@@ -1,16 +1,20 @@
-# operation_won
+# Operation Won
+## Introduction
+Built on the Flutter SDK, Operation Won is an app designed to transform your mobile phone into a walkie-talkie with the use of headphones. By using Agora and Flutter Audio Service, Operation Won is designed for in-person meetings which may seperate people from each other.
 
-A new Flutter project.
+## Features
+Opertion Won is a basic, easy-to-use application, and has features such as:
+- Push-to-talk (PTT) on earbuds by pausing/resuming audio stream.
+- Good audio quality with low latency.
+- Based off on an internet connection, allowing for an extensive range.
 
-## Getting Started
+## Installation
+For now, Operation Won can only be installed on Anroid via downloading and installing .apk files. This file will be provided upon the release of v1.0.0.
+Unfortunately, I cannot release OpWon on iOS. If you wish to install the app on iOS, you'll have to do so on your own means via Xcode.
+Operation Won is not meant for nor developed for MacOS or Windows but hey, no one's not stopping you. Simply clone the repository and run the main app. <br>
+```sh
+git clone https://github.com/Infinity6542/Operation-Won
+```
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# Contributing
+Anyone is welcome to contribute to this project! All forms of contribution are greatly appreciated. To contribute, simply fork the project and create a pull request.
