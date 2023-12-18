@@ -270,56 +270,57 @@ class _HomeState extends State<Home> {
     return MaterialApp(
       scaffoldMessengerKey: scaffoldMessengerKey,
       home: Scaffold(
-          appBar: AppBar(
-            title: const Text('Get started with Voice Calling'),
-          ),
-          body: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            children: [
-              // Channel name input
-              TextField(
-                controller: channelTextController,
-                decoration: const InputDecoration(
-                    hintText: 'Type the channel name here'),
-              ),
-              // Status text
-              SizedBox(height: 40, child: Center(child: _status())),
-              // Button Row
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: ElevatedButton(
-                      child: const Text("Join"),
-                      onPressed: () => {join()},
-                    ),
+        appBar: AppBar(
+          title: const Text('Operation Won ALPHA RELEASE'),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          children: [
+            // Channel name input
+            TextField(
+              controller: channelTextController,
+              decoration:
+                  const InputDecoration(hintText: 'Type the channel name here'),
+            ),
+            // Status text
+            SizedBox(height: 40, child: Center(child: _status())),
+            Row(
+              children: <Widget>[
+                Checkbox(
+                    value: _isMuted,
+                    onChanged: (_isMuted) => {onMuteChecked(_isMuted!)}),
+                const Text("Mute"),
+                Expanded(
+                  child: Slider(
+                    min: 0,
+                    max: 100,
+                    value: volume.toDouble(),
+                    onChanged: (value) => {onVolumeChanged(value)},
                   ),
-                  Row(
-                    children: <Widget>[
-                      Checkbox(
-                          value: _isMuted,
-                          onChanged: (_isMuted) => {onMuteChecked(_isMuted!)}),
-                      const Text("Mute"),
-                      Expanded(
-                        child: Slider(
-                          min: 0,
-                          max: 100,
-                          value: volume.toDouble(),
-                          onChanged: (value) => {onVolumeChanged(value)},
-                        ),
-                      ),
-                    ],
+                ),
+              ],
+            ),
+            // Button Row
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: ElevatedButton(
+                    child: const Text("Join"),
+                    onPressed: () => {join()},
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      child: const Text("Leave"),
-                      onPressed: () => {leave()},
-                    ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    child: const Text("Leave"),
+                    onPressed: () => {leave()},
                   ),
-                ],
-              ),
-            ],
-          )),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
