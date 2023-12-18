@@ -142,6 +142,8 @@ Widget build(BuildContext context) {
         children: [
           Image.asset('assets/e.png'),
           const Text('Loading...'),
+          const Text('Is loading taking too long?'),
+          const Text('Try relaunching the app.')
         ],
       ),
     ),
