@@ -28,22 +28,25 @@ class Master extends StatefulWidget {
 }
 
 class MasterState extends State<Master> {
-  Future<void> onPlay() async {
+  Future<bool> onPlay() async {
     setState(() {
       _isMuted = false;
     });
+    return _isMuted;
   }
 
-  Future<void> onPause() async {
+  Future<bool> onPause() async {
     setState(() {
       _isMuted = true;
     });
+    return _isMuted;
   }
 
-  Future<void> onStop() async {
+  Future<bool> onStop() async {
     setState(() {
       _isMuted = true;
     });
+    return _isMuted;
   }
 
   @override
