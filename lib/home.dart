@@ -1,4 +1,4 @@
-// ignore_for_file: no_leading_underscores_for_local_identifiers
+// ignore_for_file: no_leading_underscores_for_local_identifiers, curly_braces_in_flow_control_structures
 
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -10,7 +10,7 @@ import 'dart:convert';
 import 'package:audio_service/audio_service.dart';
 import 'dart:developer' as dev;
 
-const String appId = "b362bf39ccfe4705bca1e5cf4c7ff960 ";
+const String appId = "b362bf39ccfe4705bca1e5cf4c7ff960";
 Timer? timer;
 
 //TODO: Remove title requirement from Home once app is complete
@@ -156,10 +156,10 @@ class _HomeState extends State<Home> {
   void initState() {
     super.initState();
     // Set up an instance of Agora engine
+    createAgoraRtcEngine();
     setupVoiceSDKEngine();
     timer = Timer.periodic(
         const Duration(seconds: 5), (Timer t) => testMuteStatus());
-    super.initState();
   }
 
   // Fetch the call token :)
@@ -251,6 +251,7 @@ class _HomeState extends State<Home> {
   @override
   void dispose() async {
     await agoraEngine.leaveChannel();
+    await agoraEngine.release();
     timer?.cancel();
     super.dispose();
   }
