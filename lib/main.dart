@@ -47,6 +47,7 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> {
+  double? bodyTextSize = 24;
   @override
   void initState() {
     super.initState();
@@ -128,26 +129,59 @@ class _SplashState extends State<Splash> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Image.asset('assets/e.png'),
+        child: Container(
+          width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage("assets/entire_e.png"),
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.only(top: 250),
+                child: const Text(
+                  'Awaiting awesomeness...',
+                  style: TextStyle(
+                    fontSize: 38,
+                    fontFamily: 'Satoshi',
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.only(top: 340),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Is loading taking too long?',
+                        style: TextStyle(
+                          fontSize: bodyTextSize,
+                          fontFamily: 'Satoshi',
+                        ),
+                      ),
+                      Text(
+                        'Try relaunching the app.',
+                        style: TextStyle(
+                          fontSize: bodyTextSize,
+                          fontFamily: 'Satoshi',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
-}
-
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    body: Center(
-      child: Column(
-        children: [
-          Image.asset('assets/e.png'),
-          const Text('Loading...'),
-          const Text('Is loading taking too long?'),
-          const Text('Try relaunching the app.')
-        ],
-      ),
-    ),
-  );
 }
 
 class Config extends StatefulWidget {
