@@ -61,7 +61,7 @@ class _SplashState extends State<Splash> {
     );
   }
 
-  checkServerStatus() async {
+  Future<void> checkServerStatus() async {
     final response = await fetchAlbum();
     if (response.statusCode == 200) {
       dev.log('HTTP 200');
@@ -72,7 +72,7 @@ class _SplashState extends State<Splash> {
     }
   }
 
-  checkFirstSeen() async {
+  Future<void> checkFirstSeen() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool seen = (prefs.getBool('seen') ?? false);
 
@@ -84,12 +84,12 @@ class _SplashState extends State<Splash> {
     }
   }
 
-  void _handleStartScreen() async {
+  Future<void> _handleStartScreen() async {
     Navigator.popAndPushNamed(context, Home.id);
   }
 
   // ignore: non_constant_identifier_names
-  void RDRIntro() {
+  Future<void> RDRIntro() async {
     Navigator.popAndPushNamed(context, Intro.id);
   }
 
@@ -123,7 +123,7 @@ class _SplashState extends State<Splash> {
   }
 
   // After the app is built
-  void afterFirstLayout(BuildContext context) => checkServerStatus();
+  Future<void> afterFirstLayout(BuildContext context) => checkServerStatus();
 
   @override
   Widget build(BuildContext context) {
