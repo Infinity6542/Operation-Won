@@ -51,7 +51,7 @@ class _SplashState extends State<Splash> {
   @override
   void initState() {
     super.initState();
-    checkServerStatus();
+    afterFirstLayout(context);
   }
 
   Future<http.Response> fetchAlbum() {
@@ -72,7 +72,7 @@ class _SplashState extends State<Splash> {
     }
   }
 
-  Future<void> checkFirstSeen() async {
+  checkFirstSeen() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool seen = (prefs.getBool('seen') ?? false);
 
@@ -103,8 +103,18 @@ class _SplashState extends State<Splash> {
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                const Text('It looks like our servers couldn\'t be reached.'),
-                const Text('Check your internet connection. bit.ly/OpWonCFoST'),
+                const Text(
+                  'It looks like our servers couldn\'t be reached.',
+                  style: TextStyle(
+                    fontFamily: 'Satoshi',
+                  ),
+                ),
+                const Text(
+                  'Check your internet connection. bit.ly/OpWonCFoSU',
+                  style: TextStyle(
+                    fontFamily: 'Satoshi',
+                  ),
+                ),
                 Text('ERR_HTTP_RESPONSE_${fetchAlbum()}'),
               ],
             ),
@@ -123,7 +133,7 @@ class _SplashState extends State<Splash> {
   }
 
   // After the app is built
-  Future<void> afterFirstLayout(BuildContext context) => checkServerStatus();
+  void afterFirstLayout(BuildContext context) => checkServerStatus();
 
   @override
   Widget build(BuildContext context) {
