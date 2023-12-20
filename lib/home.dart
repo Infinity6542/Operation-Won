@@ -89,9 +89,8 @@ class Home extends StatefulWidget {
 // TODO: Figure out how this is going to work
 
 class _HomeState extends State<Home> {
-  String channelName = "ALPHA_1";
-  String token =
-      "P24QPmUhsrDFUfulP2dk6KnwJBkbGaUlGZsmZyclmpibmCalJxomGqanGaSbJ6WZmlmULKuLrUhkJFhuuNnBkYoBPHZGRx9Ajwc4w0ZGABx0iK5";
+  String channelName = "";
+  String token = "";
 
   int uid = 0; // uid of the local user
 
