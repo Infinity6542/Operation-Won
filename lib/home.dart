@@ -113,6 +113,16 @@ class _HomeState extends State<Home> {
     return _isMuted;
   }
 
+  @override
+  void initState() {
+    super.initState();
+    // Set up an instance of Agora engine
+    setupVoiceSDKEngine();
+    timer = Timer.periodic(
+        const Duration(seconds: 5), (Timer t) => testMuteStatus());
+    super.initState();
+  }
+
   // Fetch the call token :)
   Future<void> fetchToken(int uid, String channelName, int tokenRole) async {
     // Prepare the Url
@@ -217,16 +227,6 @@ class _HomeState extends State<Home> {
     }
 
     await fetchToken(uid, channelName, tokenRole);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // Set up an instance of Agora engine
-    setupVoiceSDKEngine();
-    timer = Timer.periodic(
-        const Duration(seconds: 5), (Timer t) => testMuteStatus());
-    super.initState();
   }
 
   void leave() {
