@@ -6,13 +6,22 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 // import 'package:audio_service/audio_service.dart';
-
 import 'intro.dart';
 import 'home.dart';
-// import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+// import 'package:sentry/sentry.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  await SentryFlutter.init(
+    (options) {
+      options.dsn =
+          'https://7de0b9e68b40692d64698e019b0a4e32@o4506426503135232.ingest.sentry.io/4506426513620992';
+      // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
+      // We recommend adjusting this value in production.
+      options.tracesSampleRate = 1.0;
+    },
+    appRunner: () => runApp(MyApp()),
+  );
 }
 
 class MyApp extends StatelessWidget {
