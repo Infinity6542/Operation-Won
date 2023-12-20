@@ -91,13 +91,10 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   String channelName = "";
   String token = "";
-
   int uid = 0; // uid of the local user
-
   int? _remoteUid; // uid of the remote user
   bool _isJoined = false; // Indicates if the local user has joined the channel
   late RtcEngine agoraEngine; // Agora engine instance
-
   final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>(); // Global key to access the scaffold
   int tokenRole = 1; // use 1 for Host/Broadcaster, 2 for Subscriber/Audience
