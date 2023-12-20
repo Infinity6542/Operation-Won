@@ -113,6 +113,49 @@ class _HomeState extends State<Home> {
     return _isMuted;
   }
 
+  Future<void> setupVoiceSDKEngine() async {
+    // retrieve or request microphone permission
+    await [Permission.microphone].request();
+
+    //create an instance of the Agora engine
+    agoraEngine = createAgoraRtcEngine();
+    await agoraEngine.initialize(const RtcEngineContext(appId: appId));
+
+    // Register the event handler
+    agoraEngine.registerEventHandler(
+      RtcEngineEventHandler(
+        onTokenPrivilegeWillExpire: (RtcConnection connection, String token) {
+          showMessage('Token expiring');
+          isTokenExpiring = true;
+          setState(() {
+            // fetch a new token when the current token is about to expire
+            fetchToken(uid, channelName, tokenRole);
+          });
+        },
+        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
+          showMessage(
+              "Local user uid:${connection.localUid} joined the channel");
+          setState(() {
+            _isJoined = true;
+          });
+        },
+        onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
+          showMessage("Remote user uid:$remoteUid joined the channel");
+          setState(() {
+            _remoteUid = remoteUid;
+          });
+        },
+        onUserOffline: (RtcConnection connection, int remoteUid,
+            UserOfflineReasonType reason) {
+          showMessage("Remote user uid:$remoteUid left the channel");
+          setState(() {
+            _remoteUid = null;
+          });
+        },
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -172,49 +215,6 @@ class _HomeState extends State<Home> {
         uid: uid,
       );
     }
-  }
-
-  Future<void> setupVoiceSDKEngine() async {
-    // retrieve or request microphone permission
-    await [Permission.microphone].request();
-
-    //create an instance of the Agora engine
-    agoraEngine = createAgoraRtcEngine();
-    await agoraEngine.initialize(const RtcEngineContext(appId: appId));
-
-    // Register the event handler
-    agoraEngine.registerEventHandler(
-      RtcEngineEventHandler(
-        onTokenPrivilegeWillExpire: (RtcConnection connection, String token) {
-          showMessage('Token expiring');
-          isTokenExpiring = true;
-          setState(() {
-            // fetch a new token when the current token is about to expire
-            fetchToken(uid, channelName, tokenRole);
-          });
-        },
-        onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
-          showMessage(
-              "Local user uid:${connection.localUid} joined the channel");
-          setState(() {
-            _isJoined = true;
-          });
-        },
-        onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
-          showMessage("Remote user uid:$remoteUid joined the channel");
-          setState(() {
-            _remoteUid = remoteUid;
-          });
-        },
-        onUserOffline: (RtcConnection connection, int remoteUid,
-            UserOfflineReasonType reason) {
-          showMessage("Remote user uid:$remoteUid left the channel");
-          setState(() {
-            _remoteUid = null;
-          });
-        },
-      ),
-    );
   }
 
   void join() async {
