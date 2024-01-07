@@ -19,7 +19,7 @@ class Intro extends StatelessWidget {
     return const CupertinoApp(
       debugShowCheckedModeBanner: false,
       home: OnBoard(
-          'this text shouldn\'t be here! Report this to the developer.'),
+          'This text shouldn\'t be here! Report this to the developer.'),
     );
   }
 }
@@ -28,247 +28,234 @@ class OnBoard extends StatelessWidget {
   const OnBoard(
     this.text, {
     super.key,
-    this.gradient = const LinearGradient(colors: [
-      Colors.white,
-      Colors.white,
-    ]),
     this.style,
   });
 
   final String text;
   final TextStyle? style;
-  final Gradient gradient;
   final Color kDarkBlueColor = const Color(0xFF053149);
 
   @override
   Widget build(BuildContext context) {
-    return ShaderMask(
-      blendMode: BlendMode.srcIn,
-      shaderCallback: (bounds) => gradient.createShader(
-        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+    return OnBoardingSlider(
+      finishButtonText: 'Let\'s go!',
+      onFinish: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const Home(),
+          ),
+        );
+      },
+      finishButtonStyle: const FinishButtonStyle(
+        backgroundColor: bgColour,
       ),
-      child: OnBoardingSlider(
-        finishButtonText: 'Let\'s go!',
-        onFinish: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const Home(),
-            ),
-          );
-        },
-        finishButtonStyle: FinishButtonStyle(
-          backgroundColor: kDarkBlueColor,
+      skipTextButton: const Text(
+        'Skip',
+        style: TextStyle(
+          fontFamily: 'Satoshi',
+          fontSize: 16,
+          color: primaryColour,
+          fontWeight: FontWeight.w600,
         ),
-        skipTextButton: Text(
-          'Skip',
-          style: TextStyle(
-            fontSize: 16,
-            color: kDarkBlueColor,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        controllerColor: kDarkBlueColor,
-        totalPage: 3,
-        headerBackgroundColor: Colors.black,
-        pageBackgroundColor: Colors.black,
-        background: [
-          Image.asset(
-            'assets/e.png',
-            height: 400,
-          ),
-          // TODO: create images for this :)
-          Image.asset(
-            'assets/slide_2.png',
-            height: 400,
-          ),
-          Image.asset(
-            'assets/slide_3.png',
-            height: 400,
-          ),
-          Image.asset(
-            'asset link here',
-            height: 400,
-          )
-        ],
-        speed: 1.8,
-        pageBodies: [
-          // Number 1
-          Container(
-            alignment: Alignment.center,
-            width: MediaQuery.of(context).size.width,
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                const SizedBox(
-                  height: 480,
-                ),
-                Text(
-                  'Thank you for installing Operation Won!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    foreground: Paint()
-                      ..shader = const LinearGradient(
-                        colors: <Color>[
-                          primaryColour,
-                          accentColour,
-                        ],
-                      ).createShader(const Rect.fromLTWH(0.0, 0.0, 200.0,
-                          100.0)), // accent colour (gradient possibly?)
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                const Text(
-                  'Lets give you a quick introduction to the app.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white, // text colour
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Number 2
-          Container(
-            alignment: Alignment.center,
-            width: MediaQuery.of(context).size.width,
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                const SizedBox(
-                  height: 480,
-                ),
-                Text(
-                  'In a nutshell,',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: kDarkBlueColor,
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                const Text(
-                  'OpWon is an open-source PPT app that works with earphones!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.black26,
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Number 3
-          Container(
-            alignment: Alignment.center,
-            width: MediaQuery.of(context).size.width,
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                const SizedBox(
-                  height: 480,
-                ),
-                Text(
-                  'Pause to speak, play to listen!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: kDarkBlueColor,
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                const Text(
-                  'It\'s that simple! (Just remember to resume!)',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.black26,
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Number 4
-          Container(
-            alignment: Alignment.center,
-            width: MediaQuery.of(context).size.width,
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                const SizedBox(
-                  height: 480,
-                ),
-                Text(
-                  'That\'s all you need for now.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: kDarkBlueColor,
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(
-                  height: 20,
-                ),
-                const Text(
-                  'Let\'s get started, shall we?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.black26,
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            alignment: Alignment.center,
-            width: MediaQuery.of(context).size.width,
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                const SizedBox(
-                  height: 480,
-                ),
-                Text(
-                  'Well, we\'re waiting...',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: kDarkBlueColor,
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
+      controllerColor: secondaryColour,
+      totalPage: 5,
+      headerBackgroundColor: bgColour,
+      pageBackgroundColor: bgColour,
+      background: [
+        // TODO: create images for this :)
+        Image.asset(
+          'assets/slide_1.png',
+          height: 400,
+        ),
+        Image.asset(
+          'assets/slide_2.png',
+          height: 400,
+        ),
+        Image.asset(
+          'assets/slide_3.png',
+          height: 400,
+        ),
+        Image.asset(
+          'assets/slide_4.png',
+          height: 400,
+        ),
+        Image.asset(
+          'assets/slide_5.png',
+          height: 400,
+        ),
+      ],
+      speed: 1,
+      pageBodies: [
+        // Number 1
+        Container(
+          alignment: Alignment.center,
+          width: MediaQuery.of(context).size.width,
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              SizedBox(
+                height: 480,
+              ),
+              Text(
+                'Thank you for installing Operation Won!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(
+                height: 20,
+              ),
+              Text(
+                'Lets give you a quick introduction to the app.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white, // text colour
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Number 2
+        Container(
+          alignment: Alignment.center,
+          width: MediaQuery.of(context).size.width,
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              const SizedBox(
+                height: 480,
+              ),
+              Text(
+                'In a nutshell,',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kDarkBlueColor,
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              const Text(
+                'OpWon is an open-source PPT app that works with earphones!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black26,
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Number 3
+        Container(
+          alignment: Alignment.center,
+          width: MediaQuery.of(context).size.width,
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              const SizedBox(
+                height: 480,
+              ),
+              Text(
+                'Pause to speak, play to listen!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kDarkBlueColor,
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              const Text(
+                'It\'s that simple! (Just remember to resume!)',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black26,
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Number 4
+        Container(
+          alignment: Alignment.center,
+          width: MediaQuery.of(context).size.width,
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              const SizedBox(
+                height: 480,
+              ),
+              Text(
+                'That\'s all you need for now.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kDarkBlueColor,
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              const Text(
+                'Let\'s get started, shall we?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black26,
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Number 5
+        Container(
+          alignment: Alignment.center,
+          width: MediaQuery.of(context).size.width,
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              const SizedBox(
+                height: 480,
+              ),
+              Text(
+                'Well, we\'re waiting...',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: kDarkBlueColor,
+                  fontSize: 24.0,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
