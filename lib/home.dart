@@ -130,13 +130,13 @@ class _HomeState extends State<Home> {
         },
         onJoinChannelSuccess: (RtcConnection connection, int elapsed) {
           showMessage(
-              "Local user uid:${connection.localUid} joined the channel");
+              "Successfully joined ${connection.channelId}. Your uid is ${connection.localUid}");
           setState(() {
             _isJoined = true;
           });
         },
         onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
-          showMessage("Remote user uid:$remoteUid joined the channel");
+          showMessage("User uid:$remoteUid joined ${connection.channelId}");
           setState(() {
             _remoteUid = remoteUid;
           });
@@ -219,7 +219,7 @@ class _HomeState extends State<Home> {
       showMessage("Enter a channel name");
       return;
     } else {
-      showMessage("Fetching a token ...");
+      showMessage("Fetching a token from the server...");
     }
 
     await fetchToken(uid, channelName, tokenRole);
