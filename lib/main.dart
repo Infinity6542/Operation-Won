@@ -26,14 +26,11 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       initialRoute: Splash.id,
@@ -81,25 +78,18 @@ class _SplashState extends State<Splash> {
     }
   }
 
-  checkFirstSeen() async {
+  Future checkFirstSeen() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool seen = (prefs.getBool('seen') ?? false);
+    bool _seen = (prefs.getBool('seen') ?? false);
 
-    if (seen) {
-      _handleStartScreen();
+    if (_seen) {
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const Home()));
     } else {
       await prefs.setBool('seen', true);
-      RDRIntro();
+      Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const Intro()));
     }
-  }
-
-  Future<void> _handleStartScreen() async {
-    Navigator.popAndPushNamed(context, Home.id);
-  }
-
-  // ignore: non_constant_identifier_names
-  Future<void> RDRIntro() async {
-    Navigator.popAndPushNamed(context, Intro.id);
   }
 
   Future<void> _noConnectionErr() async {
@@ -108,7 +98,7 @@ class _SplashState extends State<Splash> {
       barrierDismissible: false, // user must tap button!
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Oops! Well this is awkward...'),
+          title: const Text('Well this is awkward...'),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
@@ -168,7 +158,7 @@ class _SplashState extends State<Splash> {
                   style: TextStyle(
                     fontSize: 38,
                     fontFamily: 'Satoshi',
-                    color: Colors.white,
+                    color: Colors.black,
                   ),
                 ),
               ),
