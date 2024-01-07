@@ -33,7 +33,6 @@ class OnBoard extends StatelessWidget {
 
   final String text;
   final TextStyle? style;
-  final Color kDarkBlueColor = const Color(0xFF053149);
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +114,7 @@ class OnBoard extends StatelessWidget {
                 'Lets give you a quick introduction to the app.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white, // text colour
+                  color: textColour, // text colour
                   fontSize: 18.0,
                   fontWeight: FontWeight.w600,
                 ),
@@ -128,30 +127,30 @@ class OnBoard extends StatelessWidget {
           alignment: Alignment.center,
           width: MediaQuery.of(context).size.width,
           padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
+          child: const Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              const SizedBox(
+              SizedBox(
                 height: 480,
               ),
               Text(
                 'In a nutshell,',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: kDarkBlueColor,
+                  color: accentColour,
                   fontSize: 24.0,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(
+              SizedBox(
                 height: 20,
               ),
-              const Text(
+              Text(
                 'OpWon is an open-source PPT app that works with earphones!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.black26,
+                  color: textColour,
                   fontSize: 18.0,
                   fontWeight: FontWeight.w600,
                 ),
@@ -164,30 +163,30 @@ class OnBoard extends StatelessWidget {
           alignment: Alignment.center,
           width: MediaQuery.of(context).size.width,
           padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
+          child: const Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              const SizedBox(
+              SizedBox(
                 height: 480,
               ),
               Text(
                 'Pause to speak, play to listen!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: kDarkBlueColor,
+                  color: accentColour,
                   fontSize: 24.0,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(
+              SizedBox(
                 height: 20,
               ),
-              const Text(
+              Text(
                 'It\'s that simple! (Just remember to resume!)',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.black26,
+                  color: textColour,
                   fontSize: 18.0,
                   fontWeight: FontWeight.w600,
                 ),
@@ -200,30 +199,30 @@ class OnBoard extends StatelessWidget {
           alignment: Alignment.center,
           width: MediaQuery.of(context).size.width,
           padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
+          child: const Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              const SizedBox(
+              SizedBox(
                 height: 480,
               ),
               Text(
                 'That\'s all you need for now.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: kDarkBlueColor,
+                  color: accentColour,
                   fontSize: 24.0,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(
+              SizedBox(
                 height: 20,
               ),
-              const Text(
+              Text(
                 'Let\'s get started, shall we?',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.black26,
+                  color: textColour,
                   fontSize: 18.0,
                   fontWeight: FontWeight.w600,
                 ),
@@ -236,18 +235,18 @@ class OnBoard extends StatelessWidget {
           alignment: Alignment.center,
           width: MediaQuery.of(context).size.width,
           padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
+          child: const Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              const SizedBox(
+              SizedBox(
                 height: 480,
               ),
               Text(
                 'Well, we\'re waiting...',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: kDarkBlueColor,
+                  color: accentColour,
                   fontSize: 24.0,
                   fontWeight: FontWeight.w600,
                 ),
