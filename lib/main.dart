@@ -78,18 +78,25 @@ class _SplashState extends State<Splash> {
     }
   }
 
-  Future checkFirstSeen() async {
+  checkFirstSeen() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool _seen = (prefs.getBool('seen') ?? false);
+    bool seen = (prefs.getBool('seen') ?? false);
 
-    if (_seen) {
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const Home()));
+    if (seen) {
+      _handleStartScreen();
     } else {
       await prefs.setBool('seen', true);
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const Intro()));
+      RDRIntro();
     }
+  }
+
+  Future<void> _handleStartScreen() async {
+    Navigator.popAndPushNamed(context, Home.id);
+  }
+
+  // ignore: non_constant_identifier_names
+  Future<void> RDRIntro() async {
+    Navigator.popAndPushNamed(context, Intro.id);
   }
 
   Future<void> _noConnectionErr() async {
