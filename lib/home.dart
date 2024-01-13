@@ -214,6 +214,7 @@ class _HomeState extends State<Home> {
   }
 
   void join() async {
+    setupVoiceSDKEngine();
     channelName = channelTextController.text;
     if (channelName.isEmpty) {
       showMessage("Enter a channel name");
@@ -231,6 +232,7 @@ class _HomeState extends State<Home> {
       _remoteUid = null;
     });
     agoraEngine.leaveChannel();
+    agoraEngine.release();
   }
 
   onMuteChecked(bool value) {
