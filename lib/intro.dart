@@ -7,7 +7,7 @@ const Color textColour = Color.fromRGBO(224, 238, 249, 1.0);
 const Color bgColour = Color.fromRGBO(2, 7, 11, 1.0);
 const Color primaryColour = Color.fromRGBO(135, 191, 233, 1.0);
 const Color secondaryColour = Color.fromRGBO(59, 26, 142, 1.0);
-const Color accentColour = Color.fromRGBO(152, 52, 218, 1.0);
+const Color accentColour = Color.fromRGBO(152, 52, 218, 1);
 
 class Intro extends StatelessWidget {
   static const String id = "/intro";
