@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_onboarding_slider/flutter_onboarding_slider.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:operation_won/home.dart';
 
 const Color textColour = Color.fromRGBO(224, 238, 249, 1.0);
@@ -38,11 +39,15 @@ class OnBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return OnBoardingSlider(
       finishButtonText: 'Let\'s go!',
-      onFinish: () {
+      onFinish: () async {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        // ignore: unused_local_variable
+        bool seen = (prefs.getBool('seen') ?? false);
+        await prefs.setBool('seen', true);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const Home(),
+            builder: (context) => const Home(title: 'ALPHA 0.1.1'),
           ),
         );
       },
@@ -103,12 +108,13 @@ class OnBoard extends StatelessWidget {
                 'Thank you for installing Operation Won!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
+                  color: primaryColour,
                   fontSize: 24.0,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               SizedBox(
-                height: 20,
+                height: 10,
               ),
               Text(
                 'Lets give you a quick introduction to the app.',
@@ -135,16 +141,16 @@ class OnBoard extends StatelessWidget {
                 height: 480,
               ),
               Text(
-                'In a nutshell,',
+                'In a nutshell...',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: accentColour,
+                  color: primaryColour,
                   fontSize: 24.0,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               SizedBox(
-                height: 20,
+                height: 10,
               ),
               Text(
                 'OpWon is an open-source PPT app that works with earphones!',
@@ -174,13 +180,13 @@ class OnBoard extends StatelessWidget {
                 'Pause to speak, play to listen!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: accentColour,
+                  color: primaryColour,
                   fontSize: 24.0,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               SizedBox(
-                height: 20,
+                height: 10,
               ),
               Text(
                 'It\'s that simple! (Just remember to resume!)',
@@ -210,13 +216,13 @@ class OnBoard extends StatelessWidget {
                 'That\'s all you need for now.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: accentColour,
+                  color: primaryColour,
                   fontSize: 24.0,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               SizedBox(
-                height: 20,
+                height: 10,
               ),
               Text(
                 'Let\'s get started, shall we?',
