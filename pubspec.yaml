@@ -56,6 +56,7 @@ flutter:
   assets:
     - assets/e.png
     - assets/entire_e.png
+    - assets/header.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
