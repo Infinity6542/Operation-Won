@@ -79,7 +79,9 @@ class AudioHandler extends BaseAudioHandler {
 
 class Home extends StatefulWidget {
   static const String id = "/Home";
-  const Home({Key? key}) : super(key: key);
+  const Home({super.key, required this.title});
+
+  final title;
 
   @override
   State<Home> createState() => _HomeState();
@@ -269,8 +271,25 @@ class _HomeState extends State<Home> {
     return MaterialApp(
       scaffoldMessengerKey: scaffoldMessengerKey,
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Operation Won ALPHA RELEASE'),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(190),
+          child: AppBar(
+            title: Text(
+              widget.title,
+              style: const TextStyle(
+                fontFamily: 'ABCSANS',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            centerTitle: true,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                    image: AssetImage('assets/header.png'), fit: BoxFit.fill),
+              ),
+            ),
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

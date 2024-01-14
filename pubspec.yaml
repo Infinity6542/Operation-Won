@@ -72,15 +72,15 @@ flutter:
   fonts:
     - family: ABCSans
       fonts:
-        - asset: fonts/ABCSans/abcsans-black.otf
+        # - asset: fonts/ABCSans/abcsans-black.otf
           # style: black
-        - asset: fonts/ABCSans/abcsans-bold.otf
+        # - asset: fonts/ABCSans/abcsans-bold.otf
           # style: bold
-        - asset: fonts/ABCSans/abcsans-light.otf
+        # - asset: fonts/ABCSans/abcsans-light.otf
           # style: light
         - asset: fonts/ABCSans/abcsans-regular.otf
-        - asset: fonts/ABCSans/abcsans-regularitalic.otf
-          style: italic
+        # - asset: fonts/ABCSans/abcsans-regularitalic.otf
+        #   style: italic
     - family: Azeret_Mono
       fonts:
         - asset: fonts/Azeret_Mono/AzeretMono-Italic-VariableFont_wght.ttf
