@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
       routes: {
         Intro.id: (context) => const Intro(),
         Splash.id: (context) => const Splash(),
-        Home.id: (context) => const Home(),
+        Home.id: (context) => const Home(title: 'ALPHA 0.1.1'),
         Config.id: (context) => const Config(title: 'Settings'),
       },
     );
@@ -85,7 +85,6 @@ class _SplashState extends State<Splash> {
     if (seen) {
       _handleStartScreen();
     } else {
-      await prefs.setBool('seen', true);
       RDRIntro();
     }
   }
