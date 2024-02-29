@@ -1,5 +1,3 @@
-// TODO: implement New Relic
-// import 'package:newrelic_mobile/newrelic_mobile.dart';
 import 'dart:developer' as dev;
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -152,46 +150,6 @@ class _SplashState extends State<Splash> {
               image: AssetImage("assets/entire_e.png"),
               fit: BoxFit.cover,
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.only(top: 250),
-                child: const Text(
-                  'Awaiting awesomeness...',
-                  style: TextStyle(
-                    fontSize: 38,
-                    fontFamily: 'Satoshi',
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.only(top: 340),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Is loading taking too long?',
-                        style: TextStyle(
-                          fontSize: bodyTextSize,
-                          fontFamily: 'Satoshi',
-                        ),
-                      ),
-                      Text(
-                        'Try relaunching the app.',
-                        style: TextStyle(
-                          fontSize: bodyTextSize,
-                          fontFamily: 'Satoshi',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),
