@@ -15,7 +15,22 @@ Timer? timer;
 
 //TODO: Remove title requirement from Home once app is complete
 
-// TODO: Test media and muting
+// Agora Engine
+String channelName = "";
+String token = "";
+int uid = 0; // uid of the local user
+int? _remoteUid; // uid of the remote user
+bool _isJoined = false; // Indicates if the local user has joined the channel
+late RtcEngine agoraEngine; // Agora engine instance
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>(); // Global key to access the scaffold
+int tokenRole = 1; // use 1 for Host/Broadcaster, 2 for Subscriber/Audience
+String serverUrl =
+    "https://agora-token-server-2g0m.onrender.com"; // The base URL to your token server, for example "https://agora-token-service-production-92ff.up.railway.app"
+int tokenExpireTime = 86400; // Expire time in Seconds.
+bool isTokenExpiring = false; // Set to true when the token is about to expire
+final channelTextController =
+    TextEditingController(text: ''); // To access the TextField
 bool _isMuted = false;
 int volume = 50;
 
@@ -28,27 +43,6 @@ class Master extends StatefulWidget {
 }
 
 class MasterState extends State<Master> {
-  Future<bool> onPlay() async {
-    setState(() {
-      _isMuted = false;
-    });
-    return _isMuted;
-  }
-
-  Future<bool> onPause() async {
-    setState(() {
-      _isMuted = true;
-    });
-    return _isMuted;
-  }
-
-  Future<bool> onStop() async {
-    setState(() {
-      _isMuted = true;
-    });
-    return _isMuted;
-  }
-
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -60,19 +54,22 @@ class AudioHandler extends BaseAudioHandler {
   final MasterState handler = MasterState();
   @override
   Future<void> play() async {
-    handler.onPlay();
+    _isMuted = false;
+    agoraEngine.muteAllRemoteAudioStreams(_isMuted);
     dev.log('[LOG] [AUDIO] Unmuted user');
   }
 
   @override
   Future<void> pause() async {
-    handler.onPause();
+    _isMuted = true;
+    agoraEngine.muteAllRemoteAudioStreams(_isMuted);
     dev.log('[LOG] [AUDIO] Muted user');
   }
 
   @override
   Future<void> stop() async {
-    handler.onStop();
+    _isMuted = false;
+    agoraEngine.muteAllRemoteAudioStreams(_isMuted);
     dev.log('[LOG] [AUDIO] User stopped media');
   }
 }
@@ -91,22 +88,6 @@ class Home extends StatefulWidget {
 // TODO: Figure out how this is going to work
 
 class _HomeState extends State<Home> {
-  String channelName = "";
-  String token = "";
-  int uid = 0; // uid of the local user
-  int? _remoteUid; // uid of the remote user
-  bool _isJoined = false; // Indicates if the local user has joined the channel
-  late RtcEngine agoraEngine; // Agora engine instance
-  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
-      GlobalKey<ScaffoldMessengerState>(); // Global key to access the scaffold
-  int tokenRole = 1; // use 1 for Host/Broadcaster, 2 for Subscriber/Audience
-  String serverUrl =
-      "https://agora-token-server-2g0m.onrender.com"; // The base URL to your token server, for example "https://agora-token-service-production-92ff.up.railway.app"
-  int tokenExpireTime = 86400; // Expire time in Seconds.
-  bool isTokenExpiring = false; // Set to true when the token is about to expire
-  final channelTextController =
-      TextEditingController(text: ''); // To access the TextField
-
   testMuteStatus() {
     return _isMuted;
   }
