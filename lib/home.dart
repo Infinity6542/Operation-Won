@@ -36,7 +36,7 @@ int volume = 50;
 
 class Master extends StatefulWidget {
   static const String id = "/Master";
-  const Master({Key? key}) : super(key: key);
+  const Master({super.key});
 
   @override
   State<Master> createState() => MasterState();
