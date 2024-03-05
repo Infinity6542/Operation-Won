@@ -1,4 +1,5 @@
 import 'dart:developer' as dev;
+import 'package:dart_ping/dart_ping.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,7 +28,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Operation Won',
       theme: ThemeData(
         useMaterial3: true,
       ),
@@ -35,7 +36,7 @@ class MyApp extends StatelessWidget {
       routes: {
         Intro.id: (context) => const Intro(),
         Splash.id: (context) => const Splash(),
-        Home.id: (context) => const Home(title: 'ALPHA 0.1.1'),
+        Home.id: (context) => const Home(title: 'ALPHA 0.5.0'),
         Config.id: (context) => const Config(title: 'Settings'),
       },
     );
@@ -58,22 +59,11 @@ class _SplashState extends State<Splash> {
     afterFirstLayout(context);
   }
 
-  Future<http.Response> fetchAlbum() {
-    return http.get(
-      Uri.parse(
-          'https://agora-token-server-2g0m.onrender.com/rtc/ALPHA_1/1/uid/1/?expiry=300'),
-    );
-  }
-
-  Future<void> checkServerStatus() async {
-    final response = await fetchAlbum();
-    if (response.statusCode == 200) {
-      dev.log('HTTP 200');
-      checkFirstSeen();
-    } else {
-      dev.log('HTTP${fetchAlbum()}');
-      _noConnectionErr();
-    }
+  Future<dynamic> checkServerStatus() async {
+    final serverStatus = Ping('https://agora-token-server-2g0m.onrender.com/');
+    serverStatus.stream.listen((event) {
+      dev.log('[DEBUG] [SERVER] ${event.toString()}');
+    });
   }
 
   checkFirstSeen() async {
@@ -118,7 +108,8 @@ class _SplashState extends State<Splash> {
                     fontFamily: 'Satoshi',
                   ),
                 ),
-                Text('ERR_HTTP_RESPONSE_${fetchAlbum()}'),
+                Text(
+                    'ERR_HTTP_RESPONSE_${http.get(Uri.parse('https://agora-token-server-2g0m.onrender.com/rtc/ALPHA_1/1/uid/1/?expiry=300'))}'),
               ],
             ),
           ),
