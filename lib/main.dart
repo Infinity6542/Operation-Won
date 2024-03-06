@@ -1,5 +1,4 @@
 import 'dart:developer' as dev;
-import 'package:dart_ping/dart_ping.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,7 +35,7 @@ class MyApp extends StatelessWidget {
       routes: {
         Intro.id: (context) => const Intro(),
         Splash.id: (context) => const Splash(),
-        Home.id: (context) => const Home(title: 'ALPHA 0.5.0'),
+        Home.id: (context) => const Home(title: 'ALPHA 0.1.1'),
         Config.id: (context) => const Config(title: 'Settings'),
       },
     );
@@ -59,11 +58,19 @@ class _SplashState extends State<Splash> {
     afterFirstLayout(context);
   }
 
-  Future<dynamic> checkServerStatus() async {
-    final serverStatus = Ping('https://agora-token-server-2g0m.onrender.com/');
-    serverStatus.stream.listen((event) {
-      dev.log('[DEBUG] [SERVER] ${event.toString()}');
-    });
+  Future<void> checkServerStatus() async {
+    // TODO: work out a server testing thing
+    http.Response response = await http
+        .get(Uri.parse('https://agora-token-server-2g0m.onrender.com/'));
+    if (response.statusCode < 200 || response.statusCode > 299) {
+      // TODO: log error
+      print(
+          '[DEBUG] [SERVER] Server status code ${response.statusCode.toString()}');
+      _noConnectionErr();
+    } else {
+      // Check if the user has gone through onboarding
+      checkFirstSeen();
+    }
   }
 
   checkFirstSeen() async {
