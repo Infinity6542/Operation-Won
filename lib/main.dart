@@ -59,11 +59,9 @@ class _SplashState extends State<Splash> {
   }
 
   Future<void> checkServerStatus() async {
-    // TODO: work out a server testing thing
     http.Response response = await http
         .get(Uri.parse('https://agora-token-server-2g0m.onrender.com/'));
     if (response.statusCode < 200 || response.statusCode > 299) {
-      // TODO: log error
       print(
           '[DEBUG] [SERVER] Server status code ${response.statusCode.toString()}');
       _noConnectionErr();
