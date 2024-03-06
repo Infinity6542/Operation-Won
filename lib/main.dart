@@ -62,7 +62,8 @@ class _SplashState extends State<Splash> {
     http.Response response = await http
         .get(Uri.parse('https://agora-token-server-2g0m.onrender.com/'));
     if (response.statusCode < 200 || response.statusCode > 299) {
-      print(
+      // Log error type, then show error dialog
+      dev.log(
           '[DEBUG] [SERVER] Server status code ${response.statusCode.toString()}');
       _noConnectionErr();
     } else {
