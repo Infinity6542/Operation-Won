@@ -19,4 +19,4 @@ git clone https://github.com/Infinity6542/Operation-Won
 ```
 
 # Contributing
-Anyone is welcome to contribute to this project! All forms of contribution are greatly appreciated. To contribute, simply fork the project and create a pull request.
+Anyone is welcome to contribute to this project! All forms of contribution are greatly appreciated. To contribute, simply fork the project and create a pull request. If you wish to contribute to the website instead, you can visit [that repository](https://github.com/Infinity6542/Operation-Won-Website)
