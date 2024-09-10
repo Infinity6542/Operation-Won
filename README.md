@@ -1,3 +1,7 @@
+> ⚠️ <ins>**IMPORTANT**</ins>\
+> OpWon will soon be migrated to a different SFU/Infrastructure. This process may take a while.\
+> If the app does not work in the future, please check back on this repo. Thanks for checking OpWon out!\
+
 # Operation Won
 ## Introduction
 Built on the Flutter SDK, Operation Won is an app designed to transform your mobile phone into a walkie-talkie with the use of headphones. By using Agora and Flutter Audio Service, Operation Won is designed for in-person meetings which may seperate people from each other.
