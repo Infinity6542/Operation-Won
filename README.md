@@ -1,4 +1,4 @@
-> ⚠️ <ins>**IMPORTANT**</ins>\
+>[!IMPORTANT]
 > OpWon will soon be migrated to a different SFU/Infrastructure. This process may take a while.\
 > If the app does not work in the future, please check back on this repo. Thanks for checking OpWon out!\
 
