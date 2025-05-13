@@ -1,4 +1,4 @@
-module OpWon_Server
+module opwon_server
 
 go 1.24.3
 
