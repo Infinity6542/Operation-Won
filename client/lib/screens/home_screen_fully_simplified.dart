@@ -14,7 +14,8 @@ class HomeScreenFullySimplified extends StatefulWidget {
   const HomeScreenFullySimplified({Key? key}) : super(key: key);
 
   @override
-  HomeScreenFullySimplifiedState createState() => HomeScreenFullySimplifiedState();
+  HomeScreenFullySimplifiedState createState() =>
+      HomeScreenFullySimplifiedState();
 }
 
 class HomeScreenFullySimplifiedState extends State<HomeScreenFullySimplified> {
@@ -184,7 +185,7 @@ class HomeScreenFullySimplifiedState extends State<HomeScreenFullySimplified> {
   // Handle incoming audio data from other clients
   Future<void> _handleIncomingAudio(Uint8List audioData) async {
     if (isRecording) return; // Don't play incoming audio while recording
-    
+
     // For the PoC, we'll just simulate playing the audio
     setState(() {
       isReceivingAudio = true;
@@ -193,7 +194,7 @@ class HomeScreenFullySimplifiedState extends State<HomeScreenFullySimplified> {
 
     // Simulate audio playback for 2 seconds
     await Future.delayed(const Duration(seconds: 2));
-    
+
     if (mounted) {
       setState(() {
         isReceivingAudio = false;
@@ -225,9 +226,10 @@ class HomeScreenFullySimplifiedState extends State<HomeScreenFullySimplified> {
 
       if (response.statusCode == 200) {
         setState(() {
-          audioStatus = 'Playing replay... (${response.bodyBytes.length} bytes)';
+          audioStatus =
+              'Playing replay... (${response.bodyBytes.length} bytes)';
         });
-        
+
         // Simulate audio playback for 3 seconds
         await Future.delayed(const Duration(seconds: 3));
 

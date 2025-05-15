@@ -192,10 +192,12 @@ class HomeScreenState extends State<HomeScreen> {
         isReceivingAudio = true;
         audioStatus = 'Receiving live audio...';
       });
-    }    try {
+    }
+    try {
       // Save received audio to a temporary file
       final tempDir = await getTemporaryDirectory();
-      _tempPlaybackPath = '${tempDir.path}/temp_playback.mp3';  // Using mp3 extension since it's better supported
+      _tempPlaybackPath =
+          '${tempDir.path}/temp_playback.mp3'; // Using mp3 extension since it's better supported
       final file = File(_tempPlaybackPath!);
       await file.writeAsBytes(audioData, flush: true);
 
@@ -249,9 +251,10 @@ class HomeScreenState extends State<HomeScreen> {
       if (response.statusCode == 200) {
         setState(() {
           audioStatus = 'Playing replay...';
-        });        // Save the audio to a temporary file
+        }); // Save the audio to a temporary file
         final tempDir = await getTemporaryDirectory();
-        final file = File('${tempDir.path}/replay_audio.mp3'); // Using mp3 extension for better compatibility
+        final file = File(
+            '${tempDir.path}/replay_audio.mp3'); // Using mp3 extension for better compatibility
         await file.writeAsBytes(response.bodyBytes);
 
         // Play the audio

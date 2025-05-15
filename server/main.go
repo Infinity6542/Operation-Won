@@ -225,7 +225,7 @@ func serveWsHandler(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 // Handler for audio replay requests
 func replayAudioHandler(w http.ResponseWriter, r *http.Request) {
-	// For the PoC, we'll just serve the raw binary data 
+	// For the PoC, we'll just serve the raw binary data
 	// In a real application, we would properly format the audio for client compatibility
 	w.Header().Set("Content-Type", "application/octet-stream")
 	http.ServeFile(w, r, "poc_audio.opus")
