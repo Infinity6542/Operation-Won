@@ -13,7 +13,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:path_provider/path_provider.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   HomeScreenState createState() => HomeScreenState();
@@ -245,7 +245,7 @@ class HomeScreenState extends State<HomeScreen> {
     try {
       // Get the URL by removing 'ws://' and replacing with 'http://'
       final replayUrl =
-          Uri.parse(serverAddress.replaceAll('ws://', 'http://') + '/replay');
+          Uri.parse('${serverAddress.replaceAll('ws://', 'http://')}/replay');
 
       final response = await http.get(replayUrl);
 
@@ -425,7 +425,7 @@ class HomeScreenState extends State<HomeScreen> {
                           size: 36,
                         ),
                         const SizedBox(height: 8),
-                        Text(
+                        const Text(
                           'Push to Talk',
                           style: TextStyle(
                             color: Colors.white,

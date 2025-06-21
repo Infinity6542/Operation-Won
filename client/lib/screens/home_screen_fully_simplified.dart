@@ -11,7 +11,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class HomeScreenFullySimplified extends StatefulWidget {
-  const HomeScreenFullySimplified({Key? key}) : super(key: key);
+  const HomeScreenFullySimplified({super.key});
 
   @override
   HomeScreenFullySimplifiedState createState() =>
@@ -220,7 +220,7 @@ class HomeScreenFullySimplifiedState extends State<HomeScreenFullySimplified> {
     try {
       // Get the URL by removing 'ws://' and replacing with 'http://'
       final replayUrl =
-          Uri.parse(serverAddress.replaceAll('ws://', 'http://') + '/replay');
+          Uri.parse('${serverAddress.replaceAll('ws://', 'http://')}/replay');
 
       final response = await http.get(replayUrl);
 
@@ -385,7 +385,7 @@ class HomeScreenFullySimplifiedState extends State<HomeScreenFullySimplified> {
                           size: 36,
                         ),
                         const SizedBox(height: 8),
-                        Text(
+                        const Text(
                           'Push to Talk (Simulated)',
                           style: TextStyle(
                             color: Colors.white,
