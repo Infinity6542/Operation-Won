@@ -52,4 +52,6 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("foo", val)
+
+	client.Del(ctx, "foo").Result()
 }
