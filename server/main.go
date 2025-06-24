@@ -3,14 +3,16 @@ package main
 import (
 	// "encoding/json"
 	"context"
-	"fmt"
 	"log"
 
 	// "net/http"
 	// "os"
 	// "sync"
 	// "time"
+	"database/sql"
+
 	// "github.com/gorilla/websocket"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -32,9 +34,9 @@ import (
 
 func main() {
 	log.Println("Starting up...")
-	// Establish connection to Redis and
 
-	log.Println("Connecting to Redis...")
+	//* Connecting to and testing Redis
+	log.Println("[LOG] [SRV] Connecting to Redis")
 	client := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "", // No password set
@@ -46,12 +48,30 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 	val, err := client.Get(ctx, "foo").Result()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("foo", val)
-
+	if val != "bar" {
+		panic("Value mismatch: expected 'bar', got '" + val + "'")
+	} else {
+		log.Println("[LOG] [SRV] Connected to Redis")
+	}
 	client.Del(ctx, "foo").Result()
+
+	//* Connecting to and testing MySQL
+	log.Println("[LOG] [SRV] Connecting to db")
+	dsn := "root:yes@tcp(10.88.0.20:3306)/"
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer db.Close()
+	// Verify the connection is valid
+	err = db.Ping()
+	if err != nil {
+		panic(err.Error())
+	} else {
+		log.Println("[LOG] [SRV] Connected to db")
+	}
 }
