@@ -33,6 +33,8 @@ import (
 func main() {
 	log.Println("Starting up...")
 	// Establish connection to Redis and
+
+	log.Println("Connecting to Redis...")
 	client := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "", // No password set
@@ -40,7 +42,6 @@ func main() {
 		Protocol: 2,  // Connection protocol
 	})
 	ctx := context.Background()
-
 	err := client.Set(ctx, "foo", "bar", 0).Err()
 	if err != nil {
 		panic(err)
