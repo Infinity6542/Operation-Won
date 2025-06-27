@@ -35,6 +35,7 @@ import (
 func main() {
 	log.Println("Starting up...")
 
+	// TODO: Maybe change the entire startup process to check Podman first
 	//* Connecting to and testing Redis
 	log.Println("[LOG] [SRV] Connecting to Redis")
 	client := redis.NewClient(&redis.Options{
