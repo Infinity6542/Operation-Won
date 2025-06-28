@@ -20,12 +20,6 @@ import (
 // After I finish the server I can start on the client
 // But first the server and the design
 
-// Please refer to the flowcharts to know what to name these things cos otherwise I will forget lol :)
-
-// When will this thing refresh smh I need to get it now
-
-// Upgrader for WebSocket connections with permissive CORS policy for easy testing
-
 // 1. Make sure all services are running first (redis, DB, HTTP server) JSON signals as well
 // 2. Wait for connection
 // 3. Once connections are made, listen for messages (messages go through router)
