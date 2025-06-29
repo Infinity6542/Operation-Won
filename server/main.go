@@ -4,15 +4,16 @@ import (
 	// "encoding/json"
 	"context"
 	"log"
+	"net/http"
 
-	// "net/http"
+	// "fmt"
 	// "os"
 	// "sync"
 	// "time"
 	"database/sql"
 
-	// "github.com/gorilla/websocket"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -25,6 +26,8 @@ import (
 // 3. Once connections are made, listen for messages (messages go through router)
 // 4. If there is a new transmission, made new UUID, new file, new record and alert recipients
 // 5. Run reading, writing and broadcasting (to UUID.e and distribute to clients)
+
+var upgrader = websocket.Upgrader{}
 
 func main() {
 	log.Println("Starting up...")
@@ -56,7 +59,7 @@ func main() {
 
 	//* Connecting to and testing MySQL
 	log.Println("[LOG] [SRV] Connecting to db")
-	dsn := "root:yes@tcp(10.88.0.20:3306)/"
+	dsn := "root:yes@tcp(10.88.0.3:3306)/"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		panic(err.Error())
@@ -69,4 +72,63 @@ func main() {
 	} else {
 		log.Println("[LOG] [SRV] Connected to db")
 	}
+
+	//* Begin listening for HTTP connections to upgrade
+	http.HandleFunc("/", router)
+	http.ListenAndServe(":8000", nil)
+}
+
+func router(w http.ResponseWriter, r *http.Request) {
+	log.Println("[LOG] [SRV] Received HTTP request")
+	connection, err := upgrader.Upgrade(w, r, nil)
+
+	if err != nil {
+		log.Printf("[ERR] [SRV] Error upgrading connection: %v", err)
+		http.Error(w, "Could not upgrade connection", http.StatusInternalServerError)
+		return
+	} else {
+		log.Println("[LOG] [SRV] Upgraded HTTP connection to WebSocket")
+	}
+
+	for {
+		mtype, message, err := connection.ReadMessage()
+		log.Println("[LOG] [SRV] Read message from WebSocket")
+		log.Println(mtype)
+
+		if mtype == websocket.CloseMessage {
+			log.Println("[LOG] [SRV] Connection closed")
+			break
+		} else if err != nil {
+			log.Printf("[ERR] [SRV] Error reading message: %v", err)
+			break
+		} else {
+			switch mtype {
+			case websocket.TextMessage:
+				go handleSignal(message)
+			case websocket.BinaryMessage:
+				go handleBinary(message)
+			}
+
+			connection.WriteMessage(websocket.TextMessage, message)
+			log.Printf("[LOG] [SRV] Received message: %s", message)
+		}
+	}
+	connection.Close()
+}
+
+func handleSignal(message []byte) {
+	log.Printf("[LOG] [SRV] Handling signal: %s", message)
+	// Here you would handle the signal, e.g., parse it, store it, etc.
+	// For now, just log it
+	// You can also implement logic to handle different types of signals
+	// and perform actions based on the content of the message.
+
+}
+
+func handleBinary(message []byte) {
+	log.Printf("[LOG] [SRV] Handling binary: %s", message)
+	// Here you would handle the signal, e.g., parse it, store it, etc.
+	// For now, just log it
+	// You can also implement logic to handle different types of signals
+	// and perform actions based on the content of the message.
 }
