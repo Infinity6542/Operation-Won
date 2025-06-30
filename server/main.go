@@ -3,6 +3,7 @@ package main
 import (
 	// "encoding/json"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -58,8 +59,12 @@ func main() {
 	client.Del(ctx, "foo").Result()
 
 	//* Connecting to and testing MySQL
+	var dbip string
+
 	log.Println("[LOG] [SRV] Connecting to db")
-	dsn := "root:yes@tcp(10.88.0.3:3306)/"
+	fmt.Print("Enter the internal IP address of the mySQL database:")
+	fmt.Scan(&dbip)
+	dsn := "root:yes@tcp(" + dbip + ":3306)/"
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		panic(err.Error())
@@ -108,8 +113,6 @@ func router(w http.ResponseWriter, r *http.Request) {
 			case websocket.BinaryMessage:
 				go handleBinary(message)
 			}
-
-			connection.WriteMessage(websocket.TextMessage, message)
 			log.Printf("[LOG] [SRV] Received message: %s", message)
 		}
 	}
