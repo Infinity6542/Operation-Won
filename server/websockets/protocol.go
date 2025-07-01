@@ -1,7 +1,5 @@
 package main
 
-// temporarily set to main for testing
-
 import (
 	"fmt"
 	"log"
