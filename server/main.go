@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	// "fmt"
 	// "os"
@@ -125,7 +126,26 @@ func handleSignal(message []byte) {
 	// For now, just log it
 	// You can also implement logic to handle different types of signals
 	// and perform actions based on the content of the message.
+	msg := strings.Split(string(message), " ")
+ 	log.Printf("Message: %v\n", msg)
 
+	switch msg[0] {
+	case "usr":
+		// usr currently only has the auth method, so no switch case in here.
+		// TODO: Implement JWT auth method
+		break
+	case "ch":
+		switch msg[1] {
+		case "join":
+			break
+		case "leave":
+			break
+		case "emg":
+			break
+		}
+	case "ptt":
+		break
+	}
 }
 
 func handleBinary(message []byte) {
