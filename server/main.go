@@ -127,7 +127,7 @@ func handleSignal(message []byte) {
 	switch msg[0] {
 	case "usr":
 		// usr currently only has the auth method, so no switch case in here.
-		// TODO: Implement JWT auth method
+		
 		break
 	case "ch":
 		switch msg[1] {
@@ -139,7 +139,12 @@ func handleSignal(message []byte) {
 			break
 		}
 	case "ptt":
-		break
+		switch msg[1] {
+		case "start":
+			break
+		case "stop":
+			break
+		}
 	}
 }
 
