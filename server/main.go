@@ -120,12 +120,7 @@ func router(w http.ResponseWriter, r *http.Request) {
 	connection.Close()
 }
 
-func handleSignal(message []byte) {
-	log.Printf("[LOG] [SRV] Handling signal: %s", message)
-	// Here you would handle the signal, e.g., parse it, store it, etc.
-	// For now, just log it
-	// You can also implement logic to handle different types of signals
-	// and perform actions based on the content of the message.
+func handleSignal(message []byte) { 
 	msg := strings.Split(string(message), " ")
  	log.Printf("Message: %v\n", msg)
 
