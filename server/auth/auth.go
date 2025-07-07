@@ -22,3 +22,22 @@ func createToken(user string) (string, error) {
 	return tokenString, nill
 }
 
+func verifyToken(token string) error {
+	token, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		return secretKey, nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if !token.Valid {
+		return fmt.Errorf("[AUT] [TKN] Invalid token")
+	}
+
+	return nil
+}
+
+func handleLogin(w http.ResponseWriter, r *http.Request) {
+	
+} 

@@ -81,6 +81,7 @@ func main() {
 
 	//* Begin listening for HTTP connections to upgrade
 	http.HandleFunc("/", router)
+	http.HandleFunc("/auth", handleAuth)
 	http.ListenAndServe(":8000", nil)
 }
 
@@ -118,6 +119,10 @@ func router(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	connection.Close()
+}
+
+func handleAuth() {
+	
 }
 
 func handleSignal(message []byte) { 
