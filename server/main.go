@@ -78,8 +78,7 @@ func main() {
 	} else {
 		log.Println("[LOG] [SRV] Connected to db")
 	}
-
-	//* Begin listening for HTTP connections to upgrade
+	
 	http.HandleFunc("/", router)
 	http.HandleFunc("/auth", handleAuth)
 	http.ListenAndServe(":8000", nil)
@@ -127,14 +126,14 @@ func handleAuth() {
 
 func handleSignal(message []byte) { 
 	msg := strings.Split(string(message), " ")
+	// Splitting the signals so that they can be handled accordingly
+	// Example of a signal would be "ch join" (user joining a channel)
+	// Underscores aren't used cos spaces are a bit more readable
  	log.Printf("Message: %v\n", msg)
 
-	switch msg[0] {
-	case "usr":
-		// usr currently only has the auth method, so no switch case in here.
-		// TODO: Implement auth method from auth/auth.go
-		break
+	switch msg[0] { 
 	case "ch":
+		// TODO: Implement everything here, refer to the flowcharts
 		switch msg[1] {
 		case "join":
 			break
