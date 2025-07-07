@@ -12,9 +12,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var secret = []byte("secret")
 
+type User struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+}
 
 // TODO: Make a proper implementation of JWTs
+func CreateToken(user string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,jwt.MapClaims{
 		"username": user,
 		"exp": time.Now().Add(time.Hour * 24).Unix(),
@@ -28,9 +34,9 @@ import (
 	return tokenString, nil
 }
 
-	token, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
 func VerifyToken(tokenString string) error {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return secret, nil
 	})
 
 	if err != nil {
@@ -45,5 +51,26 @@ func VerifyToken(tokenString string) error {
 }
 
 func HandleAuth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var u User
+	json.NewDecoder(r.Body).Decode(&u)
+	// TODO: Implement fetching from DB and matching hashed password
 	
-} 
+}
+
+func HandleRegister(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var u User
+	json.NewDecoder(r.Body).Decode(&u)	
+	
+	pass, err := bcrypt.GenerateFromPassword([]byte(u.Password), 14)
+	if err != nil {
+		fmt.Errorf("[AUT] [REG] Error while attempting to hash password", err)
+	}
+	fmt.Printf(string(pass))
+
+	//TODO: Implement database integration here. For this function, also
+	//      Save the login into Redis as the user is likely to try to login
+}
