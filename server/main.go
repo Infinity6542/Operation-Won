@@ -80,7 +80,7 @@ func main() {
 	}
 	
 	http.HandleFunc("/", router)
-	http.HandleFunc("/auth", handleAuth)
+	http.HandleFunc("/auth", HandleAuth)
 	http.ListenAndServe(":8000", nil)
 }
 
@@ -118,10 +118,6 @@ func router(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	connection.Close()
-}
-
-func handleAuth() {
-	
 }
 
 func handleSignal(message []byte) { 

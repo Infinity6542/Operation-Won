@@ -5,10 +5,8 @@ import (
 	"time"
 
 
-var secret := []byte("secret")
 
 // TODO: Make a proper implementation of JWTs
-func createToken(user string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,jwt.MapClaims{
 		"username": user,
 		"exp": time.Now().Add(time.Hour * 24).Unix(),
@@ -19,12 +17,12 @@ func createToken(user string) (string, error) {
 		return "NaN", err
 	}
 
-	return tokenString, nill
+	return tokenString, nil
 }
 
-func verifyToken(token string) error {
 	token, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
+func VerifyToken(tokenString string) error {
 	})
 
 	if err != nil {
@@ -38,6 +36,6 @@ func verifyToken(token string) error {
 	return nil
 }
 
-func handleLogin(w http.ResponseWriter, r *http.Request) {
+func HandleAuth(w http.ResponseWriter, r *http.Request) {
 	
 } 
