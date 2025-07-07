@@ -3,10 +3,11 @@ package main
 import (
 	"github.com/golang-jwt/jwt/v5"
 	"time"
-)
+
 
 var secret := []byte("secret")
 
+// TODO: Make a proper implementation of JWTs
 func createToken(user string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,jwt.MapClaims{
 		"username": user,

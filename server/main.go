@@ -127,7 +127,7 @@ func handleSignal(message []byte) {
 	switch msg[0] {
 	case "usr":
 		// usr currently only has the auth method, so no switch case in here.
-		
+		// TODO: Implement auth method from auth/auth.go
 		break
 	case "ch":
 		switch msg[1] {
