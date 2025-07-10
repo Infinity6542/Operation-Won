@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 
 	// "fmt"
 	// "os"
@@ -30,6 +29,7 @@ import (
 // 5. Run reading, writing and broadcasting (to UUID.e and distribute to clients)
 
 var upgrader = websocket.Upgrader{}
+var db *sql.DB
 
 func main() {
 	log.Println("Starting up...")
@@ -79,8 +79,9 @@ func main() {
 		log.Println("[LOG] [SRV] Connected to db")
 	}
 	
+	//* Begin listening for HTTP connections to upgrade
+	http.HandleFunc("/login", HandleAuth)
 	http.HandleFunc("/", router)
-	http.HandleFunc("/auth", HandleAuth)
 	http.ListenAndServe(":8000", nil)
 }
 

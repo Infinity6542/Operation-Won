@@ -5,9 +5,7 @@ import (
 	"time"
 	"net/http"
 	"fmt"
-	// "log"
 	"encoding/json"
-	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -55,11 +53,9 @@ func HandleAuth(w http.ResponseWriter, r *http.Request) {
 
 	var u User
 	json.NewDecoder(r.Body).Decode(&u)
-	// TODO: Implement fetching from DB and matching hashed password
-	
 }
 
-func HandleRegister(w http.ResponseWriter, r *http.Request) {
+func HandleRegister(w http.ResponseWriter, r *http.Request) (err error) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var u User
