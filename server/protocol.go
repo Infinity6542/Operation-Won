@@ -79,11 +79,4 @@ func (wsh handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func main() {
-	handler := handler{
-		upgrader: websocket.Upgrader{},
-	}
-	http.Handle("/", handler)
-	log.Print("Starting server")
-	log.Fatal(http.ListenAndServe("localhost:8080", nil))
-}
+
