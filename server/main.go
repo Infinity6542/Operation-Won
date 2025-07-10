@@ -65,12 +65,12 @@ func main() {
 	log.Println("[LOG] [SRV] Connecting to db")
 	fmt.Print("Enter the internal IP address of the mySQL database:")
 	fmt.Scan(&dbip)
+	var erro error
 	dsn := "root:yes@tcp(" + dbip + ":3306)/"
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		panic(err.Error())
+	db, erro = sql.Open("mysql", dsn)
+	if erro != nil {
+		panic(erro.Error())
 	}
-	defer db.Close()
 	// Verify the connection is valid
 	err = db.Ping()
 	if err != nil {
@@ -78,7 +78,7 @@ func main() {
 	} else {
 		log.Println("[LOG] [SRV] Connected to db")
 	}
-	
+
 	//* Begin listening for HTTP connections to upgrade
 	http.HandleFunc("/login", HandleAuth)
 	http.HandleFunc("/", router)
@@ -121,32 +121,13 @@ func router(w http.ResponseWriter, r *http.Request) {
 	connection.Close()
 }
 
-func handleSignal(message []byte) { 
-	msg := strings.Split(string(message), " ")
-	// Splitting the signals so that they can be handled accordingly
-	// Example of a signal would be "ch join" (user joining a channel)
-	// Underscores aren't used cos spaces are a bit more readable
- 	log.Printf("Message: %v\n", msg)
+func handleSignal(message []byte) {
+	log.Printf("[LOG] [SRV] Handling signal: %s", message)
+	// Here you would handle the signal, e.g., parse it, store it, etc.
+	// For now, just log it
+	// You can also implement logic to handle different types of signals
+	// and perform actions based on the content of the message.
 
-	switch msg[0] { 
-	case "ch":
-		// TODO: Implement everything here, refer to the flowcharts
-		switch msg[1] {
-		case "join":
-			break
-		case "leave":
-			break
-		case "emg":
-			break
-		}
-	case "ptt":
-		switch msg[1] {
-		case "start":
-			break
-		case "stop":
-			break
-		}
-	}
 }
 
 func handleBinary(message []byte) {

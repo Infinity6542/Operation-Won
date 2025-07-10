@@ -53,6 +53,30 @@ func HandleAuth(w http.ResponseWriter, r *http.Request) {
 
 	var u User
 	json.NewDecoder(r.Body).Decode(&u)
+	var hash string
+	err := db.QueryRow("SELECT hashed_password FROM users WHERE username = ?", u.Username).Scan(&hash)
+	if err != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		fmt.Printf("[AUT] [LGN] Something went wrong when searching for the user: %v", err)
+		return
+	}
+	auth := bcrypt.CompareHashAndPassword([]byte(hash), []byte(u.Password))
+	if auth != nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		fmt.Printf("[AUT] [LGN] Incorrect password for user %s", u.Username)
+		return
+	}
+
+	tokenString, err := CreateToken(u.Username)
+	if err != nil {
+		http.Error(w, "Token creation failed", http.StatusInternalServerError)
+		fmt.Printf("[AUT] [TKN] Failed to create a token for user %s: %v", u.Username, err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"token": tokenString,
+	})
 }
 
 func HandleRegister(w http.ResponseWriter, r *http.Request) (err error) {
@@ -63,10 +87,18 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) (err error) {
 	
 	pass, err := bcrypt.GenerateFromPassword([]byte(u.Password), 14)
 	if err != nil {
-		fmt.Errorf("[AUT] [REG] Error while attempting to hash password", err)
+		return fmt.Errorf("[AUT] [REG] Error while attempting to hash password: %v", err)
 	}
-	fmt.Printf(string(pass))
+
+	result, err := db.Exec("INSERT INTO users (username, hashed_password) VALUES (?, ?)", u.Username, pass)
+	if err != nil {
+		return fmt.Errorf("[AUT] [REG] Error while adding user to the database: %v", err)
+	} else {
+		fmt.Println(result.LastInsertId())
+	}
+
 
 	//TODO: Implement database integration here. For this function, also
 	//      Save the login into Redis as the user is likely to try to login
+	return nil
 }
