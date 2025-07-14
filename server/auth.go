@@ -1,12 +1,15 @@
 package main
 
 import (
-	"github.com/golang-jwt/jwt/v5"
-	"time"
-	"net/http"
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -15,6 +18,7 @@ var secret = []byte("secret")
 type User struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
+		Email string `json:"email"`
 }
 
 // TODO: Make a proper implementation of JWTs
@@ -52,11 +56,16 @@ func HandleAuth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var u User
-	json.NewDecoder(r.Body).Decode(&u)
+	jsonerr := json.NewDecoder(r.Body).Decode(&u)
+	if jsonerr != nil {
+		fmt.Println(jsonerr)
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
 	var hash string
 	err := db.QueryRow("SELECT hashed_password FROM users WHERE username = ?", u.Username).Scan(&hash)
 	if err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		http.Error(w, "Invalid username.", http.StatusUnauthorized)
 		fmt.Printf("[AUT] [LGN] Something went wrong when searching for the user: %v", err)
 		return
 	}
@@ -79,26 +88,49 @@ func HandleAuth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func HandleRegister(w http.ResponseWriter, r *http.Request) (err error) {
+func HandleRegister(w http.ResponseWriter, r *http.Request) { 
 	w.Header().Set("Content-Type", "application/json")
 
 	var u User
-	json.NewDecoder(r.Body).Decode(&u)	
+	defer r.Body.Close()
+	err := json.NewDecoder(r.Body).Decode(&u)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
 	
 	pass, err := bcrypt.GenerateFromPassword([]byte(u.Password), 14)
 	if err != nil {
-		return fmt.Errorf("[AUT] [REG] Error while attempting to hash password: %v", err)
+		fmt.Printf("[AUT] [REG] Error while attempting to hash password: %v", err)
+		return
 	}
+	
+	fmt.Println(u.Username, string(pass), u.Email)
 
-	result, err := db.Exec("INSERT INTO users (username, hashed_password) VALUES (?, ?)", u.Username, pass)
+	uuid := uuid.New().String()
+
+	result, err := db.Exec("INSERT INTO users (user_uuid, username, email, hashed_password) VALUES (?, ?, ?, ?)", uuid, u.Username, u.Email, string(pass))
 	if err != nil {
-		return fmt.Errorf("[AUT] [REG] Error while adding user to the database: %v", err)
+		fmt.Printf("[AUT] [REG] Error while adding user to the database: %v", err)
+		
+		code := err.(*mysql.MySQLError)
+
+		switch code.Number {
+		case 1046:
+			http.Error(w, "A field was too long.", http.StatusBadRequest)
+		case 1048:
+			http.Error(w, "A sent value cannot be empty.", http.StatusBadRequest)
+		case 1062:
+			http.Error(w, "The username is not unique.", http.StatusConflict)
+		default:
+			http.Error(w, "An internal error occurred.", http.StatusInternalServerError)
+		}
+		return
 	} else {
 		fmt.Println(result.LastInsertId())
 	}
 
-
-	//TODO: Implement database integration here. For this function, also
-	//      Save the login into Redis as the user is likely to try to login
-	return nil
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Registration successful."})
 }

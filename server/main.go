@@ -66,7 +66,7 @@ func main() {
 	fmt.Print("Enter the internal IP address of the mySQL database:")
 	fmt.Scan(&dbip)
 	var erro error
-	dsn := "root:yes@tcp(" + dbip + ":3306)/"
+	dsn := "root:yes@tcp(" + dbip + ":3306)/opwon"
 	db, erro = sql.Open("mysql", dsn)
 	if erro != nil {
 		panic(erro.Error())
@@ -80,8 +80,9 @@ func main() {
 	}
 
 	//* Begin listening for HTTP connections to upgrade
-	http.HandleFunc("/login", HandleAuth)
-	http.HandleFunc("/", router)
+	http.HandleFunc("/auth/login", HandleAuth)
+	http.HandleFunc("/auth/register", HandleRegister)
+	http.HandleFunc("/msg", router)
 	http.ListenAndServe(":8000", nil)
 }
 
