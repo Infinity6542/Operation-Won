@@ -28,6 +28,7 @@ import (
 // 4. If there is a new transmission, made new UUID, new file, new record and alert recipients
 // 5. Run reading, writing and broadcasting (to UUID.e and distribute to clients)
 
+//* Variables
 var upgrader = websocket.Upgrader{}
 var db *sql.DB
 
@@ -87,6 +88,7 @@ func main() {
 }
 
 func router(w http.ResponseWriter, r *http.Request) {
+	// TODO: Rewrite this to play better with hub
 	log.Println("[LOG] [SRV] Received HTTP request")
 	connection, err := upgrader.Upgrade(w, r, nil)
 
