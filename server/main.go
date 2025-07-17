@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	// "fmt"
 	// "os"
@@ -73,70 +74,27 @@ func main() {
 		panic(erro.Error())
 	}
 	// Verify the connection is valid
-	err = db.Ping()
-	if err != nil {
+	if err = db.Ping(); err != nil {
 		panic(err.Error())
 	} else {
 		log.Println("[LOG] [SRV] Connected to db")
 	}
 
+	if err := os.MkdirAll("./audio", os.ModePerm); err != nil {
+		log.Fatalf("[DIR] [CRT] Failed to create audio directory: %s", err)
+	}
+
+	//* Start the hub and run it
+	hub := NewHub()
+	go hub.Start()
+
 	//* Begin listening for HTTP connections to upgrade
 	http.HandleFunc("/auth/login", HandleAuth)
 	http.HandleFunc("/auth/register", HandleRegister)
-	http.HandleFunc("/msg", router)
+	http.HandleFunc("/msg", func (w http.ResponseWriter, r *http.Request) {
+		ServeWs(hub, w, r)
+	})
 	http.ListenAndServe(":8000", nil)
+	log.Println("[SVR] [CON] Server is now listening on port 8000")
 }
 
-func router(w http.ResponseWriter, r *http.Request) {
-	// TODO: Rewrite this to play better with hub
-	log.Println("[LOG] [SRV] Received HTTP request")
-	connection, err := upgrader.Upgrade(w, r, nil)
-
-	if err != nil {
-		log.Printf("[ERR] [SRV] Error upgrading connection: %v", err)
-		http.Error(w, "Could not upgrade connection", http.StatusInternalServerError)
-		return
-	} else {
-		log.Println("[LOG] [SRV] Upgraded HTTP connection to WebSocket")
-	}
-
-	for {
-		mtype, message, err := connection.ReadMessage()
-		log.Println("[LOG] [SRV] Read message from WebSocket")
-		log.Println(mtype)
-
-		if mtype == websocket.CloseMessage {
-			log.Println("[LOG] [SRV] Connection closed")
-			break
-		} else if err != nil {
-			log.Printf("[ERR] [SRV] Error reading message: %v", err)
-			break
-		} else {
-			switch mtype {
-			case websocket.TextMessage:
-				go handleSignal(message)
-			case websocket.BinaryMessage:
-				go handleBinary(message)
-			}
-			log.Printf("[LOG] [SRV] Received message: %s", message)
-		}
-	}
-	connection.Close()
-}
-
-func handleSignal(message []byte) {
-	log.Printf("[LOG] [SRV] Handling signal: %s", message)
-	// Here you would handle the signal, e.g., parse it, store it, etc.
-	// For now, just log it
-	// You can also implement logic to handle different types of signals
-	// and perform actions based on the content of the message.
-
-}
-
-func handleBinary(message []byte) {
-	log.Printf("[LOG] [SRV] Handling binary: %s", message)
-	// Here you would handle the signal, e.g., parse it, store it, etc.
-	// For now, just log it
-	// You can also implement logic to handle different types of signals
-	// and perform actions based on the content of the message.
-}

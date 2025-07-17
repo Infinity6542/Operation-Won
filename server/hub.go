@@ -4,20 +4,26 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
 	"sync"
 	"time"
-	"log"
+
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
 // * Structs
 type Client struct {
-	ID        int
+	ID        string
 	UserID    int
 	ChannelID string
 	hub       *Hub
 	conn      *websocket.Conn
 	send      chan []byte
+	isRecording bool
+	currentMessageeID string
 }
 
 type Message struct {
@@ -121,15 +127,102 @@ func (c *Client) readPump() {
 		}
 		switch messageType {
 		case websocket.TextMessage:
-			//TODO: Handle this
+			var s Signal
+			if err := json.Unmarshal(messageData, &s); err != nil {
+				log.Printf("[WBS] [MSG] Inavlid message from client %s: %v", c.ID, err)
+				continue
+			}
+			c.handleSignal(s)
 		case websocket.BinaryMessage:
-			//TODO: Handle this
+			if c.isRecording {
+				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageeID)
+				f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+				if err != nil {
+					log.Printf("[REC] [OPN] Failed to open file %s: $%v", file, err)
+					continue
+				}
+				if _, err := f.Write(messageData); err != nil {
+					log.Printf("[REC] [WRT] Failed to write to file %s: %v", file, err)
+					continue
+				}
+				f.Close()
+
+				msg := &Message{ChannelID:c.ChannelID,Data:messageData,Sender:c}
+				c.hub.broadcast <- msg
+			}
 		}
 	}
 }
 
 func (c *Client) handleSignal(s Signal) {
-	switch sig.Type {
+	switch s.Type {
 	case "ptt start":
+	case "ptt stop":
+	default:
+		log.Printf("[WBS] [SIG] Received unknown signal from client '%s', consider updating the server.", s.Type)
 	}
+}
+
+func (c *Client) writePump() {
+	ticker := time.NewTicker(pingInterval)
+	defer func() {
+		ticker.Stop()
+		c.conn.Close()
+	}()
+	for {
+		select {
+		case msg, ok := <- c.send:
+		c.conn.SetWriteDeadline(time.Now().Add(waitOnReceiving))
+		if !ok {
+			log.Println("[WBS] [WRT] Something went wrong!")
+			c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+			return
+		}
+		w, err := c.conn.NextWriter(websocket.BinaryMessage)
+		if err != nil {
+			log.Printf("[WBS] [WRT] Something went wrong while preparing the writer: %s", err)
+			return
+		}
+		w.Write(msg)
+		n := len(c.send)
+		for i := 0; i < n; i++ {
+			w.Write(<-c.send)
+		}
+		if err := w.Close(); err != nil {
+			log.Printf("[WBS] [CLS] Something went wrong while closing the WebSocket connection: %s", err)
+			return
+		}
+	case <- ticker.C:
+		c.conn.SetWriteDeadline(time.Now().Add(waitOnReceiving))
+		if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			log.Printf("[WBS] [PNG] Something went wrong with the client: %s", err)
+			return
+		}
+		}
+	}
+}
+
+func ServeWs (hub *Hub, w http.ResponseWriter, r *http.Request) {
+	channelID := r.URL.Query().Get("channel")
+	if channelID == "" {
+		http.Error(w, "Invalid Channel ID.", http.StatusBadRequest)
+		return
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("[WBS] [UPG] Error while upgrading HTTP to WebSockets: %s", err)
+	}
+
+	client := &Client {
+		ID: uuid.New().String(),
+		hub: hub,
+		conn: conn,
+		send: make(chan []byte, 256),
+		ChannelID: channelID,
+	}
+
+	hub.register <- client
+	go client.writePump()
+	go client.readPump()
 }

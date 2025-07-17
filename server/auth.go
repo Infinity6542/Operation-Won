@@ -13,7 +13,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var secret = []byte("secret")
+var secret = []byte("verymuchasecr3t")
 
 type User struct {
 		Username string `json:"username"`
