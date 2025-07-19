@@ -1,1 +1,188 @@
+# Operation Won - Project .gitignore
+
+# VS Code workspace files
 *.code-workspace
+
+# =============================================================================
+# GO-SPECIFIC FILES
+# =============================================================================
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+
+# Go workspace file
+go.work
+
+# Go mod cache
+go.sum
+
+# Air live reload tool
+tmp/
+
+# =============================================================================
+# FLUTTER/DART-SPECIFIC FILES
+# =============================================================================
+
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# =============================================================================
+# DEVELOPMENT & SYSTEM FILES
+# =============================================================================
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Log files
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =============================================================================
+# SECURITY & CONFIGURATION FILES
+# =============================================================================
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# API keys and secrets
+secrets/
+*.key
+*.pem
+*.p12
+*.crt
+*.cer
+config/secrets.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# PROJECT-SPECIFIC FILES
+# =============================================================================
+
+# API Documentation (local development only)
+API_DOCUMENTATION.md
+
+# Audio files (project generates these)
+server/audio/
+*.opus
+*.mp3
+*.wav
+*.m4a
+
+# Compiled binaries
+server/opwon_server
+server/main
+server/*.exe
+
+# Test coverage
+coverage.out
+coverage.html
+
+# Documentation builds
+/docs/build/
+
+# =============================================================================
+# DOCKER & DEPLOYMENT
+# =============================================================================
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Kubernetes
+*.yaml.bak
+*.yml.bak
+
+# =============================================================================
+# BACKUPS & ARCHIVES
+# =============================================================================
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Archive files
+*.tar
+*.tar.gz
+*.zip
+*.rar
+*.7z
