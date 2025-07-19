@@ -1,28 +1,28 @@
-// TODO: use log instead of fmt when logging
+// hub.go - WebSocket hub implementation for managing client connections and message broadcasting
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
 )
 
 // * Structs
 type Client struct {
-	ID        string
-	UserID    int
-	ChannelID string
-	hub       *Hub
-	conn      *websocket.Conn
-	send      chan []byte
-	isRecording bool
+	ID                string
+	UserID            int
+	ChannelID         string
+	hub               *Hub
+	conn              *websocket.Conn
+	send              chan []byte
+	isRecording       bool
 	currentMessageeID string
 }
 
@@ -32,30 +32,44 @@ type Message struct {
 	Sender    *Client
 }
 
+type ChannelChangeRequest struct {
+	Client       *Client
+	NewChannelID string
+}
+
 type Signal struct {
-	Type string `json:"type"`
+	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
 type Hub struct {
-	channels   map[string]map[*Client]bool
-	broadcast  chan *Message
-	register   chan *Client
-	unregister chan *Client
-	mu         sync.Mutex
+	channels      map[string]map[*Client]bool
+	broadcast     chan *Message
+	register      chan *Client
+	unregister    chan *Client
+	changeChannel chan *ChannelChangeRequest
+	mu            sync.Mutex
+	redis         *redis.Client
 }
 
-func NewHub() *Hub {
+type ChannelChange struct {
+	Client       *Client
+	NewChannelID string
+}
+
+func NewHub(redis *redis.Client) *Hub {
 	return &Hub{
-		channels:   make(map[string]map[*Client]bool),
-		broadcast:  make(chan *Message),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
+		channels:      make(map[string]map[*Client]bool),
+		broadcast:     make(chan *Message),
+		register:      make(chan *Client),
+		unregister:    make(chan *Client),
+		changeChannel: make(chan *ChannelChangeRequest),
+		redis:         redis,
 	}
 }
 
-func (h* Hub) Start() {
-	fmt.Println("[HUB] [INI] Starting the hub.")
+func (h *Hub) Start() {
+	log.Println("[HUB] [INI] Starting the hub.")
 	// There's probably a better way to do this... Perhaps this is what goroutines are for, will look into it
 	for {
 		select {
@@ -66,41 +80,85 @@ func (h* Hub) Start() {
 			}
 			h.channels[client.ChannelID][client] = true
 			h.mu.Unlock()
-			fmt.Printf("\n[HUB] [CNT] Client registeres to channel %s.", client.ChannelID)
+			log.Printf("[HUB] [CNT] Client registers to channel %s.", client.ChannelID)
 		case client := <-h.unregister:
-			h.mu.Lock()
-			if _, ok := h.channels[client.ChannelID]; !ok {
-				delete(h.channels[client.ChannelID], client)
-				close(client.send)
-				if len(h.channels[client.ChannelID]) == 0 {
-					delete(h.channels, client.ChannelID)
-				}
-			}
-			h.mu.Unlock()
-			fmt.Printf("\n[HUB] [LVE] Client left channel %s", client.ChannelID)
+			h.unregisterClient(client)
 		case message := <-h.broadcast:
-			h.mu.Lock()
-			channelClients := h.channels[message.ChannelID]
-			for client := range channelClients {
-				if client != message.Sender {
-					select {
-					case client.send <- message.Data:
-					default:
-						close(client.send)
-						delete(channelClients, client)
-					}
-				}
+			h.broadcastMsg(message)
+		case req := <-h.changeChannel:
+			h.switchChannel(req)
+		}
+	}
+}
+
+func (h *Hub) unregisterClient(c *Client) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	ctx := context.Background()
+
+	if room, ok := h.channels[c.ChannelID]; ok {
+		if _, ok := room[c]; ok {
+			if c.isRecording {
+				speakerLockKey := fmt.Sprintf("channel:%s:speaker", c.ChannelID)
+				h.redis.Del(ctx, speakerLockKey)
+				log.Printf("[HUB] [USR] Speaker lock for channel %s has been released due to unregistration", c.ChannelID)
+			}
+			delete(room, c)
+			close(c.send)
+			if len(room) == 0 {
+				delete(h.channels, c.ChannelID)
+				log.Printf("[HUB] [CHN] Channel %s is empty and closed", c.ChannelID)
+			}
+		}
+	}
+	log.Printf("[HUB] [USR] User %s has been unreigstered from channel %s", c.ID, c.ChannelID)
+}
+
+func (h *Hub) broadcastMsg(message *Message) {
+	h.mu.Lock()
+	channelClients := h.channels[message.ChannelID]
+	h.mu.Unlock()
+
+	for client := range channelClients {
+		if client != message.Sender {
+			select {
+			case client.send <- message.Data:
+			default:
+				close(client.send)
+				delete(channelClients, client)
 			}
 		}
 	}
 }
 
-//* WS handling
+func (h *Hub) switchChannel(req *ChannelChangeRequest) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	oldChannelID := req.Client.ChannelID
+
+	if oldRoom, ok := h.channels[req.Client.ChannelID]; ok {
+		delete(oldRoom, req.Client)
+		if len(oldRoom) == 0 {
+			delete(h.channels, req.Client.ChannelID)
+		}
+	}
+
+	req.Client.ChannelID = req.NewChannelID
+	if _, ok := h.channels[req.NewChannelID]; !ok {
+		h.channels[req.NewChannelID] = make(map[*Client]bool)
+	}
+	h.channels[req.NewChannelID][req.Client] = true
+	log.Printf("[HUB] [CHN] [MVE] User %s moved from channel %s to %s", req.Client.ID, oldChannelID, req.NewChannelID)
+}
+
+// * WS handling
 const (
-	maxMessageSize = 4096 // This should be editable sometime later (requires reload?)
-	pongWait = 30*time.Second
-	pingInterval = pongWait*9/10
-	waitOnReceiving = 10*time.Second
+	maxMessageSize  = 4096 // This should be editable sometime later (requires reload?)
+	pongWait        = 30 * time.Second
+	pingInterval    = pongWait * 9 / 10
+	waitOnReceiving = 10 * time.Second
 )
 
 func (c *Client) readPump() {
@@ -111,7 +169,7 @@ func (c *Client) readPump() {
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPingHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(pongWait));
+		c.conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 
@@ -147,7 +205,7 @@ func (c *Client) readPump() {
 				}
 				f.Close()
 
-				msg := &Message{ChannelID:c.ChannelID,Data:messageData,Sender:c}
+				msg := &Message{ChannelID: c.ChannelID, Data: messageData, Sender: c}
 				c.hub.broadcast <- msg
 			}
 		}
@@ -171,58 +229,33 @@ func (c *Client) writePump() {
 	}()
 	for {
 		select {
-		case msg, ok := <- c.send:
-		c.conn.SetWriteDeadline(time.Now().Add(waitOnReceiving))
-		if !ok {
-			log.Println("[WBS] [WRT] Something went wrong!")
-			c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-			return
-		}
-		w, err := c.conn.NextWriter(websocket.BinaryMessage)
-		if err != nil {
-			log.Printf("[WBS] [WRT] Something went wrong while preparing the writer: %s", err)
-			return
-		}
-		w.Write(msg)
-		n := len(c.send)
-		for i := 0; i < n; i++ {
-			w.Write(<-c.send)
-		}
-		if err := w.Close(); err != nil {
-			log.Printf("[WBS] [CLS] Something went wrong while closing the WebSocket connection: %s", err)
-			return
-		}
-	case <- ticker.C:
-		c.conn.SetWriteDeadline(time.Now().Add(waitOnReceiving))
-		if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-			log.Printf("[WBS] [PNG] Something went wrong with the client: %s", err)
-			return
-		}
+		case msg, ok := <-c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(waitOnReceiving))
+			if !ok {
+				log.Println("[WBS] [WRT] Something went wrong!")
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			w, err := c.conn.NextWriter(websocket.BinaryMessage)
+			if err != nil {
+				log.Printf("[WBS] [WRT] Something went wrong while preparing the writer: %s", err)
+				return
+			}
+			w.Write(msg)
+			n := len(c.send)
+			for i := 0; i < n; i++ {
+				w.Write(<-c.send)
+			}
+			if err := w.Close(); err != nil {
+				log.Printf("[WBS] [CLS] Something went wrong while closing the WebSocket connection: %s", err)
+				return
+			}
+		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(waitOnReceiving))
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("[WBS] [PNG] Something went wrong with the client: %s", err)
+				return
+			}
 		}
 	}
-}
-
-func ServeWs (hub *Hub, w http.ResponseWriter, r *http.Request) {
-	channelID := r.URL.Query().Get("channel")
-	if channelID == "" {
-		http.Error(w, "Invalid Channel ID.", http.StatusBadRequest)
-		return
-	}
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("[WBS] [UPG] Error while upgrading HTTP to WebSockets: %s", err)
-	}
-
-	client := &Client {
-		ID: uuid.New().String(),
-		hub: hub,
-		conn: conn,
-		send: make(chan []byte, 256),
-		ChannelID: channelID,
-	}
-
-	hub.register <- client
-	go client.writePump()
-	go client.readPump()
 }

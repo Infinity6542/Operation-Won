@@ -85,14 +85,18 @@ func main() {
 	}
 
 	//* Start the hub and run it
-	hub := NewHub()
+	hub := NewHub(client)
 	go hub.Start()
 
+	server := NewServer(hub, db, client)	 
+
 	//* Begin listening for HTTP connections to upgrade
-	http.HandleFunc("/auth/login", HandleAuth)
-	http.HandleFunc("/auth/register", HandleRegister)
+	http.HandleFunc("/auth/login", server.HandleAuth)
+	http.HandleFunc("/auth/register", server.HandleRegister)
+	http.Handle("/channels/create", server.Security(http.HandlerFunc(server.CreateChannel)))
+	http.Handle("/channels", server.Security(http.HandlerFunc(server.GetChannels)))
 	http.HandleFunc("/msg", func (w http.ResponseWriter, r *http.Request) {
-		ServeWs(hub, w, r)
+		server.ServeWs(hub, w, r)
 	})
 	http.ListenAndServe(":8000", nil)
 	log.Println("[SVR] [CON] Server is now listening on port 8000")
