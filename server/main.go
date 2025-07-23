@@ -95,6 +95,8 @@ func main() {
 	http.HandleFunc("/auth/register", server.HandleRegister)
 	http.Handle("/channels/create", server.Security(http.HandlerFunc(server.CreateChannel)))
 	http.Handle("/channels", server.Security(http.HandlerFunc(server.GetChannels)))
+	http.Handle("/events/create", server.Security(http.HandlerFunc(server.CreateEvent)))
+	http.Handle("/events", server.Security(http.HandlerFunc(server.GetEvents)))
 	http.HandleFunc("/msg", func (w http.ResponseWriter, r *http.Request) {
 		server.ServeWs(hub, w, r)
 	})

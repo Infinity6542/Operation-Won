@@ -53,6 +53,18 @@ type ChannelResponse struct {
 	EventUUID   *string `json:"event_uuid"`
 }
 
+type CrtEvent struct {
+	EventName        string `json:"event_name"`
+	EventDescription string `json:"event_description"`
+}
+
+type EventResponse struct {
+	EventUUID        string `json:"event_uuid"`
+	EventName        string `json:"event_name"`
+	EventDescription string `json:"event_description"`
+	IsOrganiser      bool   `json:"is_organiser"`
+}
+
 func NewServer(hub *Hub, db *sql.DB, redis *redis.Client) *Server {
 	return &Server{
 		hub:   hub,
@@ -351,4 +363,93 @@ func (s *Server) GetChannels(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(channels)
+}
+
+func (s *Server) CreateEvent(w http.ResponseWriter, r *http.Request) {
+	uid, ok := r.Context().Value(userIDKey).(int)
+	if !ok {
+		http.Error(w, "Failed to find user.", http.StatusInternalServerError)
+		return
+	}
+
+	var payload CrtEvent
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid request.", http.StatusBadRequest)
+		return
+	}
+	if payload.EventName == "" {
+		http.Error(w, "Event name is required.", http.StatusBadRequest)
+		return
+	}
+
+	var eventUUID = uuid.New().String()
+	var lastInsertID int64
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		http.Error(w, "Database error.", http.StatusInternalServerError)
+		return
+	}
+
+	// Create the event
+	res, err := tx.Exec("INSERT INTO events (event_uuid, event_name, event_description, organiser_user_id) VALUES (?, ?, ?, ?)",
+		eventUUID, payload.EventName, payload.EventDescription, uid)
+	if err != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to create event.", http.StatusInternalServerError)
+		return
+	}
+
+	lastInsertID, _ = res.LastInsertId()
+
+	// Add the creator as an event member with 'organiser' role
+	_, err = tx.Exec("INSERT INTO event_members (event_id, user_id, role) VALUES (?, ?, 'organiser')",
+		lastInsertID, uid)
+	if err != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to add creator to event.", http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "Failed to create event.", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[EVT] [CRT] %d created event %s", uid, payload.EventName)
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Event created successfully", "event_uuid": eventUUID})
+}
+
+func (s *Server) GetEvents(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	uid, _ := r.Context().Value(userIDKey).(int)
+
+	query := `SELECT e.event_uuid, e.event_name, e.event_description, 
+			  CASE WHEN e.organiser_user_id = ? THEN true ELSE false END as is_organiser
+			  FROM events e 
+			  INNER JOIN event_members em ON e.id = em.event_id 
+			  WHERE em.user_id = ?`
+
+	rows, err := s.db.Query(query, uid, uid)
+	if err != nil {
+		log.Printf("[EVT] [GET] Failed to get event list for user %d: %v", uid, err)
+		http.Error(w, "Failed to get event list for user", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var events []EventResponse
+	for rows.Next() {
+		var ev EventResponse
+		if err := rows.Scan(&ev.EventUUID, &ev.EventName, &ev.EventDescription, &ev.IsOrganiser); err != nil {
+			log.Printf("[EVT] [DTB] Failed to scan event row: %v", err)
+			continue
+		}
+		events = append(events, ev)
+	}
+
+	json.NewEncoder(w).Encode(events)
 }

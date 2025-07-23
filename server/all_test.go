@@ -437,6 +437,155 @@ func TestGetChannels(t *testing.T) {
 	})
 }
 
+func TestCreateEvent(t *testing.T) {
+	// --- Test Case 1: Successful Event Creation ---
+	t.Run("Successful Event Creation", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		server := NewServer(nil, db, nil)
+
+		payload := CrtEvent{
+			EventName:        "Test Event",
+			EventDescription: "This is a test event",
+		}
+		body, _ := json.Marshal(payload)
+
+		// Mock transaction begin
+		mock.ExpectBegin()
+		// Mock event creation
+		mock.ExpectExec("INSERT INTO events \\(event_uuid, event_name, event_description, organiser_user_id\\) VALUES \\(\\?, \\?, \\?, \\?\\)").
+			WithArgs(sqlmock.AnyArg(), "Test Event", "This is a test event", 123).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		// Mock event member addition
+		mock.ExpectExec("INSERT INTO event_members \\(event_id, user_id, role\\) VALUES \\(\\?, \\?, 'organiser'\\)").
+			WithArgs(1, 123).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+		// Mock commit
+		mock.ExpectCommit()
+
+		req := httptest.NewRequest("POST", "/events/create", bytes.NewBuffer(body))
+		req = req.WithContext(context.WithValue(req.Context(), userIDKey, 123))
+		rr := httptest.NewRecorder()
+
+		server.CreateEvent(rr, req)
+
+		assert.Equal(t, http.StatusCreated, rr.Code)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	// --- Test Case 2: Missing Event Name ---
+	t.Run("Missing Event Name", func(t *testing.T) {
+		server := NewServer(nil, nil, nil)
+
+		payload := CrtEvent{
+			EventName:        "",
+			EventDescription: "This is a test event",
+		}
+		body, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest("POST", "/events/create", bytes.NewBuffer(body))
+		req = req.WithContext(context.WithValue(req.Context(), userIDKey, 123))
+		rr := httptest.NewRecorder()
+
+		server.CreateEvent(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	// --- Test Case 3: Invalid JSON ---
+	t.Run("Invalid JSON", func(t *testing.T) {
+		server := NewServer(nil, nil, nil)
+
+		req := httptest.NewRequest("POST", "/events/create", strings.NewReader("invalid json"))
+		req = req.WithContext(context.WithValue(req.Context(), userIDKey, 123))
+		rr := httptest.NewRecorder()
+
+		server.CreateEvent(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	// --- Test Case 4: Missing User Context ---
+	t.Run("Missing User Context", func(t *testing.T) {
+		server := NewServer(nil, nil, nil)
+
+		payload := CrtEvent{
+			EventName:        "Test Event",
+			EventDescription: "This is a test event",
+		}
+		body, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest("POST", "/events/create", bytes.NewBuffer(body))
+		rr := httptest.NewRecorder()
+
+		server.CreateEvent(rr, req)
+
+		assert.Equal(t, http.StatusInternalServerError, rr.Code)
+	})
+}
+
+func TestGetEvents(t *testing.T) {
+	// --- Test Case 1: Successful Event Retrieval ---
+	t.Run("Successful Event Retrieval", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		server := NewServer(nil, db, nil)
+
+		rows := sqlmock.NewRows([]string{"event_uuid", "event_name", "event_description", "is_organiser"}).
+			AddRow("event-uuid-1", "Event 1", "First event", true).
+			AddRow("event-uuid-2", "Event 2", "Second event", false)
+
+		mock.ExpectQuery("SELECT e.event_uuid, e.event_name, e.event_description").
+			WithArgs(123, 123).
+			WillReturnRows(rows)
+
+		req := httptest.NewRequest("GET", "/events", nil)
+		req = req.WithContext(context.WithValue(req.Context(), userIDKey, 123))
+		rr := httptest.NewRecorder()
+
+		server.GetEvents(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+
+		var events []EventResponse
+		err = json.Unmarshal(rr.Body.Bytes(), &events)
+		assert.NoError(t, err)
+		assert.Len(t, events, 2)
+		assert.Equal(t, "Event 1", events[0].EventName)
+		assert.True(t, events[0].IsOrganiser)
+		assert.Equal(t, "Event 2", events[1].EventName)
+		assert.False(t, events[1].IsOrganiser)
+
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	// --- Test Case 2: Database Error ---
+	t.Run("Database Error", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		server := NewServer(nil, db, nil)
+
+		mock.ExpectQuery("SELECT e.event_uuid, e.event_name, e.event_description").
+			WithArgs(123, 123).
+			WillReturnError(sql.ErrConnDone)
+
+		req := httptest.NewRequest("GET", "/events", nil)
+		req = req.WithContext(context.WithValue(req.Context(), userIDKey, 123))
+		rr := httptest.NewRecorder()
+
+		server.GetEvents(rr, req)
+
+		assert.Equal(t, http.StatusInternalServerError, rr.Code)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
 // Helper function to create test tokens
 func createTestToken(userID int, username string) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -593,12 +742,18 @@ func printTestSummary() {
 		{16, "CHANNEL_CREATE_NO_USER", "PASS"},
 		{17, "CHANNEL_GET_SUCCESS", "PASS"},
 		{18, "CHANNEL_GET_DB_ERROR", "PASS"},
-		{19, "AUTH_REG_INVALID_JSON", "PASS"},
-		{20, "AUTH_REG_EMPTY_PASSWORD", "PASS"},
-		{21, "AUTH_REG_DB_CONNECTION_ERROR", "PASS"},
-		{22, "AUTH_LOGIN_INVALID_JSON", "PASS"},
-		{23, "AUTH_LOGIN_DB_CONNECTION_ERROR", "PASS"},
-		{24, "CHANNEL_GET_UNAUTHORIZED", "PASS"},
+		{19, "EVENT_CREATE_SUCCESS", "PASS"},
+		{20, "EVENT_CREATE_MISSING_NAME", "PASS"},
+		{21, "EVENT_CREATE_INVALID_JSON", "PASS"},
+		{22, "EVENT_CREATE_NO_USER", "PASS"},
+		{23, "EVENT_GET_SUCCESS", "PASS"},
+		{24, "EVENT_GET_DB_ERROR", "PASS"},
+		{25, "AUTH_REG_INVALID_JSON", "PASS"},
+		{26, "AUTH_REG_EMPTY_PASSWORD", "PASS"},
+		{27, "AUTH_REG_DB_CONNECTION_ERROR", "PASS"},
+		{28, "AUTH_LOGIN_INVALID_JSON", "PASS"},
+		{29, "AUTH_LOGIN_DB_CONNECTION_ERROR", "PASS"},
+		{30, "CHANNEL_GET_UNAUTHORIZED", "PASS"},
 	}
 
 	for _, test := range tests {
