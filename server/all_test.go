@@ -556,10 +556,10 @@ func TestHandleAuthEdgeCases(t *testing.T) {
 func TestMain(m *testing.M) {
 	// Run all tests
 	code := m.Run()
-	
+
 	// Print test summary after all tests complete
 	printTestSummary()
-	
+
 	// Exit with the same code as the tests
 	os.Exit(code)
 }
@@ -568,11 +568,11 @@ func printTestSummary() {
 	fmt.Println("\n" + strings.Repeat("=", 70))
 	fmt.Println("OPERATION WON - TEST SUMMARY")
 	fmt.Println(strings.Repeat("=", 70))
-	
+
 	// Test results in simple format
 	tests := []struct {
-		id   int
-		name string
+		id     int
+		name   string
 		status string
 	}{
 		{1, "AUTH_REG_VALID", "PASS"},
@@ -600,11 +600,11 @@ func printTestSummary() {
 		{23, "AUTH_LOGIN_DB_CONNECTION_ERROR", "PASS"},
 		{24, "CHANNEL_GET_UNAUTHORIZED", "PASS"},
 	}
-	
+
 	for _, test := range tests {
 		fmt.Printf("TEST %2d %-35s %s\n", test.id, test.name, test.status)
 	}
-	
+
 	fmt.Println(strings.Repeat("=", 70))
 	fmt.Printf("TOTAL: %d tests | PASSED: %d | FAILED: 0\n", len(tests), len(tests))
 	fmt.Println(strings.Repeat("=", 70))

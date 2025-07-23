@@ -139,6 +139,9 @@ config/secrets.json
 # API Documentation (local development only)
 API_DOCUMENTATION.md
 
+# Test Summary (local development only)
+TEST_SUMMARY.md
+
 # Audio files (project generates these)
 server/audio/
 *.opus
