@@ -1,0 +1,70 @@
+import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import '../models/channel_model.dart';
+
+class ChannelProvider extends ChangeNotifier {
+  final ApiService _apiService = ApiService();
+
+  List<ChannelResponse> _channels = [];
+  bool _isLoading = false;
+  String? _error;
+
+  List<ChannelResponse> get channels => _channels;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  Future<void> loadChannels() async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      _channels = await _apiService.getChannels();
+      _setLoading(false);
+    } catch (e) {
+      _setError(e.toString());
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> createChannel(String channelName, {String? eventUuid}) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      await _apiService.createChannel(channelName, eventUuid: eventUuid);
+      await loadChannels(); // Refresh the list
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setError(e.toString());
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  List<ChannelResponse> getChannelsForEvent(String? eventUuid) {
+    if (eventUuid == null) {
+      return _channels.where((channel) => channel.eventUuid == null).toList();
+    }
+    return _channels
+        .where((channel) => channel.eventUuid == eventUuid)
+        .toList();
+  }
+
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setError(String error) {
+    _error = error;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  void clearError() => _clearError();
+}

@@ -1,23 +1,174 @@
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:flutter/material.dart';
-import 'screens/home_screen_fully_simplified.dart';
+import 'package:provider/provider.dart';
+import 'package:operation_won/comms_state.dart';
+import 'package:operation_won/globals/app_state.dart';
+import 'package:operation_won/channel.dart';
+import 'package:operation_won/pages/auth_page.dart';
+import 'package:operation_won/pages/home_page.dart';
+import 'package:operation_won/pages/splash.dart';
+import 'package:operation_won/providers/auth_provider.dart';
+import 'package:operation_won/providers/event_provider.dart';
+import 'package:operation_won/providers/channel_provider.dart';
 
-void main() {
+@NowaGenerated()
+late final SharedPreferences sharedPrefs;
+
+@NowaGenerated()
+main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+
+  try {
+    sharedPrefs = await SharedPreferences.getInstance();
+    runApp(const MyApp());
+  } catch (e) {
+    print('Error initializing app: $e');
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Text('Error initializing app: $e'),
+        ),
+      ),
+    ));
+  }
 }
 
+@NowaGenerated({'visibleInNowa': false})
 class MyApp extends StatelessWidget {
+  @NowaGenerated({'loader': 'auto-constructor'})
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Operation Won PoC',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<CommsState>(
+          create: (context) => CommsState(),
+        ),
+        ChangeNotifierProvider<AppState>(
+          create: (context) => AppState(),
+        ),
+        ChangeNotifierProvider<AuthProvider>(
+          create: (context) => AuthProvider(),
+        ),
+        ChangeNotifierProvider<EventProvider>(
+          create: (context) => EventProvider(),
+        ),
+        ChangeNotifierProvider<ChannelProvider>(
+          create: (context) => ChannelProvider(),
+        ),
+      ],
+      child: Consumer<AppState>(
+        builder: (context, appState, child) {
+          print('App State loaded: ${appState.theme}');
+
+          return MaterialApp(
+            title: 'Operation Won',
+            debugShowCheckedModeBanner: false,
+            theme: appState.theme,
+            home: const AuthenticationFlow(),
+            routes: {
+              'Channel': (context) => const Channel(),
+              'AuthPage': (context) => const AuthPage(),
+              'HomePage': (context) => const HomePage(),
+              'Splash': (context) => const Splash(),
+            },
+          );
+        },
       ),
-      home: const HomeScreenFullySimplified(),
+    );
+  }
+}
+
+class AuthenticationFlow extends StatelessWidget {
+  const AuthenticationFlow({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        print(
+            'AuthenticationFlow: isLoading=${authProvider.isLoading}, isLoggedIn=${authProvider.isLoggedIn}, error=${authProvider.error}');
+
+        // Show error if there's one
+        if (authProvider.error != null) {
+          return Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            body: Center(
+              child: Card(
+                margin: const EdgeInsets.all(24),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Theme.of(context).colorScheme.error,
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Connection Error',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        authProvider.error!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        onPressed: () {
+                          authProvider.clearError();
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Try Again'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        // Show loading screen while initializing
+        if (authProvider.isLoading) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF0F172A),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Color(0xff59dafb),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading...',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Show home page if logged in
+        if (authProvider.isLoggedIn) {
+          return const HomePage();
+        }
+
+        // Show auth page if not logged in
+        return const AuthPage();
+      },
     );
   }
 }

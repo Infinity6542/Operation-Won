@@ -1,4 +1,4 @@
-package com.example.client
+package com.example.operation_won
 
 import io.flutter.embedding.android.FlutterActivity
 
