@@ -1,29 +1,29 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:nowa_runtime/nowa_runtime.dart';
+import 'package:operation_won/channel.dart';
 import 'package:operation_won/comms_state.dart';
 import 'package:operation_won/globals/app_state.dart';
-import 'package:operation_won/channel.dart';
 import 'package:operation_won/pages/auth_page.dart';
 import 'package:operation_won/pages/home_page.dart';
 import 'package:operation_won/pages/splash.dart';
 import 'package:operation_won/providers/auth_provider.dart';
-import 'package:operation_won/providers/event_provider.dart';
 import 'package:operation_won/providers/channel_provider.dart';
+import 'package:operation_won/providers/event_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 @NowaGenerated()
 late final SharedPreferences sharedPrefs;
 
 @NowaGenerated()
-main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
     sharedPrefs = await SharedPreferences.getInstance();
     runApp(const MyApp());
   } catch (e) {
-    print('Error initializing app: $e');
+    debugPrint('Error initializing app: $e');
     runApp(MaterialApp(
       home: Scaffold(
         body: Center(
@@ -61,7 +61,7 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer<AppState>(
         builder: (context, appState, child) {
-          print('App State loaded: ${appState.theme}');
+          debugPrint('App State loaded: ${appState.theme}');
 
           return MaterialApp(
             title: 'Operation Won',
@@ -88,7 +88,7 @@ class AuthenticationFlow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        print(
+        debugPrint(
             'AuthenticationFlow: isLoading=${authProvider.isLoading}, isLoggedIn=${authProvider.isLoggedIn}, error=${authProvider.error}');
 
         // Show error if there's one

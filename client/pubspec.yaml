@@ -1,5 +1,5 @@
 name: operation_won
-description: A new Nowa project.
+description: an app i suppose
 publish_to: none
 version: 1.0.0+1
 environment:
@@ -8,16 +8,16 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  nowa_runtime: ^0.0.44
+  dio: ^5.5.0+1
   flutter_html: ^3.0.0-beta.2
   flutter_svg: ^2.0.7
+  nowa_runtime: ^0.0.44
   provider: ^6.1.1
   shared_preferences: ^2.2.3
-  dio: ^5.5.0+1
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^6.0.0
 flutter:
   uses-material-design: true
   assets:

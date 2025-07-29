@@ -85,24 +85,26 @@ func (s *Server) HandleAuth(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	var payload AuthPayload
-	err := json.NewDecoder(r.Body).Decode(&payload)
-	if err != nil {
-		fmt.Println(err)
+	e := json.NewDecoder(r.Body).Decode(&payload)
+	if e != nil {
+		fmt.Println(e)
 		http.Error(w, "Invalid body", http.StatusBadRequest)
 		return
 	}
+
 	var hash string
 	var uid int
 	var username string
-	if err := s.db.QueryRow("SELECT id, username, hashed_password FROM users WHERE email = ?", payload.Email).Scan(&uid, &username, &hash); err != nil {
-		if err == sql.ErrNoRows {
+	if e := s.db.QueryRow("SELECT id, username, hashed_password FROM users WHERE email = ?", payload.Email).Scan(&uid, &username, &hash); e != nil {
+		if e == sql.ErrNoRows {
 			http.Error(w, "Invalid credentials.", http.StatusUnauthorized)
 			return
 		}
-		fmt.Printf("[AUT] [LGN] Something went wrong when searching for the user: %v\n", err)
+		fmt.Printf("[AUT] [LGN] Something went wrong when searching for the user: %v\n", e)
 		http.Error(w, "Invalid username.", http.StatusUnauthorized)
 		return
 	}
+
 	auth := bcrypt.CompareHashAndPassword([]byte(hash), []byte(payload.Password))
 	if auth != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
@@ -116,9 +118,9 @@ func (s *Server) HandleAuth(w http.ResponseWriter, r *http.Request) {
 		"exp":      time.Now().Add(time.Hour * 48).Unix(),
 	})
 
-	tokenString, err := token.SignedString(secret)
-	if err != nil {
-		log.Printf("[AUT] [TKN] Failed to create a token: %s", err)
+	tokenString, e := token.SignedString(secret)
+	if e != nil {
+		log.Printf("[AUT] [TKN] Failed to create a token: %s", e)
 		http.Error(w, "Failed to create the token.", http.StatusInternalServerError)
 		return
 	}
@@ -130,9 +132,9 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var payload AuthPayload
-	err := json.NewDecoder(r.Body).Decode(&payload)
-	if err != nil {
-		fmt.Println(err)
+	e := json.NewDecoder(r.Body).Decode(&payload)
+	if e != nil {
+		fmt.Println(e)
 		http.Error(w, "Invalid body", http.StatusBadRequest)
 		return
 	}
@@ -150,21 +152,21 @@ func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pass, err := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
-	if err != nil {
-		fmt.Printf("[AUT] [REG] Error while attempting to hash password: %v", err)
+	pass, e := bcrypt.GenerateFromPassword([]byte(payload.Password), bcrypt.DefaultCost)
+	if e != nil {
+		fmt.Printf("[AUT] [REG] Error while attempting to hash password: %v", e)
 		http.Error(w, "Failed to process request.", http.StatusInternalServerError)
 		return
 	}
 
 	uuid := uuid.New().String()
 
-	result, err := s.db.Exec("INSERT INTO users (user_uuid, username, email, hashed_password) VALUES (?, ?, ?, ?)", uuid, payload.Username, payload.Email, string(pass))
-	if err != nil {
-		fmt.Printf("[AUT] [REG] Error while adding user to the database: %v\n", err)
+	result, e := s.db.Exec("INSERT INTO users (user_uuid, username, email, hashed_password) VALUES (?, ?, ?, ?)", uuid, payload.Username, payload.Email, string(pass))
+	if e != nil {
+		fmt.Printf("[AUT] [REG] Error while adding user to the database: %v\n", e)
 
 		// Check if it's a MySQL error before casting
-		if mysqlErr, ok := err.(*mysql.MySQLError); ok {
+		if mysqlErr, ok := e.(*mysql.MySQLError); ok {
 			switch mysqlErr.Number {
 			case 1046:
 				http.Error(w, "A field was too long.", http.StatusBadRequest)
@@ -195,10 +197,10 @@ func (s *Server) ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	}
 
 	claims := &jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	token, e := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return secret, nil
 	})
-	if err != nil || !token.Valid {
+	if e != nil || !token.Valid {
 		http.Error(w, "Invalid token.", http.StatusUnauthorized)
 		return
 	}
@@ -212,9 +214,9 @@ func (s *Server) ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("[WBS] [UPG] Error while upgrading HTTP to WebSockets: %s", err)
+	conn, e := upgrader.Upgrade(w, r, nil)
+	if e != nil {
+		log.Printf("[WBS] [UPG] Error while upgrading HTTP to WebSockets: %s", e)
 	}
 
 	client := &Client{
@@ -238,15 +240,17 @@ func (s *Server) Security(next http.Handler) http.Handler {
 			http.Error(w, "Invalid authentication.", http.StatusUnauthorized)
 			return
 		}
+
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		if tokenString == authHeader {
 			http.Error(w, "Invalid token format.", http.StatusUnauthorized)
 		}
+
 		claims := &jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		token, e := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return secret, nil
 		})
-		if err != nil || !token.Valid {
+		if e != nil || !token.Valid {
 			http.Error(w, "Something went wrong with the authorisation token.", http.StatusUnauthorized)
 		}
 
@@ -264,7 +268,7 @@ func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload CrtChannel
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	if e := json.NewDecoder(r.Body).Decode(&payload); e != nil {
 		http.Error(w, "Invalid request.", http.StatusBadRequest)
 		return
 	}
@@ -276,8 +280,8 @@ func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
 	var channelUUID = uuid.New().String()
 	var lastInsertID int64
 
-	tx, err := s.db.Begin()
-	if err != nil {
+	tx, e := s.db.Begin()
+	if e != nil {
 		http.Error(w, "Database error.", http.StatusInternalServerError)
 		return
 	}
@@ -285,10 +289,10 @@ func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
 	// Event
 	if payload.EventUUID != nil && *payload.EventUUID != "" {
 		var eventID int
-		err := tx.QueryRow("SELECT id FROM events WHERE event_uuid = ? AND organiser_user_id = ?", *payload.EventUUID, uid).Scan(&eventID)
-		if err != nil {
+		e := tx.QueryRow("SELECT id FROM events WHERE event_uuid = ? AND organiser_user_id = ?", *payload.EventUUID, uid).Scan(&eventID)
+		if e != nil {
 			tx.Rollback()
-			if err == sql.ErrNoRows {
+			if e == sql.ErrNoRows {
 				http.Error(w, "Event not found or you are not the organiser.", http.StatusForbidden)
 				return
 			}
@@ -296,33 +300,33 @@ func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id) VALUES (?, ?, ?)",
+		_, e = tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id) VALUES (?, ?, ?)",
 			channelUUID, payload.ChannelName, eventID)
-		if err != nil {
+		if e != nil {
 			tx.Rollback()
 			http.Error(w, "Failed to create channel.", http.StatusInternalServerError)
 			return
 		}
 
 	} else { // No event
-		res, err := tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id) VALUES (?, ?, NULL)",
+		res, e := tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id) VALUES (?, ?, NULL)",
 			channelUUID, payload.ChannelName)
-		if err != nil {
+		if e != nil {
 			tx.Rollback()
 			http.Error(w, "Failed to create channel.", http.StatusInternalServerError)
 			return
 		}
 		lastInsertID, _ = res.LastInsertId()
-		_, err = tx.Exec("INSERT INTO channel_members (channel_id, user_id, role) VALUES (?, ?, 'admin')",
+		_, e = tx.Exec("INSERT INTO channel_members (channel_id, user_id, role) VALUES (?, ?, 'admin')",
 			lastInsertID, uid)
-		if err != nil {
+		if e != nil {
 			tx.Rollback()
 			http.Error(w, "Failed to add creator to channel.", http.StatusInternalServerError)
 			return
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
+	if e := tx.Commit(); e != nil {
 		http.Error(w, "Failed to create channel.", http.StatusInternalServerError)
 		return
 	}
@@ -340,9 +344,9 @@ func (s *Server) GetChannels(w http.ResponseWriter, r *http.Request) {
 
 	query := `SELECT c.channel_uuid, c.channel_name, e.event_uuid FROM channels c LEFT JOIN events e ON c.event_id = e.id LEFT JOIN event_members em ON e.id = em.event.id LEFT JOIN channel_members cm ON c.id = cm.channel_id WHERE em.user_id = ? OR cm.user_id = ?`
 
-	rows, err := s.db.Query(query, uid, uid)
-	if err != nil {
-		log.Printf("[CHN] [GET] Failed to get channel list for user %d: %v", uid, err)
+	rows, e := s.db.Query(query, uid, uid)
+	if e != nil {
+		log.Printf("[CHN] [GET] Failed to get channel list for user %d: %v", uid, e)
 		http.Error(w, "Failed to get channel list for user", http.StatusInternalServerError)
 		return
 	}
@@ -352,8 +356,8 @@ func (s *Server) GetChannels(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var ch ChannelResponse
 		var eventUUID sql.NullString
-		if err := rows.Scan(&ch.ChannelUUID, &ch.ChannelName, &eventUUID); err != nil {
-			log.Printf("[CHN] [DTB] Failed to scan channel row: %v", err)
+		if e := rows.Scan(&ch.ChannelUUID, &ch.ChannelName, &eventUUID); e != nil {
+			log.Printf("[CHN] [DTB] Failed to scan channel row: %v", e)
 			continue
 		}
 		if eventUUID.Valid {
@@ -373,7 +377,7 @@ func (s *Server) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload CrtEvent
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	if e := json.NewDecoder(r.Body).Decode(&payload); e != nil {
 		http.Error(w, "Invalid request.", http.StatusBadRequest)
 		return
 	}
@@ -385,16 +389,16 @@ func (s *Server) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	var eventUUID = uuid.New().String()
 	var lastInsertID int64
 
-	tx, err := s.db.Begin()
-	if err != nil {
+	tx, e := s.db.Begin()
+	if e != nil {
 		http.Error(w, "Database error.", http.StatusInternalServerError)
 		return
 	}
 
 	// Create the event
-	res, err := tx.Exec("INSERT INTO events (event_uuid, event_name, event_description, organiser_user_id) VALUES (?, ?, ?, ?)",
+	res, e := tx.Exec("INSERT INTO events (event_uuid, event_name, event_description, organiser_user_id) VALUES (?, ?, ?, ?)",
 		eventUUID, payload.EventName, payload.EventDescription, uid)
-	if err != nil {
+	if e != nil {
 		tx.Rollback()
 		http.Error(w, "Failed to create event.", http.StatusInternalServerError)
 		return
@@ -403,15 +407,15 @@ func (s *Server) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	lastInsertID, _ = res.LastInsertId()
 
 	// Add the creator as an event member with 'organiser' role
-	_, err = tx.Exec("INSERT INTO event_members (event_id, user_id, role) VALUES (?, ?, 'organiser')",
+	_, e = tx.Exec("INSERT INTO event_members (event_id, user_id, role) VALUES (?, ?, 'organiser')",
 		lastInsertID, uid)
-	if err != nil {
+	if e != nil {
 		tx.Rollback()
 		http.Error(w, "Failed to add creator to event.", http.StatusInternalServerError)
 		return
 	}
 
-	if err := tx.Commit(); err != nil {
+	if e := tx.Commit(); e != nil {
 		http.Error(w, "Failed to create event.", http.StatusInternalServerError)
 		return
 	}
@@ -433,9 +437,9 @@ func (s *Server) GetEvents(w http.ResponseWriter, r *http.Request) {
 			  INNER JOIN event_members em ON e.id = em.event_id 
 			  WHERE em.user_id = ?`
 
-	rows, err := s.db.Query(query, uid, uid)
-	if err != nil {
-		log.Printf("[EVT] [GET] Failed to get event list for user %d: %v", uid, err)
+	rows, e := s.db.Query(query, uid, uid)
+	if e != nil {
+		log.Printf("[EVT] [GET] Failed to get event list for user %d: %v", uid, e)
 		http.Error(w, "Failed to get event list for user", http.StatusInternalServerError)
 		return
 	}
@@ -444,8 +448,8 @@ func (s *Server) GetEvents(w http.ResponseWriter, r *http.Request) {
 	var events []EventResponse
 	for rows.Next() {
 		var ev EventResponse
-		if err := rows.Scan(&ev.EventUUID, &ev.EventName, &ev.EventDescription, &ev.IsOrganiser); err != nil {
-			log.Printf("[EVT] [DTB] Failed to scan event row: %v", err)
+		if e := rows.Scan(&ev.EventUUID, &ev.EventName, &ev.EventDescription, &ev.IsOrganiser); e != nil {
+			log.Printf("[EVT] [DTB] Failed to scan event row: %v", e)
 			continue
 		}
 		events = append(events, ev)

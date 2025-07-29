@@ -1,4 +1,4 @@
-// hub.go - WebSocket hub implementation for managing client connections and message broadcasting
+// WebSocket hub implementation for managing client connections and message broadcasting
 package main
 
 import (
@@ -14,7 +14,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// * Structs
+// Structs
 type Client struct {
 	ID                string
 	UserID            int
@@ -153,7 +153,7 @@ func (h *Hub) switchChannel(req *ChannelChangeRequest) {
 	log.Printf("[HUB] [CHN] [MVE] User %s moved from channel %s to %s", req.Client.ID, oldChannelID, req.NewChannelID)
 }
 
-// * WS handling
+// WebSocket handling constants
 const (
 	maxMessageSize  = 4096 // This should be editable sometime later (requires reload?)
 	pongWait        = 30 * time.Second
@@ -174,33 +174,33 @@ func (c *Client) readPump() {
 	})
 
 	for {
-		messageType, messageData, err := c.conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("[WBS] [CLI] Client unexpectedly closed the connection: %v", err)
+		messageType, messageData, e := c.conn.ReadMessage()
+		if e != nil {
+			if websocket.IsUnexpectedCloseError(e, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("[WBS] [CLI] Client unexpectedly closed the connection: %v", e)
 			} else {
-				log.Printf("[WBS] [RED] Something went wrong while reading the WebSocket message: %v", err)
+				log.Printf("[WBS] [RED] Something went wrong while reading the WebSocket message: %v", e)
 			}
 			break
 		}
 		switch messageType {
 		case websocket.TextMessage:
 			var s Signal
-			if err := json.Unmarshal(messageData, &s); err != nil {
-				log.Printf("[WBS] [MSG] Inavlid message from client %s: %v", c.ID, err)
+			if e := json.Unmarshal(messageData, &s); e != nil {
+				log.Printf("[WBS] [MSG] Inavlid message from client %s: %v", c.ID, e)
 				continue
 			}
 			c.handleSignal(s)
 		case websocket.BinaryMessage:
 			if c.isRecording {
 				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageeID)
-				f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-				if err != nil {
-					log.Printf("[REC] [OPN] Failed to open file %s: $%v", file, err)
+				f, e := os.OpenFile(file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+				if e != nil {
+					log.Printf("[REC] [OPN] Failed to open file %s: $%v", file, e)
 					continue
 				}
-				if _, err := f.Write(messageData); err != nil {
-					log.Printf("[REC] [WRT] Failed to write to file %s: %v", file, err)
+				if _, e := f.Write(messageData); e != nil {
+					log.Printf("[REC] [WRT] Failed to write to file %s: %v", file, e)
 					continue
 				}
 				f.Close()
@@ -236,9 +236,9 @@ func (c *Client) writePump() {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			w, err := c.conn.NextWriter(websocket.BinaryMessage)
-			if err != nil {
-				log.Printf("[WBS] [WRT] Something went wrong while preparing the writer: %s", err)
+			w, e := c.conn.NextWriter(websocket.BinaryMessage)
+			if e != nil {
+				log.Printf("[WBS] [WRT] Something went wrong while preparing the writer: %s", e)
 				return
 			}
 			w.Write(msg)
@@ -246,14 +246,14 @@ func (c *Client) writePump() {
 			for i := 0; i < n; i++ {
 				w.Write(<-c.send)
 			}
-			if err := w.Close(); err != nil {
-				log.Printf("[WBS] [CLS] Something went wrong while closing the WebSocket connection: %s", err)
+			if e := w.Close(); e != nil {
+				log.Printf("[WBS] [CLS] Something went wrong while closing the WebSocket connection: %s", e)
 				return
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(waitOnReceiving))
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				log.Printf("[WBS] [PNG] Something went wrong with the client: %s", err)
+			if e := c.conn.WriteMessage(websocket.PingMessage, nil); e != nil {
+				log.Printf("[WBS] [PNG] Something went wrong with the client: %s", e)
 				return
 			}
 		}
