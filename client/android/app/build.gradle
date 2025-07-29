@@ -51,7 +51,7 @@ android {
         applicationId "com.example.operation_won"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
-        minSdkVersion flutter.minSdkVersion
+        minSdkVersion 21  // Required for AudioRecord and noise suppression APIs
         multiDexEnabled true
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
@@ -89,5 +89,5 @@ flutter {
 }
 
 dependencies {
-
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.70'  // For E2EE encryption
 }

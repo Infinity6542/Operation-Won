@@ -39,32 +39,46 @@ class _SettingsViewState extends State<SettingsView>
               // Audio Settings Section
               _buildSectionHeader('Audio Settings'),
               const SizedBox(height: 12),
-              _buildSettingsCard([
-                _buildSwitchSetting(
-                  title: 'Magic Mic',
-                  subtitle: 'Improve your microphone\'s audio and clarity',
-                  tooltip: 'May drain battery faster when enabled',
-                  value: settingsProvider.magicMicEnabled,
-                  onChanged: (value) {
-                    settingsProvider.setMagicMicEnabled(value);
-                  },
-                ),
-                const Divider(),
-                _buildDropdownSetting(
-                  title: 'PTT Mode',
-                  subtitle: 'Push-to-talk behavior',
-                  tooltip:
-                      'Hold: Press and hold to transmit\nTap: Click to toggle transmit',
-                  value: settingsProvider.pttMode,
-                  items: const [
-                    DropdownMenuItem(value: 'hold', child: Text('Hold')),
-                    DropdownMenuItem(value: 'tap', child: Text('Tap')),
-                  ],
-                  onChanged: (value) {
-                    settingsProvider.setPttMode(value!);
-                  },
-                ),
-              ]),
+              Consumer<CommsState>(
+                builder: (context, commsState, child) {
+                  return _buildSettingsCard([
+                    _buildSwitchSetting(
+                      title: 'Magic Mic',
+                      subtitle: 'Noise suppression and automatic gain control',
+                      tooltip: 'Improves audio quality using AI-powered noise reduction and gain control. May drain battery faster when enabled.',
+                      value: settingsProvider.magicMicEnabled,
+                      onChanged: (value) {
+                        settingsProvider.setMagicMicEnabled(value);
+                      },
+                    ),
+                    const Divider(),
+                    _buildDropdownSetting(
+                      title: 'PTT Mode',
+                      subtitle: 'Push-to-talk behavior',
+                      tooltip:
+                          'Hold: Press and hold to transmit\nTap: Click to toggle transmit',
+                      value: settingsProvider.pttMode,
+                      items: const [
+                        DropdownMenuItem(value: 'hold', child: Text('Hold')),
+                        DropdownMenuItem(value: 'tap', child: Text('Tap')),
+                      ],
+                      onChanged: (value) {
+                        settingsProvider.setPttMode(value!);
+                      },
+                    ),
+                    const Divider(),
+                    _buildInfoTile(
+                      title: 'End-to-End Encryption',
+                      subtitle: commsState.hasE2EEKey 
+                          ? '🔒 Encryption active' 
+                          : '🔓 No encryption key',
+                      icon: commsState.hasE2EEKey 
+                          ? LucideIcons.lock 
+                          : LucideIcons.lockOpen,
+                    ),
+                  ]);
+                },
+              ),
               const SizedBox(height: 32),
 
               // API Configuration Section

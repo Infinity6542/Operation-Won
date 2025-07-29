@@ -1,6 +1,7 @@
 import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:typed_data';
 import 'services/communication_service.dart';
 import 'providers/settings_provider.dart';
 
@@ -16,12 +17,14 @@ class CommsState extends ChangeNotifier {
     return Provider.of<CommsState>(context, listen: listen);
   }
 
-  // Getters
+    // Communication status getters
   bool get isConnected => _communicationService?.isConnected ?? false;
   bool get isPTTActive => _communicationService?.isPTTActive ?? false;
   bool get isRecording => _communicationService?.isRecording ?? false;
   bool get isPTTToggleMode => _communicationService?.isPTTToggleMode ?? false;
   bool get isEmergencyMode => _communicationService?.isEmergencyMode ?? false;
+  bool get isMagicMicEnabled => _communicationService?.isMagicMicEnabled ?? false;
+  bool get hasE2EEKey => _communicationService?.hasE2EEKey ?? false;
   String? get currentChannelId => _currentChannelId;
   bool get isInitialized => _isInitialized;
 
@@ -101,11 +104,26 @@ class CommsState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Exit emergency mode
+  // Exit emergency mode and return to previous channel
   Future<void> exitEmergencyMode() async {
     if (_communicationService == null) return;
     await _communicationService!.exitEmergencyMode();
-    notifyListeners();
+  }
+  
+  // E2EE Key Management
+  Future<Uint8List?> generateE2EEKey() async {
+    if (_communicationService == null) return null;
+    return await _communicationService!.generateE2EEKey();
+  }
+  
+  Future<bool> setE2EEKey(Uint8List keyBytes) async {
+    if (_communicationService == null) return false;
+    return await _communicationService!.setE2EEKey(keyBytes);
+  }
+  
+  Uint8List? getE2EEKey() {
+    if (_communicationService == null) return null;
+    return _communicationService!.getE2EEKey();
   }
 
   // Legacy methods for compatibility

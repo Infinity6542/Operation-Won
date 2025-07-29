@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../providers/settings_provider.dart';
 import 'websocket_service.dart';
@@ -73,10 +74,19 @@ class CommunicationService extends ChangeNotifier {
     // Update PTT mode from settings
     _isPTTToggleMode = _settingsProvider.pttMode == 'tap';
     
+    // Update Magic Mic setting
+    _updateMagicMicSetting();
+    
     // Reconnect with new WebSocket endpoint if connected
     if (_webSocketService.isConnected) {
       _reconnectWebSocket();
     }
+  }
+  
+  Future<void> _updateMagicMicSetting() async {
+    final magicMicEnabled = _settingsProvider.magicMicEnabled;
+    await _audioService.setMagicMicEnabled(magicMicEnabled);
+    debugPrint('[Comm] Magic Mic ${magicMicEnabled ? 'enabled' : 'disabled'}');
   }
   
   Future<void> _initializeConnection() async {
@@ -89,6 +99,9 @@ class CommunicationService extends ChangeNotifier {
       channels: 1,        // Mono for voice communication
       bitRate: 64000,     // Good quality for voice
     );
+    
+    // Set Magic Mic setting
+    await _updateMagicMicSetting();
     
     // Connect to WebSocket if not already connected
     await connectWebSocket();
@@ -247,6 +260,24 @@ class CommunicationService extends ChangeNotifier {
   Future<bool> checkMicrophonePermission() async {
     return await _audioService.requestMicrophonePermission();
   }
+  
+  // E2EE Key Management
+  Future<Uint8List?> generateE2EEKey() async {
+    return await _audioService.generateNewE2EEKey();
+  }
+  
+  Future<bool> setE2EEKey(Uint8List keyBytes) async {
+    return await _audioService.setE2EEKey(keyBytes);
+  }
+  
+  Uint8List? getE2EEKey() {
+    return _audioService.getE2EEKey();
+  }
+  
+  bool get hasE2EEKey => _audioService.hasE2EEKey;
+  
+  // Magic Mic status
+  bool get isMagicMicEnabled => _audioService.magicMicEnabled;
 
   // Join emergency channel (overrides current channel)
   Future<void> joinEmergencyChannel() async {

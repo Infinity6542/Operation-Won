@@ -7,6 +7,8 @@ class AudioService extends ChangeNotifier {
   
   bool _isRecording = false;
   bool _isPlaying = false;
+  bool _magicMicEnabled = false;
+  Uint8List? _e2eeKey;
   StreamSubscription? _audioStreamSubscription;
   
   // Audio recording stream controller
@@ -16,10 +18,13 @@ class AudioService extends ChangeNotifier {
   // Getters
   bool get isRecording => _isRecording;
   bool get isPlaying => _isPlaying;
+  bool get magicMicEnabled => _magicMicEnabled;
+  bool get hasE2EEKey => _e2eeKey != null;
   Stream<Uint8List> get audioDataStream => _audioDataController.stream;
   
   AudioService() {
     _setupMethodCallHandler();
+    _generateE2EEKey(); // Generate key on startup
   }
   
   void _setupMethodCallHandler() {
@@ -143,6 +148,59 @@ class AudioService extends ChangeNotifier {
     } catch (e) {
       debugPrint('[Audio] Failed to set audio config: $e');
     }
+  }
+  
+  // Enable/disable Magic Mic (noise suppression and automatic gain control)
+  Future<void> setMagicMicEnabled(bool enabled) async {
+    try {
+      await _channel.invokeMethod('setMagicMicEnabled', enabled);
+      _magicMicEnabled = enabled;
+      notifyListeners();
+      
+      debugPrint('[Audio] Magic Mic ${enabled ? 'enabled' : 'disabled'}');
+    } catch (e) {
+      debugPrint('[Audio] Failed to set Magic Mic: $e');
+    }
+  }
+  
+  // E2EE Key Management
+  Future<void> _generateE2EEKey() async {
+    try {
+      final keyBytes = await _channel.invokeMethod('generateE2EEKey');
+      if (keyBytes != null) {
+        _e2eeKey = Uint8List.fromList(keyBytes);
+        debugPrint('[Audio] E2EE key generated');
+      }
+    } catch (e) {
+      debugPrint('[Audio] Failed to generate E2EE key: $e');
+    }
+  }
+  
+  // Set E2EE key (for sharing between clients)
+  Future<bool> setE2EEKey(Uint8List keyBytes) async {
+    try {
+      final result = await _channel.invokeMethod('setE2EEKey', keyBytes);
+      if (result as bool) {
+        _e2eeKey = keyBytes;
+        debugPrint('[Audio] E2EE key set successfully');
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[Audio] Failed to set E2EE key: $e');
+      return false;
+    }
+  }
+  
+  // Get current E2EE key for sharing
+  Uint8List? getE2EEKey() {
+    return _e2eeKey;
+  }
+  
+  // Generate new E2EE key
+  Future<Uint8List?> generateNewE2EEKey() async {
+    await _generateE2EEKey();
+    return _e2eeKey;
   }
   
   @override
