@@ -17,13 +17,14 @@ class CommsState extends ChangeNotifier {
     return Provider.of<CommsState>(context, listen: listen);
   }
 
-    // Communication status getters
+  // Communication status getters
   bool get isConnected => _communicationService?.isConnected ?? false;
   bool get isPTTActive => _communicationService?.isPTTActive ?? false;
   bool get isRecording => _communicationService?.isRecording ?? false;
   bool get isPTTToggleMode => _communicationService?.isPTTToggleMode ?? false;
   bool get isEmergencyMode => _communicationService?.isEmergencyMode ?? false;
-  bool get isMagicMicEnabled => _communicationService?.isMagicMicEnabled ?? false;
+  bool get isMagicMicEnabled =>
+      _communicationService?.isMagicMicEnabled ?? false;
   bool get hasE2EEKey => _communicationService?.hasE2EEKey ?? false;
   String? get currentChannelId => _currentChannelId;
   bool get isInitialized => _isInitialized;
@@ -31,15 +32,15 @@ class CommsState extends ChangeNotifier {
   // Initialize communication service with settings provider
   void initialize(SettingsProvider settingsProvider) {
     if (_isInitialized) return;
-    
+
     _communicationService = CommunicationService(settingsProvider);
     _communicationService!.addListener(() {
       notifyListeners();
     });
-    
+
     _isInitialized = true;
     notifyListeners();
-    
+
     debugPrint('[CommsState] Communication service initialized');
   }
 
@@ -58,7 +59,7 @@ class CommsState extends ChangeNotifier {
   // Join a channel
   Future<void> joinChannel(String channelId) async {
     if (_communicationService == null) return;
-    
+
     await _communicationService!.joinChannel(channelId);
     _currentChannelId = channelId;
     notifyListeners();
@@ -67,7 +68,7 @@ class CommsState extends ChangeNotifier {
   // Leave current channel
   Future<void> leaveChannel() async {
     if (_communicationService == null) return;
-    
+
     await _communicationService!.leaveChannel();
     _currentChannelId = null;
     notifyListeners();
@@ -109,18 +110,18 @@ class CommsState extends ChangeNotifier {
     if (_communicationService == null) return;
     await _communicationService!.exitEmergencyMode();
   }
-  
+
   // E2EE Key Management
   Future<Uint8List?> generateE2EEKey() async {
     if (_communicationService == null) return null;
     return await _communicationService!.generateE2EEKey();
   }
-  
+
   Future<bool> setE2EEKey(Uint8List keyBytes) async {
     if (_communicationService == null) return false;
     return await _communicationService!.setE2EEKey(keyBytes);
   }
-  
+
   Uint8List? getE2EEKey() {
     if (_communicationService == null) return null;
     return _communicationService!.getE2EEKey();
@@ -134,7 +135,8 @@ class CommsState extends ChangeNotifier {
 
   void createChannel() {
     // This is handled by ChannelProvider now
-    debugPrint('[CommsState] createChannel called - handled by ChannelProvider');
+    debugPrint(
+        '[CommsState] createChannel called - handled by ChannelProvider');
   }
 
   void getChannels() {

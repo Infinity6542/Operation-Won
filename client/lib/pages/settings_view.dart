@@ -45,7 +45,8 @@ class _SettingsViewState extends State<SettingsView>
                     _buildSwitchSetting(
                       title: 'Magic Mic',
                       subtitle: 'Noise suppression and automatic gain control',
-                      tooltip: 'Improves audio quality using AI-powered noise reduction and gain control. May drain battery faster when enabled.',
+                      tooltip:
+                          'Improves audio quality using AI-powered noise reduction and gain control. May drain battery faster when enabled.',
                       value: settingsProvider.magicMicEnabled,
                       onChanged: (value) {
                         settingsProvider.setMagicMicEnabled(value);
@@ -69,11 +70,11 @@ class _SettingsViewState extends State<SettingsView>
                     const Divider(),
                     _buildInfoTile(
                       title: 'End-to-End Encryption',
-                      subtitle: commsState.hasE2EEKey 
-                          ? '🔒 Encryption active' 
+                      subtitle: commsState.hasE2EEKey
+                          ? '🔒 Encryption active'
                           : '🔓 No encryption key',
-                      icon: commsState.hasE2EEKey 
-                          ? LucideIcons.lock 
+                      icon: commsState.hasE2EEKey
+                          ? LucideIcons.lock
                           : LucideIcons.lockOpen,
                     ),
                   ]);
@@ -147,7 +148,8 @@ class _SettingsViewState extends State<SettingsView>
                   title: 'Test WebSocket',
                   subtitle: 'Test real-time communication',
                   icon: LucideIcons.radio,
-                  onTap: () => _testWebSocketConnection(context, settingsProvider),
+                  onTap: () =>
+                      _testWebSocketConnection(context, settingsProvider),
                 ),
               ]),
               const SizedBox(height: 32),
@@ -957,7 +959,7 @@ class _SettingsViewState extends State<SettingsView>
       BuildContext context, SettingsProvider settingsProvider) async {
     // Get CommsState from provider
     final commsState = Provider.of<CommsState>(context, listen: false);
-    
+
     // Show loading dialog
     showDialog(
       context: context,

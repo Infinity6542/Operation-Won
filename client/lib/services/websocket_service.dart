@@ -10,36 +10,36 @@ class WebSocketService extends ChangeNotifier {
   bool _isConnected = false;
   String? _currentChannelId;
   StreamSubscription? _subscription;
-  
+
   // Audio data stream controller
-  final StreamController<Uint8List> _audioStreamController = 
+  final StreamController<Uint8List> _audioStreamController =
       StreamController<Uint8List>.broadcast();
-  
+
   // Connection status
   bool get isConnected => _isConnected;
   String? get currentChannelId => _currentChannelId;
-  
+
   // Audio stream getter
   Stream<Uint8List> get audioStream => _audioStreamController.stream;
-  
+
   // Connect to WebSocket
   Future<bool> connect(String url) async {
     try {
       await disconnect(); // Disconnect existing connection
-      
+
       _currentUrl = url;
       _channel = WebSocketChannel.connect(Uri.parse(url));
-      
+
       // Listen to the WebSocket stream
       _subscription = _channel!.stream.listen(
         _handleMessage,
         onError: _handleError,
         onDone: _handleDisconnect,
       );
-      
+
       _isConnected = true;
       notifyListeners();
-      
+
       debugPrint('[WebSocket] Connected to $url');
       return true;
     } catch (e) {
@@ -49,7 +49,7 @@ class WebSocketService extends ChangeNotifier {
       return false;
     }
   }
-  
+
   // Disconnect from WebSocket
   Future<void> disconnect() async {
     if (_channel != null) {
@@ -58,30 +58,30 @@ class WebSocketService extends ChangeNotifier {
       _channel = null;
       _subscription = null;
     }
-    
+
     _isConnected = false;
     _currentChannelId = null;
     notifyListeners();
-    
+
     debugPrint('[WebSocket] Disconnected');
   }
-  
+
   // Join a channel
   void joinChannel(String channelId) {
     _currentChannelId = channelId;
     notifyListeners();
     debugPrint('[WebSocket] Joined channel: $channelId');
   }
-  
+
   // Send text signal (like PTT start/stop)
   void sendSignal(String type, [Map<String, dynamic>? payload]) {
     if (!_isConnected || _channel == null) return;
-    
+
     final signal = {
       'type': type,
       if (payload != null) 'payload': payload,
     };
-    
+
     try {
       _channel!.sink.add(jsonEncode(signal));
       debugPrint('[WebSocket] Sent signal: $type');
@@ -89,11 +89,11 @@ class WebSocketService extends ChangeNotifier {
       debugPrint('[WebSocket] Failed to send signal: $e');
     }
   }
-  
+
   // Send audio data
   void sendAudioData(Uint8List audioData) {
     if (!_isConnected || _channel == null) return;
-    
+
     try {
       _channel!.sink.add(audioData);
       debugPrint('[WebSocket] Sent audio chunk: ${audioData.length} bytes');
@@ -101,7 +101,7 @@ class WebSocketService extends ChangeNotifier {
       debugPrint('[WebSocket] Failed to send audio data: $e');
     }
   }
-  
+
   // Handle incoming messages
   void _handleMessage(dynamic message) {
     if (message is String) {
@@ -119,12 +119,12 @@ class WebSocketService extends ChangeNotifier {
       debugPrint('[WebSocket] Received audio chunk: ${audioData.length} bytes');
     }
   }
-  
+
   // Handle signals from server
   void _handleSignal(Map<String, dynamic> signal) {
     final type = signal['type'] as String?;
     debugPrint('[WebSocket] Received signal: $type');
-    
+
     switch (type) {
       case 'user_joined':
         // Handle user joined channel
@@ -139,14 +139,14 @@ class WebSocketService extends ChangeNotifier {
         debugPrint('[WebSocket] Unknown signal type: $type');
     }
   }
-  
+
   // Handle connection errors
   void _handleError(dynamic error) {
     debugPrint('[WebSocket] Connection error: $error');
     _isConnected = false;
     notifyListeners();
   }
-  
+
   // Handle disconnection
   void _handleDisconnect() {
     debugPrint('[WebSocket] Connection closed');
@@ -154,7 +154,7 @@ class WebSocketService extends ChangeNotifier {
     _currentChannelId = null;
     notifyListeners();
   }
-  
+
   // Reconnect to the same URL
   Future<bool> reconnect() async {
     if (_currentUrl != null) {
@@ -162,7 +162,7 @@ class WebSocketService extends ChangeNotifier {
     }
     return false;
   }
-  
+
   @override
   void dispose() {
     disconnect();

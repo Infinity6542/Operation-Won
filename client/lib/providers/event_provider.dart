@@ -15,9 +15,13 @@ class EventProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  EventProvider({SettingsProvider? settingsProvider})
+  EventProvider({SettingsProvider? settingsProvider, ApiService? apiService})
       : _settingsProvider = settingsProvider {
-    _initializeApiService();
+    if (apiService != null) {
+      _apiService = apiService;
+    } else {
+      _initializeApiService();
+    }
   }
 
   void _initializeApiService() {

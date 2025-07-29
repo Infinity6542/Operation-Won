@@ -9,16 +9,16 @@ class CommunicationService extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
   final WebSocketService _webSocketService = WebSocketService();
   late final AudioService _audioService;
-  
+
   StreamSubscription? _audioDataSubscription;
   StreamSubscription? _incomingAudioSubscription;
-  
+
   bool _isPTTActive = false;
   bool _isPTTToggleMode = false; // true for tap mode, false for hold mode
   String? _currentChannelId;
   bool _isEmergencyMode = false;
   String? _previousChannelId; // Store previous channel for emergency exit
-  
+
   // Getters
   bool get isConnected => _webSocketService.isConnected;
   bool get isPTTActive => _isPTTActive;
@@ -26,7 +26,7 @@ class CommunicationService extends ChangeNotifier {
   bool get isPTTToggleMode => _isPTTToggleMode;
   bool get isEmergencyMode => _isEmergencyMode;
   String? get currentChannelId => _currentChannelId;
-  
+
   CommunicationService(this._settingsProvider) {
     // Initialize audio service based on platform
     if (kIsWeb) {
@@ -34,25 +34,25 @@ class CommunicationService extends ChangeNotifier {
     } else {
       _audioService = AudioService();
     }
-    
+
     _setupListeners();
     _initializeConnection();
   }
-  
+
   void _setupListeners() {
     // Listen to settings changes for endpoint updates
     _settingsProvider.addListener(_onSettingsChanged);
-    
+
     // Listen to WebSocket service changes
     _webSocketService.addListener(() {
       notifyListeners();
     });
-    
+
     // Listen to audio service changes
     _audioService.addListener(() {
       notifyListeners();
     });
-    
+
     // Listen to outgoing audio data (from microphone)
     _audioDataSubscription = _audioService.audioDataStream.listen(
       _onAudioDataReceived,
@@ -60,7 +60,7 @@ class CommunicationService extends ChangeNotifier {
         debugPrint('[Comm] Audio data stream error: $error');
       },
     );
-    
+
     // Listen to incoming audio data (from WebSocket)
     _incomingAudioSubscription = _webSocketService.audioStream.listen(
       _onIncomingAudioReceived,
@@ -69,100 +69,100 @@ class CommunicationService extends ChangeNotifier {
       },
     );
   }
-  
+
   void _onSettingsChanged() {
     // Update PTT mode from settings
     _isPTTToggleMode = _settingsProvider.pttMode == 'tap';
-    
+
     // Update Magic Mic setting
     _updateMagicMicSetting();
-    
+
     // Reconnect with new WebSocket endpoint if connected
     if (_webSocketService.isConnected) {
       _reconnectWebSocket();
     }
   }
-  
+
   Future<void> _updateMagicMicSetting() async {
     final magicMicEnabled = _settingsProvider.magicMicEnabled;
     await _audioService.setMagicMicEnabled(magicMicEnabled);
     debugPrint('[Comm] Magic Mic ${magicMicEnabled ? 'enabled' : 'disabled'}');
   }
-  
+
   Future<void> _initializeConnection() async {
     // Update PTT mode from current settings
     _isPTTToggleMode = _settingsProvider.pttMode == 'tap';
-    
+
     // Set up audio configuration
     await _audioService.setAudioConfig(
-      sampleRate: 48000,  // High quality audio
-      channels: 1,        // Mono for voice communication
-      bitRate: 64000,     // Good quality for voice
+      sampleRate: 48000, // High quality audio
+      channels: 1, // Mono for voice communication
+      bitRate: 64000, // Good quality for voice
     );
-    
+
     // Set Magic Mic setting
     await _updateMagicMicSetting();
-    
+
     // Connect to WebSocket if not already connected
     await connectWebSocket();
   }
-  
+
   // Connect to WebSocket using current settings
   Future<bool> connectWebSocket() async {
     final wsUrl = _settingsProvider.websocketEndpoint;
     debugPrint('[Comm] Connecting to WebSocket: $wsUrl');
-    
+
     final success = await _webSocketService.connect(wsUrl);
     if (success) {
       debugPrint('[Comm] WebSocket connected successfully');
     } else {
       debugPrint('[Comm] Failed to connect to WebSocket');
     }
-    
+
     return success;
   }
-  
+
   // Disconnect from WebSocket
   Future<void> disconnectWebSocket() async {
     await _webSocketService.disconnect();
     debugPrint('[Comm] WebSocket disconnected');
   }
-  
+
   // Reconnect WebSocket with current settings
   Future<void> _reconnectWebSocket() async {
     await disconnectWebSocket();
     await connectWebSocket();
   }
-  
+
   // Join a specific channel
   Future<void> joinChannel(String channelId) async {
     if (!_webSocketService.isConnected) {
       await connectWebSocket();
     }
-    
+
     _currentChannelId = channelId;
     _webSocketService.joinChannel(channelId);
-    
+
     // Start audio playing mode to receive audio
     await _audioService.startPlaying();
-    
+
     debugPrint('[Comm] Joined channel: $channelId');
     notifyListeners();
   }
-  
+
   // Leave current channel
   Future<void> leaveChannel() async {
     if (_isPTTActive) {
       await stopPTT();
     }
-    
+
     await _audioService.stopPlaying();
     _currentChannelId = null;
-    
+
     debugPrint('[Comm] Left channel');
     notifyListeners();
   }
-  
+
   // Start Push-to-Talk (PTT) - supports both hold and tap modes
   Future<bool> startPTT() async {
     if (!_webSocketService.isConnected || _currentChannelId == null) {
@@ -206,109 +206,110 @@ class CommunicationService extends ChangeNotifier {
 
     debugPrint('[Comm] PTT started');
     return true;
-  }  // Stop Push-to-Talk (PTT)
+  } // Stop Push-to-Talk (PTT)
+
   Future<void> stopPTT() async {
     if (!_isPTTActive) return;
-    
+
     // Stop audio recording
     await _audioService.stopRecording();
-    
+
     // Send PTT stop signal
     _webSocketService.sendSignal('ptt stop');
-    
+
     _isPTTActive = false;
     notifyListeners();
-    
+
     debugPrint('[Comm] PTT stopped');
   }
-  
+
   // Handle outgoing audio data (from microphone)
   void _onAudioDataReceived(Uint8List audioData) {
     if (_isPTTActive && _webSocketService.isConnected) {
       _webSocketService.sendAudioData(audioData);
     }
   }
-  
+
   // Handle incoming audio data (from other users)
   void _onIncomingAudioReceived(Uint8List audioData) {
     // Play the received audio chunk
     _audioService.playAudioChunk(audioData);
   }
-  
+
   // Test connection
   Future<bool> testConnection() async {
     try {
       final wsUrl = _settingsProvider.websocketEndpoint;
-      
+
       // Try to connect temporarily
       final tempService = WebSocketService();
       final success = await tempService.connect(wsUrl);
-      
+
       if (success) {
         await tempService.disconnect();
         return true;
       }
-      
+
       return false;
     } catch (e) {
       debugPrint('[Comm] Connection test failed: $e');
       return false;
     }
   }
-  
+
   // Check microphone permission
   Future<bool> checkMicrophonePermission() async {
     return await _audioService.requestMicrophonePermission();
   }
-  
+
   // E2EE Key Management
   Future<Uint8List?> generateE2EEKey() async {
     return await _audioService.generateNewE2EEKey();
   }
-  
+
   Future<bool> setE2EEKey(Uint8List keyBytes) async {
     return await _audioService.setE2EEKey(keyBytes);
   }
-  
+
   Uint8List? getE2EEKey() {
     return _audioService.getE2EEKey();
   }
-  
+
   bool get hasE2EEKey => _audioService.hasE2EEKey;
-  
+
   // Magic Mic status
   bool get isMagicMicEnabled => _audioService.magicMicEnabled;
 
   // Join emergency channel (overrides current channel)
   Future<void> joinEmergencyChannel() async {
     const emergencyChannelId = 'EMERGENCY';
-    
+
     if (_currentChannelId != null && _currentChannelId != emergencyChannelId) {
       _previousChannelId = _currentChannelId;
     }
-    
+
     _isEmergencyMode = true;
     await joinChannel(emergencyChannelId);
-    
+
     debugPrint('[Comm] Joined emergency channel');
   }
 
   // Exit emergency mode and return to previous channel
   Future<void> exitEmergencyMode() async {
     if (!_isEmergencyMode) return;
-    
+
     _isEmergencyMode = false;
-    
+
     if (_previousChannelId != null) {
       await joinChannel(_previousChannelId!);
       _previousChannelId = null;
     } else {
       await leaveChannel();
     }
-    
+
     debugPrint('[Comm] Exited emergency mode');
   }
-  
+
   @override
   void dispose() {
     stopPTT();

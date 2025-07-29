@@ -5,7 +5,7 @@ import '../comms_state.dart';
 
 class FloatingPTTButton extends StatefulWidget {
   final VoidCallback? onEmergencyActivated;
-  
+
   const FloatingPTTButton({
     super.key,
     this.onEmergencyActivated,
@@ -21,24 +21,24 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
   late AnimationController _emergencyAnimationController;
   late Animation<double> _pttScaleAnimation;
   late Animation<double> _emergencyPulseAnimation;
-  
+
   bool _isPressed = false;
   bool _showEmergencyButton = false;
 
   @override
   void initState() {
     super.initState();
-    
+
     _pttAnimationController = AnimationController(
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    
+
     _emergencyAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _pttScaleAnimation = Tween<double>(
       begin: 1.0,
       end: 0.95,
@@ -46,7 +46,7 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
       parent: _pttAnimationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _emergencyPulseAnimation = Tween<double>(
       begin: 1.0,
       end: 1.1,
@@ -54,7 +54,7 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
       parent: _emergencyAnimationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _emergencyAnimationController.repeat(reverse: true);
   }
 
@@ -125,7 +125,7 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
   Future<void> _activateEmergency(CommsState commsState) async {
     await commsState.joinEmergencyChannel();
     widget.onEmergencyActivated?.call();
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -172,7 +172,10 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                               height: 60,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFFDC2626), Color(0xFF991B1B)],
+                                  colors: [
+                                    Color(0xFFDC2626),
+                                    Color(0xFF991B1B)
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
@@ -207,7 +210,7 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                 ),
                 const SizedBox(height: 16),
               ],
-              
+
               // Main PTT Button
               Center(
                 child: GestureDetector(
@@ -220,8 +223,8 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                     animation: _pttScaleAnimation,
                     builder: (context, child) {
                       return Transform.scale(
-                        scale: _isPressed && !commsState.isPTTToggleMode 
-                            ? _pttScaleAnimation.value 
+                        scale: _isPressed && !commsState.isPTTToggleMode
+                            ? _pttScaleAnimation.value
                             : 1.0,
                         child: Container(
                           width: 80,
@@ -242,8 +245,8 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                             ),
                           ),
                           child: Icon(
-                            commsState.isPTTActive 
-                                ? LucideIcons.mic 
+                            commsState.isPTTActive
+                                ? LucideIcons.mic
                                 : LucideIcons.micOff,
                             color: Colors.white,
                             size: 32,
@@ -254,12 +257,13 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               // PTT Mode Indicator
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(12),
@@ -273,12 +277,13 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                   ),
                 ),
               ),
-              
+
               // Emergency mode indicator
               if (commsState.isEmergencyMode) ...[
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(12),
@@ -319,7 +324,7 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
         end: Alignment.bottomRight,
       );
     }
-    
+
     if (commsState.isPTTActive) {
       return const LinearGradient(
         colors: [Color(0xFF059669), Color(0xFF047857)],
@@ -327,7 +332,7 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
         end: Alignment.bottomRight,
       );
     }
-    
+
     return const LinearGradient(
       colors: [Color(0xFF374151), Color(0xFF1F2937)],
       begin: Alignment.topLeft,
@@ -339,11 +344,11 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
     if (commsState.isEmergencyMode) {
       return Colors.red.withValues(alpha: 0.4);
     }
-    
+
     if (commsState.isPTTActive) {
       return Colors.green.withValues(alpha: 0.4);
     }
-    
+
     return Colors.grey.withValues(alpha: 0.3);
   }
 }

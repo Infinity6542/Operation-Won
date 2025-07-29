@@ -23,7 +23,7 @@ class _PTTButtonState extends State<PTTButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  
+
   bool _isPressed = false;
 
   @override
@@ -33,7 +33,7 @@ class _PTTButtonState extends State<PTTButton>
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    
+
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 0.95,
@@ -64,7 +64,7 @@ class _PTTButtonState extends State<PTTButton>
     });
 
     _animationController.repeat(reverse: true);
-    
+
     final success = await commsState.startPTT();
     if (!success) {
       await _stopPTT(commsState);
@@ -88,7 +88,7 @@ class _PTTButtonState extends State<PTTButton>
 
     _animationController.stop();
     _animationController.reset();
-    
+
     await commsState.stopPTT();
   }
 
@@ -99,7 +99,7 @@ class _PTTButtonState extends State<PTTButton>
         final isConnected = commsState.isConnected;
         final hasChannel = commsState.currentChannelId != null;
         final canUsePTT = widget.enabled && isConnected && hasChannel;
-        
+
         return GestureDetector(
           onTapDown: canUsePTT ? (_) => _startPTT(commsState) : null,
           onTapUp: canUsePTT ? (_) => _stopPTT(commsState) : null,

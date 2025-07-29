@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
   @NowaGenerated({'loader': 'auto-constructor'})
   const MyApp({super.key});
 
-    @override
+  @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
