@@ -244,6 +244,7 @@ func (s *Server) Security(next http.Handler) http.Handler {
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		if tokenString == authHeader {
 			http.Error(w, "Invalid token format.", http.StatusUnauthorized)
+			return
 		}
 
 		claims := &jwt.MapClaims{}
@@ -252,6 +253,7 @@ func (s *Server) Security(next http.Handler) http.Handler {
 		})
 		if e != nil || !token.Valid {
 			http.Error(w, "Something went wrong with the authorisation token.", http.StatusUnauthorized)
+			return
 		}
 
 		uidFloat, _ := (*claims)["user_id"].(float64)
