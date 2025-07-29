@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var secret = []byte("verymuchasecr3t")
+var secret = []byte(getEnv("JWT_SECRET", "verymuchasecr3t"))
 
 // Define a custom type for context keys to avoid collisions
 type contextKey string
