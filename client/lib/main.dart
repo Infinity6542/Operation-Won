@@ -42,13 +42,20 @@ class MyApp extends StatelessWidget {
   @NowaGenerated({'loader': 'auto-constructor'})
   const MyApp({super.key});
 
-  @override
+    @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => CommsState()),
         ChangeNotifierProvider(create: (context) => AppState()),
         ChangeNotifierProvider(create: (context) => SettingsProvider()),
+        ChangeNotifierProxyProvider<SettingsProvider, CommsState>(
+          create: (context) => CommsState(),
+          update: (context, settingsProvider, commsState) {
+            commsState ??= CommsState();
+            commsState.initialize(settingsProvider);
+            return commsState;
+          },
+        ),
         ChangeNotifierProxyProvider<SettingsProvider, AuthProvider>(
           create: (context) => AuthProvider(),
           update: (context, settingsProvider, authProvider) {

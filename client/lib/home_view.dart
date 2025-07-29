@@ -3,11 +3,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'event_item.dart';
 import 'channel_item.dart';
+import 'comms_state.dart';
 import 'providers/auth_provider.dart';
 import 'providers/event_provider.dart';
 import 'providers/channel_provider.dart';
 import 'widgets/create_event_dialog.dart';
 import 'widgets/create_channel_dialog.dart';
+import 'widgets/ptt_button.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -84,6 +86,163 @@ class _HomeViewState extends State<HomeView>
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Communication Panel
+                  Consumer<CommsState>(
+                    builder: (context, commsState, child) {
+                      return Card(
+                        color: const Color(0xFF1E293B),
+                        elevation: 4,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    LucideIcons.radio,
+                                    color: Color(0xFF3B82F6),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Communication',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  _buildConnectionStatus(commsState),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              
+                              if (commsState.currentChannelId == null) ...[
+                                // No channel selected
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF374151),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        LucideIcons.micOff,
+                                        color: Colors.grey[400],
+                                        size: 32,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Select a channel to start communicating',
+                                        style: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ] else ...[
+                                // Channel selected - show PTT controls
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            commsState.isEmergencyMode 
+                                                ? 'Emergency Channel' 
+                                                : 'Active Channel',
+                                            style: TextStyle(
+                                              color: commsState.isEmergencyMode 
+                                                  ? Colors.red 
+                                                  : Colors.grey[400],
+                                              fontSize: 12,
+                                              fontWeight: commsState.isEmergencyMode 
+                                                  ? FontWeight.bold 
+                                                  : FontWeight.normal,
+                                            ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              if (commsState.isEmergencyMode)
+                                                Icon(
+                                                  LucideIcons.triangle,
+                                                  color: Colors.red,
+                                                  size: 14,
+                                                ),
+                                              if (commsState.isEmergencyMode)
+                                                const SizedBox(width: 4),
+                                              Text(
+                                                commsState.currentChannelId!,
+                                                style: TextStyle(
+                                                  color: commsState.isEmergencyMode 
+                                                      ? Colors.red 
+                                                      : Colors.white,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    // Emergency exit button
+                                    if (commsState.isEmergencyMode) ...[
+                                      ElevatedButton.icon(
+                                        onPressed: () async {
+                                          await commsState.exitEmergencyMode();
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Exited emergency mode'),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        icon: const Icon(LucideIcons.x, size: 16),
+                                        label: const Text('Exit Emergency'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red[700],
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, 
+                                            vertical: 8
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
+                                    PTTButton(
+                                      size: 60,
+                                      onPermissionDenied: () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Microphone permission required for Push-to-Talk'),
+                                            backgroundColor: Colors.orange,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 32),
 
@@ -326,9 +485,53 @@ class _HomeViewState extends State<HomeView>
   }
 
   void _openChannel(String channelUuid) {
-    // TODO: Navigate to channel page
+    // Join the channel for communication
+    final commsState = Provider.of<CommsState>(context, listen: false);
+    commsState.joinChannel(channelUuid);
+    
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Opening channel: $channelUuid')),
+      SnackBar(
+        content: Text('Joined channel for communication'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  Widget _buildConnectionStatus(CommsState commsState) {
+    final isConnected = commsState.isConnected;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isConnected ? Colors.green.withValues(alpha: 0.2) : Colors.red.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isConnected ? Colors.green : Colors.red,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: isConnected ? Colors.green : Colors.red,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            isConnected ? 'Connected' : 'Disconnected',
+            style: TextStyle(
+              color: isConnected ? Colors.green : Colors.red,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

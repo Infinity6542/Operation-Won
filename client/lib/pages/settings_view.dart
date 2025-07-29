@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+import '../comms_state.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -126,6 +127,13 @@ class _SettingsViewState extends State<SettingsView>
                   title: 'Test Connection',
                   icon: LucideIcons.wifi,
                   onTap: () => _testConnection(context, settingsProvider),
+                ),
+                const Divider(),
+                _buildActionTile(
+                  title: 'Test WebSocket',
+                  subtitle: 'Test real-time communication',
+                  icon: LucideIcons.radio,
+                  onTap: () => _testWebSocketConnection(context, settingsProvider),
                 ),
               ]),
               const SizedBox(height: 32),
@@ -923,6 +931,65 @@ class _SettingsViewState extends State<SettingsView>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ Connection failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Test WebSocket connection
+  void _testWebSocketConnection(
+      BuildContext context, SettingsProvider settingsProvider) async {
+    // Get CommsState from provider
+    final commsState = Provider.of<CommsState>(context, listen: false);
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Testing WebSocket connection...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Test the WebSocket connection
+      final success = await commsState.testConnection();
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  '✅ WebSocket connection successful to ${settingsProvider.websocketEndpoint}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ WebSocket connection failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ WebSocket test failed: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
