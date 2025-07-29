@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -12,18 +14,14 @@ class SettingsView extends StatefulWidget {
 
 class _SettingsViewState extends State<SettingsView>
     with AutomaticKeepAliveClientMixin {
-  bool _magicMicEnabled = true;
-  String _pttMode = 'hold';
-  String _themeMode = 'dark';
-
   @override
   bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
+    return Consumer2<AuthProvider, SettingsProvider>(
+      builder: (context, authProvider, settingsProvider, child) {
         final user = authProvider.user;
 
         return SingleChildScrollView(
@@ -45,12 +43,9 @@ class _SettingsViewState extends State<SettingsView>
                   title: 'Magic Mic',
                   subtitle: 'Improve your microphone\'s audio and clarity',
                   tooltip: 'May drain battery faster when enabled',
-                  value: _magicMicEnabled,
+                  value: settingsProvider.magicMicEnabled,
                   onChanged: (value) {
-                    setState(() {
-                      _magicMicEnabled = value;
-                    });
-                    // TODO: Implement magic mic functionality
+                    settingsProvider.setMagicMicEnabled(value);
                   },
                 ),
                 const Divider(),
@@ -59,17 +54,78 @@ class _SettingsViewState extends State<SettingsView>
                   subtitle: 'Push-to-talk behavior',
                   tooltip:
                       'Hold: Press and hold to transmit\nTap: Click to toggle transmit',
-                  value: _pttMode,
+                  value: settingsProvider.pttMode,
                   items: const [
                     DropdownMenuItem(value: 'hold', child: Text('Hold')),
                     DropdownMenuItem(value: 'tap', child: Text('Tap')),
                   ],
                   onChanged: (value) {
-                    setState(() {
-                      _pttMode = value!;
-                    });
-                    // TODO: Implement PTT mode change
+                    settingsProvider.setPttMode(value!);
                   },
+                ),
+              ]),
+              const SizedBox(height: 32),
+
+              // API Configuration Section
+              _buildSectionHeader('API Configuration'),
+              const SizedBox(height: 12),
+              _buildSettingsCard([
+                _buildDropdownSetting(
+                  title: 'Server Endpoint',
+                  subtitle: 'Choose server to connect to',
+                  tooltip: 'Select predefined server or use custom endpoint',
+                  value: settingsProvider
+                          .getCurrentPredefinedEndpoint()?['name'] ??
+                      'Custom',
+                  items: [
+                    ...SettingsProvider.predefinedEndpoints.map(
+                      (endpoint) => DropdownMenuItem(
+                        value: endpoint['name'],
+                        child: Text(endpoint['name']!),
+                      ),
+                    ),
+                    const DropdownMenuItem(
+                      value: 'Custom',
+                      child: Text('Custom'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != 'Custom') {
+                      // Find the selected predefined endpoint
+                      final selectedEndpoint = SettingsProvider
+                          .predefinedEndpoints
+                          .firstWhere((endpoint) => endpoint['name'] == value);
+                      settingsProvider.setPredefinedEndpoint(selectedEndpoint);
+                    }
+                    // For custom, we'll show the custom endpoint dialog
+                    if (value == 'Custom') {
+                      _showCustomEndpointDialog(context, settingsProvider);
+                    }
+                  },
+                ),
+                if (settingsProvider.isUsingCustomEndpoint) ...[
+                  const Divider(),
+                  _buildActionTile(
+                    title: 'API Endpoint',
+                    subtitle: settingsProvider.apiEndpoint,
+                    icon: LucideIcons.server,
+                    onTap: () =>
+                        _showCustomEndpointDialog(context, settingsProvider),
+                  ),
+                  const Divider(),
+                  _buildActionTile(
+                    title: 'WebSocket Endpoint',
+                    subtitle: settingsProvider.websocketEndpoint,
+                    icon: LucideIcons.radio,
+                    onTap: () =>
+                        _showCustomEndpointDialog(context, settingsProvider),
+                  ),
+                ],
+                const Divider(),
+                _buildActionTile(
+                  title: 'Test Connection',
+                  icon: LucideIcons.wifi,
+                  onTap: () => _testConnection(context, settingsProvider),
                 ),
               ]),
               const SizedBox(height: 32),
@@ -81,7 +137,7 @@ class _SettingsViewState extends State<SettingsView>
                 _buildDropdownSetting(
                   title: 'Theme',
                   subtitle: 'Choose your preferred theme',
-                  value: _themeMode,
+                  value: settingsProvider.themeMode,
                   items: const [
                     DropdownMenuItem(value: 'dark', child: Text('Dark')),
                     DropdownMenuItem(value: 'light', child: Text('Light')),
@@ -89,10 +145,7 @@ class _SettingsViewState extends State<SettingsView>
                         value: 'system', child: Text('System Default')),
                   ],
                   onChanged: (value) {
-                    setState(() {
-                      _themeMode = value!;
-                    });
-                    // TODO: Implement theme change
+                    settingsProvider.setThemeMode(value!);
                   },
                 ),
               ]),
@@ -731,5 +784,149 @@ class _SettingsViewState extends State<SettingsView>
         ],
       ),
     );
+  }
+
+  // Show dialog for custom endpoint configuration
+  void _showCustomEndpointDialog(
+      BuildContext context, SettingsProvider settingsProvider) {
+    final apiController =
+        TextEditingController(text: settingsProvider.apiEndpoint);
+    final wsController =
+        TextEditingController(text: settingsProvider.websocketEndpoint);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(LucideIcons.settings, size: 24),
+            SizedBox(width: 8),
+            Text('Custom API Endpoint'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: apiController,
+              decoration: const InputDecoration(
+                labelText: 'API Endpoint',
+                hintText: 'http://localhost:8000',
+                prefixIcon: Icon(LucideIcons.server),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: wsController,
+              decoration: const InputDecoration(
+                labelText: 'WebSocket Endpoint',
+                hintText: 'ws://localhost:8000/msg',
+                prefixIcon: Icon(LucideIcons.radio),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Make sure both endpoints point to the same server',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final apiUrl = apiController.text.trim();
+              final wsUrl = wsController.text.trim();
+
+              if (apiUrl.isNotEmpty && wsUrl.isNotEmpty) {
+                await settingsProvider.setApiEndpoint(apiUrl);
+                await settingsProvider.setWebsocketEndpoint(wsUrl);
+
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Endpoints updated successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Test connection to the API
+  void _testConnection(
+      BuildContext context, SettingsProvider settingsProvider) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Testing connection...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Create a temporary Dio instance for testing
+      final dio = Dio();
+      dio.options.baseUrl = settingsProvider.apiEndpoint;
+      dio.options.connectTimeout = const Duration(seconds: 5);
+      dio.options.receiveTimeout = const Duration(seconds: 3);
+
+      // Test the health endpoint
+      final response = await dio.get('/health');
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  '✅ Connection successful to ${settingsProvider.apiEndpoint}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Connection failed: ${response.statusCode}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Connection failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

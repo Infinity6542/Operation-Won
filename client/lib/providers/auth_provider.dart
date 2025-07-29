@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/auth_model.dart';
 import '../services/api_service.dart';
+import 'settings_provider.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  late final ApiService _apiService;
+  final SettingsProvider? _settingsProvider;
 
   bool _isLoading = false;
   String? _error;
@@ -14,8 +16,32 @@ class AuthProvider extends ChangeNotifier {
   JWTClaims? get user => _user;
   bool get isLoggedIn => _apiService.isLoggedIn;
 
-  AuthProvider() {
+  AuthProvider({SettingsProvider? settingsProvider})
+      : _settingsProvider = settingsProvider {
+    _initializeApiService();
     _initialize();
+  }
+
+  void _initializeApiService() {
+    if (_settingsProvider != null) {
+      _apiService = ApiService(baseUrl: _settingsProvider.apiEndpoint);
+      // Listen to settings changes to update API endpoint
+      _settingsProvider.addListener(_onSettingsChanged);
+    } else {
+      _apiService = ApiService();
+    }
+  }
+
+  void _onSettingsChanged() {
+    if (_settingsProvider != null) {
+      _apiService.updateBaseUrl(_settingsProvider.apiEndpoint);
+    }
+  }
+
+  @override
+  void dispose() {
+    _settingsProvider?.removeListener(_onSettingsChanged);
+    super.dispose();
   }
 
   Future<void> _initialize() async {

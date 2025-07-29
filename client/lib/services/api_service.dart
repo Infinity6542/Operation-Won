@@ -7,12 +7,14 @@ import '../models/channel_model.dart';
 import '../models/event_model.dart';
 
 class ApiService {
-  static const String baseURL = 'http://localhost:8000';
+  static const String defaultBaseURL = 'http://localhost:8000';
   final Dio _dio;
   String? _token;
+  String _baseUrl = defaultBaseURL;
 
-  ApiService() : _dio = Dio() {
-    _dio.options.baseUrl = baseURL;
+  ApiService({String? baseUrl}) : _dio = Dio() {
+    _baseUrl = baseUrl ?? defaultBaseURL;
+    _dio.options.baseUrl = _baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 5);
     _dio.options.receiveTimeout = const Duration(seconds: 3);
 
@@ -36,6 +38,17 @@ class ApiService {
 
     _loadToken();
   }
+
+  // Method to update the base URL
+  void updateBaseUrl(String newBaseUrl) {
+    if (_baseUrl != newBaseUrl) {
+      _baseUrl = newBaseUrl;
+      _dio.options.baseUrl = newBaseUrl;
+      debugPrint('API Service: Updated base URL to $newBaseUrl');
+    }
+  }
+
+  String get baseUrl => _baseUrl;
 
   Future<void> _loadToken() async {
     final prefs = await SharedPreferences.getInstance();
