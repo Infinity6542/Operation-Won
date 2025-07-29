@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'event_item.dart';
 import 'channel_item.dart';
@@ -15,7 +16,11 @@ class HomeView extends StatefulWidget {
   State<HomeView> createState() => _HomeViewState();
 }
 
-class _HomeViewState extends State<HomeView> {
+class _HomeViewState extends State<HomeView>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +42,7 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Consumer3<AuthProvider, EventProvider, ChannelProvider>(
       builder: (context, authProvider, eventProvider, channelProvider, child) {
         final user = authProvider.user;
@@ -95,7 +101,7 @@ class _HomeViewState extends State<HomeView> {
                       const Spacer(),
                       TextButton.icon(
                         onPressed: () => _showCreateEventDialog(),
-                        icon: const Icon(Icons.add, size: 18),
+                        icon: const Icon(LucideIcons.plus, size: 18),
                         label: const Text('Create'),
                         style: TextButton.styleFrom(
                           foregroundColor: const Color(0xFF3B82F6),
@@ -124,7 +130,7 @@ class _HomeViewState extends State<HomeView> {
                       child: Column(
                         children: [
                           Icon(
-                            Icons.event_note,
+                            LucideIcons.calendar,
                             size: 48,
                             color: Colors.grey[400],
                           ),
@@ -183,7 +189,7 @@ class _HomeViewState extends State<HomeView> {
                       const Spacer(),
                       TextButton.icon(
                         onPressed: () => _showCreateChannelDialog(),
-                        icon: const Icon(Icons.add, size: 18),
+                        icon: const Icon(LucideIcons.plus, size: 18),
                         label: const Text('Create'),
                         style: TextButton.styleFrom(
                           foregroundColor: const Color(0xFF10B981),
@@ -212,7 +218,7 @@ class _HomeViewState extends State<HomeView> {
                       child: Column(
                         children: [
                           Icon(
-                            Icons.chat_bubble_outline,
+                            LucideIcons.messageSquare,
                             size: 48,
                             color: Colors.grey[400],
                           ),
@@ -282,14 +288,14 @@ class _HomeViewState extends State<HomeView> {
                 onPressed: () => _showCreateChannelDialog(),
                 backgroundColor: const Color(0xFF10B981),
                 child:
-                    const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                    const Icon(LucideIcons.messageSquare, color: Colors.white),
               ),
               const SizedBox(height: 12),
               FloatingActionButton(
                 heroTag: "create_event",
                 onPressed: () => _showCreateEventDialog(),
                 backgroundColor: const Color(0xFF3B82F6),
-                child: const Icon(Icons.event_note, color: Colors.white),
+                child: const Icon(LucideIcons.calendar, color: Colors.white),
               ),
             ],
           ),

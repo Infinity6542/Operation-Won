@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../providers/event_provider.dart';
 
@@ -99,7 +100,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
-                          Icons.event_note,
+                          LucideIcons.calendar,
                           color: Colors.white,
                           size: 24,
                         ),
@@ -117,7 +118,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.close, color: Colors.grey),
+                        icon: const Icon(LucideIcons.x, color: Colors.grey),
                         padding: EdgeInsets.all(isSmallScreen ? 4 : 8),
                         constraints: BoxConstraints(
                           minWidth: isSmallScreen ? 32 : 40,

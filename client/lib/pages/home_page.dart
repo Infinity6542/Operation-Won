@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:operation_won/home_view.dart';
 import 'package:operation_won/pages/settings_view.dart';
@@ -15,8 +16,12 @@ class HomePage extends StatefulWidget {
 }
 
 @NowaGenerated()
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with AutomaticKeepAliveClientMixin {
   int? pageIndex = 0;
+
+  @override
+  bool get wantKeepAlive => true;
 
   void _showSettingsBottomSheet(BuildContext context) {
     showModalBottomSheet(
@@ -69,7 +74,7 @@ class _HomePageState extends State<HomePage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
-                        Icons.settings_rounded,
+                        LucideIcons.cog,
                         color: Colors.white,
                         size: 24,
                       ),
@@ -87,7 +92,7 @@ class _HomePageState extends State<HomePage> {
                     IconButton(
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(
-                        Icons.close_rounded,
+                        LucideIcons.x,
                         color: Colors.grey,
                       ),
                     ),
@@ -117,8 +122,9 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Scaffold(
-      body: SafeArea(
+      body: const SafeArea(
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -128,9 +134,8 @@ class _HomePageState extends State<HomePage> {
             FlexSizedBox(
               flex: 1,
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 15),
-                child: const SizedBox(
+                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 15),
+                child: SizedBox(
                   child: HomeView(),
                 ),
               ),
@@ -152,7 +157,7 @@ class _HomePageState extends State<HomePage> {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
               child: Icon(
-                Icons.settings_rounded,
+                LucideIcons.cog,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),

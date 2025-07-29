@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:operation_won/channel.dart';
 import 'package:operation_won/comms_state.dart';
@@ -9,6 +10,7 @@ import 'package:operation_won/pages/splash.dart';
 import 'package:operation_won/providers/auth_provider.dart';
 import 'package:operation_won/providers/channel_provider.dart';
 import 'package:operation_won/providers/event_provider.dart';
+import 'package:operation_won/widgets/optimized_auth_flow.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,18 +47,23 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider<CommsState>(
           create: (context) => CommsState(),
+          lazy: false, // Keep CommsState eager for app state
         ),
         ChangeNotifierProvider<AppState>(
           create: (context) => AppState(),
+          lazy: false, // Keep AppState eager for theme
         ),
         ChangeNotifierProvider<AuthProvider>(
           create: (context) => AuthProvider(),
+          lazy: false, // Keep AuthProvider eager for authentication flow
         ),
         ChangeNotifierProvider<EventProvider>(
           create: (context) => EventProvider(),
+          lazy: true, // Load only when needed
         ),
         ChangeNotifierProvider<ChannelProvider>(
           create: (context) => ChannelProvider(),
+          lazy: true, // Load only when needed
         ),
       ],
       child: Consumer<AppState>(
@@ -67,7 +74,7 @@ class MyApp extends StatelessWidget {
             title: 'Operation Won',
             debugShowCheckedModeBanner: false,
             theme: appState.theme,
-            home: const AuthenticationFlow(),
+            home: const OptimizedAuthenticationFlow(),
             routes: {
               'Channel': (context) => const Channel(),
               'AuthPage': (context) => const AuthPage(),
@@ -104,7 +111,7 @@ class AuthenticationFlow extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.error_outline,
+                        LucideIcons.circleAlert,
                         color: Theme.of(context).colorScheme.error,
                         size: 48,
                       ),
@@ -128,7 +135,7 @@ class AuthenticationFlow extends StatelessWidget {
                         onPressed: () {
                           authProvider.clearError();
                         },
-                        icon: const Icon(Icons.refresh),
+                        icon: const Icon(LucideIcons.refreshCw),
                         label: const Text('Try Again'),
                       ),
                     ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
@@ -9,13 +10,18 @@ class SettingsView extends StatefulWidget {
   State<SettingsView> createState() => _SettingsViewState();
 }
 
-class _SettingsViewState extends State<SettingsView> {
+class _SettingsViewState extends State<SettingsView>
+    with AutomaticKeepAliveClientMixin {
   bool _magicMicEnabled = true;
   String _pttMode = 'hold';
   String _themeMode = 'dark';
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         final user = authProvider.user;
@@ -99,12 +105,12 @@ class _SettingsViewState extends State<SettingsView> {
                 _buildInfoTile(
                   title: 'Version',
                   subtitle: '1.0.0',
-                  icon: Icons.info_outline,
+                  icon: LucideIcons.info,
                 ),
                 const Divider(),
                 _buildActionTile(
                   title: 'Privacy Policy',
-                  icon: Icons.privacy_tip_outlined,
+                  icon: LucideIcons.shield,
                   onTap: () {
                     // TODO: Open privacy policy
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -116,7 +122,7 @@ class _SettingsViewState extends State<SettingsView> {
                 const Divider(),
                 _buildActionTile(
                   title: 'Terms of Service',
-                  icon: Icons.description_outlined,
+                  icon: LucideIcons.fileText,
                   onTap: () {
                     // TODO: Open terms of service
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -339,7 +345,7 @@ class _SettingsViewState extends State<SettingsView> {
               children: [
                 Expanded(
                   child: _buildAccountActionButton(
-                    icon: Icons.edit_outlined,
+                    icon: LucideIcons.pencil,
                     label: 'Edit Profile',
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -352,7 +358,7 @@ class _SettingsViewState extends State<SettingsView> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildAccountActionButton(
-                    icon: Icons.security_outlined,
+                    icon: LucideIcons.lock,
                     label: 'Security',
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -454,7 +460,7 @@ class _SettingsViewState extends State<SettingsView> {
             _buildActionTile(
               title: 'Sign Out',
               subtitle: 'Sign out of your account',
-              icon: Icons.logout,
+              icon: LucideIcons.logOut,
               isDestructive: true,
               onTap: () => _showSignOutDialog(authProvider),
             ),
@@ -674,7 +680,7 @@ class _SettingsViewState extends State<SettingsView> {
               ),
             ),
             Icon(
-              Icons.chevron_right,
+              LucideIcons.chevronRight,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
               size: 20,
             ),
