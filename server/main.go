@@ -15,8 +15,12 @@ import (
 
 // Variables
 var (
-	upgrader = websocket.Upgrader{}
-	db       *sql.DB
+	upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true // Allow connections from any origin
+		},
+	}
+	db *sql.DB
 )
 
 func main() {
@@ -27,9 +31,9 @@ func main() {
 	redisPort := getEnv("REDIS_PORT", "6379")
 	mysqlHost := getEnv("MYSQL_HOST", "localhost")
 	mysqlPort := getEnv("MYSQL_PORT", "3306")
-	mysqlUser := getEnv("MYSQL_USER", "root")
-	mysqlPassword := getEnv("MYSQL_PASSWORD", "yes")
-	mysqlDatabase := getEnv("MYSQL_DATABASE", "opwon")
+	mysqlUser := getEnv("MYSQL_USER", "appuser")
+	mysqlPassword := getEnv("MYSQL_PASSWORD", "apppassword")
+	mysqlDatabase := getEnv("MYSQL_DATABASE", "operation_won")
 	serverPort := getEnv("SERVER_PORT", "8000")
 
 	// Redis configuration
@@ -94,30 +98,48 @@ func main() {
 	// Start cleanup routine for JWT blacklist and rate limiting
 	server.startCleanupRoutine()
 
-	// Authentication endpoints (no security middleware)
-	http.HandleFunc("/auth/login", server.HandleAuth)
-	http.HandleFunc("/auth/register", server.HandleRegister)
+	// CORS middleware for Flutter app
+	corsHandler := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("[DEBUG] Incoming request: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+			if r.Method == "OPTIONS" {
+				log.Printf("[DEBUG] Handling OPTIONS preflight request")
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	// Authentication endpoints (no security middleware but with CORS)
+	http.Handle("/auth/login", corsHandler(http.HandlerFunc(server.HandleAuth)))
+	http.Handle("/auth/register", corsHandler(http.HandlerFunc(server.HandleRegister)))
 
 	// JWT management endpoints (require authentication)
-	http.Handle("/api/refresh", server.Security(http.HandlerFunc(server.HandleRefreshToken)))
-	http.Handle("/api/logout", server.Security(http.HandlerFunc(server.HandleLogout)))
+	http.Handle("/api/refresh", corsHandler(server.Security(http.HandlerFunc(server.HandleRefreshToken))))
+	http.Handle("/api/logout", corsHandler(server.Security(http.HandlerFunc(server.HandleLogout))))
 
 	// Protected API endpoints
-	http.Handle("/api/protected/channels/create", server.Security(http.HandlerFunc(server.CreateChannel)))
-	http.Handle("/api/protected/channels", server.Security(http.HandlerFunc(server.GetChannels)))
-	http.Handle("/api/protected/events/create", server.Security(http.HandlerFunc(server.CreateEvent)))
-	http.Handle("/api/protected/events", server.Security(http.HandlerFunc(server.GetEvents)))
+	http.Handle("/api/protected/channels/create", corsHandler(server.Security(http.HandlerFunc(server.CreateChannel))))
+	http.Handle("/api/protected/channels", corsHandler(server.Security(http.HandlerFunc(server.GetChannels))))
+	http.Handle("/api/protected/events/create", corsHandler(server.Security(http.HandlerFunc(server.CreateEvent))))
+	http.Handle("/api/protected/events", corsHandler(server.Security(http.HandlerFunc(server.GetEvents))))
 
 	// WebSocket endpoint (requires special handling)
-	http.HandleFunc("/msg", func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/msg", corsHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		server.ServeWs(hub, w, r)
-	})
+	})))
 
 	// Health check endpoint for Docker
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/health", corsHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
-	})
+	})))
 
 	log.Printf("[SVR] [CON] Server is now listening on port %s", serverPort)
 	http.ListenAndServe(":"+serverPort, nil)

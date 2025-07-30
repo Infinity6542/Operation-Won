@@ -34,20 +34,30 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
       final channelProvider =
           Provider.of<ChannelProvider>(context, listen: false);
 
-      await channelProvider.createChannel(
+      final success = await channelProvider.createChannel(
         _nameController.text.trim(),
         eventUuid: _selectedEvent?.eventUuid,
       );
 
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Channel "${_nameController.text.trim()}" created successfully!'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+        if (success) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Channel "${_nameController.text.trim()}" created successfully!'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content:
+                  Text(channelProvider.error ?? 'Failed to create channel'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

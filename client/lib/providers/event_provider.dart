@@ -51,9 +51,12 @@ class EventProvider extends ChangeNotifier {
     _clearError();
 
     try {
+      debugPrint('[EventProvider] Loading events...');
       _events = await _apiService.getEvents();
+      debugPrint('[EventProvider] Loaded ${_events.length} events');
       _setLoading(false);
     } catch (e) {
+      debugPrint('[EventProvider] Error loading events: $e');
       _setError(e.toString());
       _setLoading(false);
     }
@@ -64,12 +67,17 @@ class EventProvider extends ChangeNotifier {
     _clearError();
 
     try {
+      debugPrint('[EventProvider] Creating event: $eventName');
       await _apiService.createEvent(eventName,
           eventDescription: eventDescription);
+      debugPrint(
+          '[EventProvider] Event created successfully, refreshing list...');
       await loadEvents(); // Refresh the list
+      debugPrint('[EventProvider] Event list refreshed, notifying listeners');
       _setLoading(false);
       return true;
     } catch (e) {
+      debugPrint('[EventProvider] Error creating event: $e');
       _setError(e.toString());
       _setLoading(false);
       return false;

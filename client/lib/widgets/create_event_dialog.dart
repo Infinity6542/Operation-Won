@@ -33,7 +33,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
     try {
       final eventProvider = Provider.of<EventProvider>(context, listen: false);
 
-      await eventProvider.createEvent(
+      final success = await eventProvider.createEvent(
         _nameController.text.trim(),
         eventDescription: _descriptionController.text.trim().isNotEmpty
             ? _descriptionController.text.trim()
@@ -41,14 +41,23 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
       );
 
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Event "${_nameController.text.trim()}" created successfully!'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+        if (success) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Event "${_nameController.text.trim()}" created successfully!'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(eventProvider.error ?? 'Failed to create event'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

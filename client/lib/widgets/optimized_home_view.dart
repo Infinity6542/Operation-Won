@@ -7,6 +7,7 @@ import '../providers/event_provider.dart';
 import '../providers/channel_provider.dart';
 import '../widgets/create_event_dialog.dart';
 import '../widgets/create_channel_dialog.dart';
+import '../widgets/event_details_dialog.dart';
 import '../utils/performance_utils.dart';
 
 class OptimizedHomeView extends StatefulWidget {
@@ -121,7 +122,10 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
             itemCount: events.length,
             itemBuilder: (context, index) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: EventItem(event: events[index]),
+              child: EventItem(
+                event: events[index],
+                onTap: () => _showEventDetails(events[index].eventUuid),
+              ),
             ),
           ),
       ],
@@ -178,6 +182,13 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
       builder: (context) => const CreateChannelDialog(),
     );
   }
+
+  void _showEventDetails(String eventUuid) {
+    showDialog(
+      context: context,
+      builder: (context) => EventDetailsDialog(eventUuid: eventUuid),
+    );
+  }
 }
 
 // Immutable state class for better performance
@@ -200,16 +211,38 @@ class _HomeViewState {
       other is _HomeViewState &&
           runtimeType == other.runtimeType &&
           user == other.user &&
-          events.length == other.events.length &&
+          _listsEqual(events, other.events) &&
           isLoading == other.isLoading &&
-          standaloneChannels.length == other.standaloneChannels.length;
+          _listsEqual(standaloneChannels, other.standaloneChannels);
+
+  // Helper method to compare lists by their content hashes
+  bool _listsEqual(List a, List b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      // Compare by UUID for events/channels, which should be unique
+      final aId = a[i]?.eventUuid ?? a[i]?.channelUuid ?? a[i].hashCode;
+      final bId = b[i]?.eventUuid ?? b[i]?.channelUuid ?? b[i].hashCode;
+      if (aId != bId) return false;
+    }
+    return true;
+  }
 
   @override
   int get hashCode =>
       user.hashCode ^
-      events.length.hashCode ^
+      _getListHashCode(events) ^
       isLoading.hashCode ^
-      standaloneChannels.length.hashCode;
+      _getListHashCode(standaloneChannels);
+
+  // Helper method to create a hash from list contents
+  int _getListHashCode(List list) {
+    int hash = list.length.hashCode;
+    for (final item in list) {
+      final id = item?.eventUuid ?? item?.channelUuid ?? item.hashCode;
+      hash ^= id.hashCode;
+    }
+    return hash;
+  }
 }
 
 // Optimized const welcome section

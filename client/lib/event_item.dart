@@ -30,6 +30,7 @@ class EventItem extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Header with event info
                   Row(
@@ -72,16 +73,18 @@ class EventItem extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
 
                   // Event description
                   if (event.eventDescription.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       event.eventDescription,
                       style: TextStyle(
                         color: Colors.grey[300],
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -90,7 +93,7 @@ class EventItem extends StatelessWidget {
 
                   // Channels preview
                   if (eventChannels.isNotEmpty) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     Text(
                       'Channels:',
                       style: TextStyle(
@@ -99,9 +102,9 @@ class EventItem extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     SizedBox(
-                      height: 60,
+                      height: 50,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         itemCount:

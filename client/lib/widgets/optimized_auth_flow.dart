@@ -23,7 +23,7 @@ class OptimizedAuthenticationFlow extends StatelessWidget {
 
         // Show error if there's one
         if (authState.error != null) {
-          return const _ErrorScreen();
+          return _ErrorScreen(error: authState.error!);
         }
 
         // Show loading screen while checking authentication
@@ -65,7 +65,9 @@ class _AuthState {
 
 /// Optimized error screen widget with const constructor
 class _ErrorScreen extends StatelessWidget {
-  const _ErrorScreen();
+  const _ErrorScreen({required this.error});
+
+  final String error;
 
   @override
   Widget build(BuildContext context) {
@@ -90,9 +92,12 @@ class _ErrorScreen extends StatelessWidget {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Please check your connection and try again.',
+                Text(
+                  error,
                   textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                 ),
                 const SizedBox(height: 24),
                 FilledButton.icon(

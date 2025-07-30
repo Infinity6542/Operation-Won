@@ -41,6 +41,11 @@ class SettingsProvider extends ChangeNotifier {
       'websocket': 'ws://localhost:8000/msg',
     },
     {
+      'name': 'Android Emulator',
+      'api': 'http://10.0.2.2:8000',
+      'websocket': 'ws://10.0.2.2:8000/msg',
+    },
+    {
       'name': 'Local Network (WiFi)',
       'api': 'http://192.168.1.100:8000',
       'websocket': 'ws://192.168.1.100:8000/msg',

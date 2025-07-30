@@ -8,6 +8,7 @@ import 'providers/auth_provider.dart';
 import 'providers/event_provider.dart';
 import 'providers/channel_provider.dart';
 import 'widgets/create_event_dialog.dart';
+import 'widgets/event_details_dialog.dart';
 import 'widgets/create_channel_dialog.dart';
 import 'widgets/ptt_button.dart';
 
@@ -483,9 +484,9 @@ class _HomeViewState extends State<HomeView>
   }
 
   void _showEventDetails(String eventUuid) {
-    // TODO: Navigate to event details page
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Opening event: $eventUuid')),
+    showDialog(
+      context: context,
+      builder: (context) => EventDetailsDialog(eventUuid: eventUuid),
     );
   }
 

@@ -60,6 +60,12 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       await _apiService.register(username, email, password);
+
+      // Automatically log in the user after successful registration
+      String loginIdentifier = username.contains('@') ? username : email;
+      await _apiService.login(loginIdentifier, password);
+      _user = _apiService.decodeToken();
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -74,10 +80,8 @@ class AuthProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      // For demo purposes, use username as email format
-      String loginEmail =
-          username.contains('@') ? username : '$username@demo.com';
-      await _apiService.login(loginEmail, password);
+      // Send the username as-is to the server, let server handle email vs username lookup
+      await _apiService.login(username, password);
       _user = _apiService.decodeToken();
       _setLoading(false);
       return true;

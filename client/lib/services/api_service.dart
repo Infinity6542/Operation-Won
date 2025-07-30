@@ -122,12 +122,16 @@ class ApiService {
     }
   }
 
-  Future<AuthResponse> login(String email, String password) async {
+  Future<AuthResponse> login(String usernameOrEmail, String password) async {
     try {
+      // Determine if input is email or username
+      bool isEmail = usernameOrEmail.contains('@');
+
       final response = await _dio.post(
         '/auth/login',
         data: AuthRequest(
-          email: email,
+          username: isEmail ? null : usernameOrEmail,
+          email: isEmail ? usernameOrEmail : '',
           password: password,
         ).toJson(),
       );
@@ -160,8 +164,9 @@ class ApiService {
   // Token refresh functionality
   Future<bool> refreshToken() async {
     try {
-      final refreshToken = await SecureStorageService.getRefreshToken();
-      if (refreshToken == null) {
+      // Use the current token (even if expired) for refresh
+      if (_token == null) {
+        debugPrint('No token available for refresh');
         return false;
       }
 
@@ -177,6 +182,7 @@ class ApiService {
       final newToken = response.data['token'] as String?;
       if (newToken != null) {
         await _saveToken(newToken);
+        debugPrint('Token refreshed successfully');
         return true;
       }
       return false;
@@ -200,6 +206,7 @@ class ApiService {
   Future<String> createEvent(String eventName,
       {String? eventDescription}) async {
     try {
+      debugPrint('[API] Creating event: $eventName');
       final response = await _dio.post(
         '/api/protected/events/create',
         data: EventRequest(
@@ -208,9 +215,43 @@ class ApiService {
         ).toJson(),
       );
 
-      return response.data['event_uuid'];
+      debugPrint('[API] Event creation response: ${response.data}');
+      debugPrint('[API] Response data type: ${response.data.runtimeType}');
+
+      // Handle both Map and String responses
+      dynamic data = response.data;
+
+      // If response is a String, try to parse it as JSON
+      if (data is String) {
+        debugPrint('[API] Response is String, attempting to parse as JSON');
+        try {
+          data = jsonDecode(data);
+          debugPrint('[API] Successfully parsed JSON: $data');
+        } catch (e) {
+          debugPrint('[API] Failed to parse JSON string: $e');
+          throw Exception('Invalid JSON response format');
+        }
+      }
+
+      // Extract event_uuid from parsed data
+      if (data is Map &&
+          data.containsKey('event_uuid') &&
+          data['event_uuid'] != null) {
+        final eventUuid = data['event_uuid'];
+        debugPrint('[API] Extracted event UUID: $eventUuid');
+        return eventUuid.toString();
+      }
+
+      debugPrint(
+          '[API] ERROR: Could not extract event_uuid from response: $data');
+      throw Exception('Invalid response format: missing or null event_uuid');
     } on DioException catch (e) {
+      debugPrint('[API] DioException creating event: ${e.message}');
+      debugPrint('[API] Response data: ${e.response?.data}');
       throw _handleError(e);
+    } catch (e) {
+      debugPrint('[API] General exception creating event: $e');
+      rethrow;
     }
   }
 
@@ -227,6 +268,8 @@ class ApiService {
 
   Future<String> createChannel(String channelName, {String? eventUuid}) async {
     try {
+      debugPrint(
+          '[API] Creating channel: $channelName with eventUuid: $eventUuid');
       final response = await _dio.post(
         '/api/protected/channels/create',
         data: ChannelRequest(
@@ -235,11 +278,63 @@ class ApiService {
         ).toJson(),
       );
 
-      return response.data['channel_uuid'];
+      debugPrint('[API] Channel creation response: ${response.data}');
+      debugPrint('[API] Response data type: ${response.data.runtimeType}');
+
+      // Check if the response contains channel_uuid
+      if (response.data != null) {
+        // Handle both Map and dynamic types
+        dynamic data = response.data;
+
+        // If response is a String, try to parse it as JSON
+        if (data is String) {
+          debugPrint('[API] Response is String, attempting to parse as JSON');
+          try {
+            data = jsonDecode(data);
+            debugPrint('[API] Successfully parsed JSON: $data');
+          } catch (e) {
+            debugPrint('[API] Failed to parse JSON string: $e');
+            throw Exception('Invalid JSON response format');
+          }
+        }
+
+        if (data is Map<String, dynamic>) {
+          debugPrint('[API] Response is Map<String, dynamic>');
+          debugPrint('[API] Keys: ${data.keys.toList()}');
+          if (data.containsKey('channel_uuid') &&
+              data['channel_uuid'] != null) {
+            final channelUuid = data['channel_uuid'];
+            debugPrint('[API] Extracted channel UUID: $channelUuid');
+            return channelUuid.toString();
+          }
+        } else if (data is Map) {
+          debugPrint('[API] Response is generic Map');
+          debugPrint('[API] Keys: ${data.keys.toList()}');
+          if (data.containsKey('channel_uuid') &&
+              data['channel_uuid'] != null) {
+            final channelUuid = data['channel_uuid'];
+            debugPrint('[API] Extracted channel UUID: $channelUuid');
+            return channelUuid.toString();
+          }
+        } else {
+          debugPrint(
+              '[API] Response is neither Map<String, dynamic> nor Map: ${data.runtimeType}');
+        }
+      }
+
+      debugPrint(
+          '[API] ERROR: Could not extract channel_uuid from response: ${response.data}');
+      throw Exception(
+          'Invalid response format: missing or null channel_uuid'); // Fixed
     } on DioException catch (e) {
+      debugPrint('[API] DioException creating channel: ${e.message}');
+      debugPrint('[API] Response data: ${e.response?.data}');
       throw _handleError(e);
+    } catch (e) {
+      debugPrint('[API] General exception creating channel: $e');
+      rethrow;
     }
-  }
+  } // Debug version
 
   // Token management
   bool get isLoggedIn {

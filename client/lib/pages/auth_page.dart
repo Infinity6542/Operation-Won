@@ -678,7 +678,8 @@ class _LoginFormState extends State<LoginForm> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFF475569),
                   borderRadius: BorderRadius.circular(8),
@@ -702,7 +703,9 @@ class _LoginFormState extends State<LoginForm> {
                       ),
                     ),
                     Icon(
-                      _showServerSelection ? Icons.expand_less : Icons.expand_more,
+                      _showServerSelection
+                          ? Icons.expand_less
+                          : Icons.expand_more,
                       color: Colors.grey[400],
                       size: 16,
                     ),
@@ -722,12 +725,15 @@ class _LoginFormState extends State<LoginForm> {
                   children: [
                     // Predefined servers
                     ...SettingsProvider.predefinedEndpoints.map((endpoint) {
-                      final isSelected = settingsProvider.apiEndpoint == endpoint['api'];
+                      final isSelected =
+                          settingsProvider.apiEndpoint == endpoint['api'];
                       return ListTile(
                         dense: true,
                         leading: Icon(
                           Icons.radio_button_checked,
-                          color: isSelected ? const Color(0xFF3B82F6) : Colors.grey[500],
+                          color: isSelected
+                              ? const Color(0xFF3B82F6)
+                              : Colors.grey[500],
                           size: 16,
                         ),
                         title: Text(
@@ -745,8 +751,10 @@ class _LoginFormState extends State<LoginForm> {
                           ),
                         ),
                         onTap: () async {
-                          await settingsProvider.setApiEndpoint(endpoint['api']!);
-                          await settingsProvider.setWebsocketEndpoint(endpoint['websocket']!);
+                          await settingsProvider
+                              .setApiEndpoint(endpoint['api']!);
+                          await settingsProvider
+                              .setWebsocketEndpoint(endpoint['websocket']!);
                           setState(() {
                             _showServerSelection = false;
                           });
@@ -785,23 +793,24 @@ class _LoginFormState extends State<LoginForm> {
 
   String _getSelectedServerName(SettingsProvider settingsProvider) {
     final currentEndpoint = settingsProvider.apiEndpoint;
-    
+
     // Check if it matches a predefined endpoint
     for (final endpoint in SettingsProvider.predefinedEndpoints) {
       if (endpoint['api'] == currentEndpoint) {
         return endpoint['name']!;
       }
     }
-    
+
     // If it's a custom endpoint, show the URL
-    return currentEndpoint.length > 30 
+    return currentEndpoint.length > 30
         ? '${currentEndpoint.substring(0, 27)}...'
         : currentEndpoint;
   }
 
   void _showCustomServerDialog(SettingsProvider settingsProvider) {
-    final controller = TextEditingController(text: settingsProvider.apiEndpoint);
-    
+    final controller =
+        TextEditingController(text: settingsProvider.apiEndpoint);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -845,10 +854,10 @@ class _LoginFormState extends State<LoginForm> {
               if (apiUrl.isNotEmpty) {
                 // Generate websocket URL from API URL
                 final wsUrl = apiUrl.replaceFirst('http', 'ws') + '/msg';
-                
+
                 await settingsProvider.setApiEndpoint(apiUrl);
                 await settingsProvider.setWebsocketEndpoint(wsUrl);
-                
+
                 setState(() {
                   _showServerSelection = false;
                 });
@@ -1205,7 +1214,8 @@ class _RegisterFormState extends State<RegisterForm> {
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFF475569),
                   borderRadius: BorderRadius.circular(8),
@@ -1229,7 +1239,9 @@ class _RegisterFormState extends State<RegisterForm> {
                       ),
                     ),
                     Icon(
-                      _showServerSelection ? Icons.expand_less : Icons.expand_more,
+                      _showServerSelection
+                          ? Icons.expand_less
+                          : Icons.expand_more,
                       color: Colors.grey[400],
                       size: 16,
                     ),
@@ -1249,12 +1261,15 @@ class _RegisterFormState extends State<RegisterForm> {
                   children: [
                     // Predefined servers
                     ...SettingsProvider.predefinedEndpoints.map((endpoint) {
-                      final isSelected = settingsProvider.apiEndpoint == endpoint['api'];
+                      final isSelected =
+                          settingsProvider.apiEndpoint == endpoint['api'];
                       return ListTile(
                         dense: true,
                         leading: Icon(
                           Icons.radio_button_checked,
-                          color: isSelected ? const Color(0xFF3B82F6) : Colors.grey[500],
+                          color: isSelected
+                              ? const Color(0xFF3B82F6)
+                              : Colors.grey[500],
                           size: 16,
                         ),
                         title: Text(
@@ -1272,14 +1287,16 @@ class _RegisterFormState extends State<RegisterForm> {
                           ),
                         ),
                         onTap: () async {
-                          await settingsProvider.setApiEndpoint(endpoint['api']!);
-                          await settingsProvider.setWebsocketEndpoint(endpoint['websocket']!);
+                          await settingsProvider
+                              .setApiEndpoint(endpoint['api']!);
+                          await settingsProvider
+                              .setWebsocketEndpoint(endpoint['websocket']!);
                           setState(() {
                             _showServerSelection = false;
                           });
                         },
                       );
-                    }).toList(),
+                    }),
                     // Custom server option
                     const Divider(color: Colors.grey, height: 1),
                     ListTile(
@@ -1312,23 +1329,24 @@ class _RegisterFormState extends State<RegisterForm> {
 
   String _getSelectedServerName(SettingsProvider settingsProvider) {
     final currentEndpoint = settingsProvider.apiEndpoint;
-    
+
     // Check if it matches a predefined endpoint
     for (final endpoint in SettingsProvider.predefinedEndpoints) {
       if (endpoint['api'] == currentEndpoint) {
         return endpoint['name']!;
       }
     }
-    
+
     // If it's a custom endpoint, show the URL
-    return currentEndpoint.length > 30 
+    return currentEndpoint.length > 30
         ? '${currentEndpoint.substring(0, 27)}...'
         : currentEndpoint;
   }
 
   void _showCustomServerDialog(SettingsProvider settingsProvider) {
-    final controller = TextEditingController(text: settingsProvider.apiEndpoint);
-    
+    final controller =
+        TextEditingController(text: settingsProvider.apiEndpoint);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1372,15 +1390,15 @@ class _RegisterFormState extends State<RegisterForm> {
               if (apiUrl.isNotEmpty) {
                 // Generate websocket URL from API URL
                 final wsUrl = apiUrl.replaceFirst('http', 'ws') + '/msg';
-                
+
                 await settingsProvider.setApiEndpoint(apiUrl);
                 await settingsProvider.setWebsocketEndpoint(wsUrl);
-                
+
                 setState(() {
                   _showServerSelection = false;
                 });
               }
-              Navigator.of(context).pop();
+              if (mounted) Navigator.of(context).pop();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF3B82F6),

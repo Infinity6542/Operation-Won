@@ -47,9 +47,12 @@ class ChannelProvider extends ChangeNotifier {
     _clearError();
 
     try {
+      debugPrint('[ChannelProvider] Loading channels...');
       _channels = await _apiService.getChannels();
+      debugPrint('[ChannelProvider] Loaded ${_channels.length} channels');
       _setLoading(false);
     } catch (e) {
+      debugPrint('[ChannelProvider] Error loading channels: $e');
       _setError(e.toString());
       _setLoading(false);
     }
@@ -60,11 +63,17 @@ class ChannelProvider extends ChangeNotifier {
     _clearError();
 
     try {
+      debugPrint('[ChannelProvider] Creating channel: $channelName');
       await _apiService.createChannel(channelName, eventUuid: eventUuid);
+      debugPrint(
+          '[ChannelProvider] Channel created successfully, refreshing list...');
       await loadChannels(); // Refresh the list
+      debugPrint(
+          '[ChannelProvider] Channel list refreshed, notifying listeners');
       _setLoading(false);
       return true;
     } catch (e) {
+      debugPrint('[ChannelProvider] Error creating channel: $e');
       _setError(e.toString());
       _setLoading(false);
       return false;

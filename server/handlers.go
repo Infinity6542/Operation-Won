@@ -234,16 +234,46 @@ func (s *Server) HandleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("[AUT] [LGN] Received payload - Username: '%s', Email: '%s'", payload.Username, payload.Email)
+
 	var hash string
 	var uid int
 	var username string
-	if e := s.db.QueryRow("SELECT id, username, hashed_password FROM users WHERE email = ?", payload.Email).Scan(&uid, &username, &hash); e != nil {
-		if e == sql.ErrNoRows {
+
+	// Try to find user by email first, then by username
+	var loginIdentifier string
+	if payload.Email != "" {
+		loginIdentifier = payload.Email
+		log.Printf("[AUT] [LGN] Login attempt with email: %s", payload.Email)
+	} else if payload.Username != "" {
+		loginIdentifier = payload.Username
+		log.Printf("[AUT] [LGN] Login attempt with username: %s", payload.Username)
+	} else {
+		log.Printf("[AUT] [LGN] No username or email provided")
+		http.Error(w, "Username or email is required.", http.StatusBadRequest)
+		return
+	}
+
+	// First try email lookup
+	query := "SELECT id, username, hashed_password FROM users WHERE email = ?"
+	log.Printf("[AUT] [LGN] Trying email query with identifier: %s", loginIdentifier)
+	err := s.db.QueryRow(query, loginIdentifier).Scan(&uid, &username, &hash)
+
+	// If email lookup fails and the identifier doesn't contain @, try username lookup
+	if err == sql.ErrNoRows && !strings.Contains(loginIdentifier, "@") {
+		query = "SELECT id, username, hashed_password FROM users WHERE username = ?"
+		log.Printf("[AUT] [LGN] Email lookup failed, trying username query with: %s", loginIdentifier)
+		err = s.db.QueryRow(query, loginIdentifier).Scan(&uid, &username, &hash)
+	}
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("[AUT] [LGN] User not found: %s", loginIdentifier)
 			http.Error(w, "Invalid credentials.", http.StatusUnauthorized)
 			return
 		}
-		fmt.Printf("[AUT] [LGN] Something went wrong when searching for the user: %v\n", e)
-		http.Error(w, "Invalid username.", http.StatusUnauthorized)
+		fmt.Printf("[AUT] [LGN] Something went wrong when searching for the user: %v\n", err)
+		http.Error(w, "Invalid credentials.", http.StatusUnauthorized)
 		return
 	}
 
@@ -299,16 +329,25 @@ func (s *Server) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	claims := &jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return secret, nil
 	})
 
-	if err != nil || !token.Valid {
-		http.Error(w, "Invalid token.", http.StatusUnauthorized)
-		return
+	// For refresh, we allow expired tokens as long as they're properly signed
+	if err != nil {
+		// Check if the error is just due to expiration
+		if strings.Contains(err.Error(), "token is expired") {
+			// Token is expired but otherwise valid - this is OK for refresh
+			log.Printf("[AUT] [REF] Accepting expired token for refresh")
+		} else {
+			// Token has other validation errors
+			log.Printf("[AUT] [REF] Token validation error: %v", err)
+			http.Error(w, "Invalid token.", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	// Check if token is blacklisted
@@ -478,6 +517,7 @@ func (s *Server) ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	tokenString := r.URL.Query().Get("token")
 	if tokenString == "" {
 		http.Error(w, "Invalid authentication method.", http.StatusUnauthorized)
+		return
 	}
 
 	claims := &jwt.MapClaims{}
@@ -497,14 +537,15 @@ func (s *Server) ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	uid := int(uidFloat)
 
 	channelID := r.URL.Query().Get("channel")
+	// Allow connections without a channel initially - user can join channel later
 	if channelID == "" {
-		http.Error(w, "Invalid Channel ID.", http.StatusBadRequest)
-		return
+		channelID = "lobby" // Default channel
 	}
 
 	conn, e := upgrader.Upgrade(w, r, nil)
 	if e != nil {
 		log.Printf("[WBS] [UPG] Error while upgrading HTTP to WebSockets: %s", e)
+		return
 	}
 
 	client := &Client{
@@ -591,30 +632,41 @@ func (s *Server) Security(next http.Handler) http.Handler {
 }
 
 func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[CHN] [CRT] CreateChannel called")
+
 	uid, ok := r.Context().Value(userIDKey).(int)
 	if !ok {
+		log.Printf("[CHN] [CRT] Failed to get user ID from context")
 		http.Error(w, "Failed to find user.", http.StatusInternalServerError)
 		return
 	}
+	log.Printf("[CHN] [CRT] User ID: %d", uid)
 
 	var payload CrtChannel
 	if e := json.NewDecoder(r.Body).Decode(&payload); e != nil {
+		log.Printf("[CHN] [CRT] Failed to decode request body: %v", e)
 		http.Error(w, "Invalid request.", http.StatusBadRequest)
 		return
 	}
+	log.Printf("[CHN] [CRT] Channel name: %s", payload.ChannelName)
+
 	if payload.ChannelName == "" {
+		log.Printf("[CHN] [CRT] Channel name is empty")
 		http.Error(w, "Channel name is required.", http.StatusBadRequest)
 		return
 	}
 
 	var channelUUID = uuid.New().String()
 	var lastInsertID int64
+	log.Printf("[CHN] [CRT] Generated UUID: %s", channelUUID)
 
 	tx, e := s.db.Begin()
 	if e != nil {
+		log.Printf("[CHN] [CRT] Failed to begin transaction: %v", e)
 		http.Error(w, "Database error.", http.StatusInternalServerError)
 		return
 	}
+	log.Printf("[CHN] [CRT] Transaction started")
 
 	// Event
 	if payload.EventUUID != nil && *payload.EventUUID != "" {
@@ -630,22 +682,14 @@ func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, e = tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id) VALUES (?, ?, ?)",
-			channelUUID, payload.ChannelName, eventID)
+		res, e := tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id, created_by) VALUES (?, ?, ?, ?)",
+			channelUUID, payload.ChannelName, eventID, uid)
 		if e != nil {
 			tx.Rollback()
 			http.Error(w, "Failed to create channel.", http.StatusInternalServerError)
 			return
 		}
 
-	} else { // No event
-		res, e := tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id) VALUES (?, ?, NULL)",
-			channelUUID, payload.ChannelName)
-		if e != nil {
-			tx.Rollback()
-			http.Error(w, "Failed to create channel.", http.StatusInternalServerError)
-			return
-		}
 		lastInsertID, _ = res.LastInsertId()
 		_, e = tx.Exec("INSERT INTO channel_members (channel_id, user_id, role) VALUES (?, ?, 'admin')",
 			lastInsertID, uid)
@@ -654,12 +698,37 @@ func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to add creator to channel.", http.StatusInternalServerError)
 			return
 		}
+
+	} else { // No event
+		log.Printf("[CHN] [CRT] Creating standalone channel")
+		res, e := tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id, created_by) VALUES (?, ?, NULL, ?)",
+			channelUUID, payload.ChannelName, uid)
+		if e != nil {
+			log.Printf("[CHN] [CRT] Failed to insert channel: %v", e)
+			tx.Rollback()
+			http.Error(w, "Failed to create channel.", http.StatusInternalServerError)
+			return
+		}
+		lastInsertID, _ = res.LastInsertId()
+		log.Printf("[CHN] [CRT] Channel inserted with ID: %d", lastInsertID)
+
+		_, e = tx.Exec("INSERT INTO channel_members (channel_id, user_id, role) VALUES (?, ?, 'admin')",
+			lastInsertID, uid)
+		if e != nil {
+			log.Printf("[CHN] [CRT] Failed to add user to channel: %v", e)
+			tx.Rollback()
+			http.Error(w, "Failed to add creator to channel.", http.StatusInternalServerError)
+			return
+		}
+		log.Printf("[CHN] [CRT] User added as admin to channel")
 	}
 
 	if e := tx.Commit(); e != nil {
+		log.Printf("[CHN] [CRT] Failed to commit transaction: %v", e)
 		http.Error(w, "Failed to create channel.", http.StatusInternalServerError)
 		return
 	}
+	log.Printf("[CHN] [CRT] Transaction committed successfully")
 
 	log.Printf("[CHN] [CRT] %d created channel %s", uid, payload.ChannelName)
 
@@ -676,7 +745,13 @@ func (s *Server) GetChannels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := `SELECT c.channel_uuid, c.channel_name, e.event_uuid FROM channels c LEFT JOIN events e ON c.event_id = e.id LEFT JOIN event_members em ON e.id = em.event.id LEFT JOIN channel_members cm ON c.id = cm.channel_id WHERE em.user_id = ? OR cm.user_id = ?`
+	// Simplified query to get all channels user has access to
+	query := `SELECT DISTINCT c.channel_uuid, c.channel_name, e.event_uuid 
+			  FROM channels c 
+			  LEFT JOIN events e ON c.event_id = e.id 
+			  LEFT JOIN channel_members cm ON c.id = cm.channel_id 
+			  LEFT JOIN event_members em ON e.id = em.event_id 
+			  WHERE cm.user_id = ? OR em.user_id = ?`
 
 	rows, e := s.db.Query(query, uid, uid)
 	if e != nil {
@@ -698,6 +773,11 @@ func (s *Server) GetChannels(w http.ResponseWriter, r *http.Request) {
 			ch.EventUUID = &eventUUID.String
 		}
 		channels = append(channels, ch)
+	}
+
+	// Ensure we always return an array, even if empty
+	if channels == nil {
+		channels = []ChannelResponse{}
 	}
 
 	json.NewEncoder(w).Encode(channels)
@@ -787,6 +867,11 @@ func (s *Server) GetEvents(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		events = append(events, ev)
+	}
+
+	// Ensure we always return an array, even if empty
+	if events == nil {
+		events = []EventResponse{}
 	}
 
 	json.NewEncoder(w).Encode(events)
