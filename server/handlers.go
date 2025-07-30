@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -23,6 +24,124 @@ var secret = []byte(getEnv("JWT_SECRET", "verymuchasecr3t"))
 type contextKey string
 
 const userIDKey contextKey = "userID"
+
+// Rate limiting structures
+type RateLimiter struct {
+	requests map[string][]time.Time
+	mu       sync.RWMutex
+	limit    int
+	window   time.Duration
+}
+
+type JWTBlacklist struct {
+	tokens map[string]time.Time
+	mu     sync.RWMutex
+}
+
+var (
+	authRateLimiter = NewRateLimiter(5, time.Minute)     // 5 requests per minute for auth
+	jwtBlacklist    = NewJWTBlacklist()
+)
+
+func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
+	return &RateLimiter{
+		requests: make(map[string][]time.Time),
+		limit:    limit,
+		window:   window,
+	}
+}
+
+func NewJWTBlacklist() *JWTBlacklist {
+	return &JWTBlacklist{
+		tokens: make(map[string]time.Time),
+	}
+}
+
+func (rl *RateLimiter) IsAllowed(clientIP string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	now := time.Now()
+	windowStart := now.Add(-rl.window)
+
+	// Clean old requests
+	requests := rl.requests[clientIP]
+	validRequests := make([]time.Time, 0)
+	for _, req := range requests {
+		if req.After(windowStart) {
+			validRequests = append(validRequests, req)
+		}
+	}
+
+	// Check if limit exceeded
+	if len(validRequests) >= rl.limit {
+		return false
+	}
+
+	// Add current request
+	validRequests = append(validRequests, now)
+	rl.requests[clientIP] = validRequests
+	return true
+}
+
+func (rl *RateLimiter) Cleanup() {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	
+	now := time.Now()
+	for clientIP, requests := range rl.requests {
+		validRequests := make([]time.Time, 0)
+		windowStart := now.Add(-rl.window)
+		
+		for _, req := range requests {
+			if req.After(windowStart) {
+				validRequests = append(validRequests, req)
+			}
+		}
+		
+		if len(validRequests) == 0 {
+			delete(rl.requests, clientIP)
+		} else {
+			rl.requests[clientIP] = validRequests
+		}
+	}
+}
+
+func (jb *JWTBlacklist) Add(tokenID string, expiry time.Time) {
+	jb.mu.Lock()
+	defer jb.mu.Unlock()
+	jb.tokens[tokenID] = expiry
+}
+
+func (jb *JWTBlacklist) IsBlacklisted(tokenID string) bool {
+	jb.mu.RLock()
+	defer jb.mu.RUnlock()
+	
+	expiry, exists := jb.tokens[tokenID]
+	if !exists {
+		return false
+	}
+	
+	// Clean expired tokens
+	if time.Now().After(expiry) {
+		delete(jb.tokens, tokenID)
+		return false
+	}
+	
+	return true
+}
+
+func (jb *JWTBlacklist) Cleanup() {
+	jb.mu.Lock()
+	defer jb.mu.Unlock()
+	
+	now := time.Now()
+	for tokenID, expiry := range jb.tokens {
+		if now.After(expiry) {
+			delete(jb.tokens, tokenID)
+		}
+	}
+}
 
 type User struct {
 	Username string `json:"username"`
@@ -76,6 +195,14 @@ func NewServer(hub *Hub, db *sql.DB, redis *redis.Client) *Server {
 func (s *Server) HandleAuth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
+	// Rate limiting check
+	clientIP := r.RemoteAddr
+	if !authRateLimiter.IsAllowed(clientIP) {
+		log.Printf("[AUT] [RATE] Rate limit exceeded for IP: %s", clientIP)
+		http.Error(w, "Too many authentication attempts. Please try again later.", http.StatusTooManyRequests)
+		return
+	}
+
 	if s.db == nil {
 		log.Println("[ERR] [DTB] Database is nil")
 		http.Error(w, "Internal server error.", http.StatusInternalServerError)
@@ -112,10 +239,17 @@ func (s *Server) HandleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create token with JTI (JWT ID) for blacklisting capability
+	jti := uuid.New().String()
+	now := time.Now()
+	expiry := now.Add(time.Hour * 48)
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"jti":      jti,
 		"user_id":  uid,
 		"username": username,
-		"exp":      time.Now().Add(time.Hour * 48).Unix(),
+		"iat":      now.Unix(),
+		"exp":      expiry.Unix(),
 	})
 
 	tokenString, e := token.SignedString(secret)
@@ -125,7 +259,142 @@ func (s *Server) HandleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cache user information in Redis
+	if s.hub != nil {
+		s.hub.SetUserCache(uid, username, payload.Email)
+	}
+
+	log.Printf("[AUT] [LGN] User %s successfully authenticated", username)
 	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+}
+
+func (s *Server) HandleRefreshToken(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing authorization header.", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader {
+		http.Error(w, "Invalid token format.", http.StatusUnauthorized)
+		return
+	}
+
+	claims := &jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return secret, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid token.", http.StatusUnauthorized)
+		return
+	}
+
+	// Check if token is blacklisted
+	jti, ok := (*claims)["jti"].(string)
+	if ok && jwtBlacklist.IsBlacklisted(jti) {
+		http.Error(w, "Token has been revoked.", http.StatusUnauthorized)
+		return
+	}
+
+	// Extract user information
+	userID, ok := (*claims)["user_id"].(float64)
+	if !ok {
+		http.Error(w, "Invalid token claims.", http.StatusUnauthorized)
+		return
+	}
+
+	username, ok := (*claims)["username"].(string)
+	if !ok {
+		http.Error(w, "Invalid token claims.", http.StatusUnauthorized)
+		return
+	}
+
+	// Create new token
+	newJTI := uuid.New().String()
+	now := time.Now()
+	expiry := now.Add(time.Hour * 48)
+
+	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"jti":      newJTI,
+		"user_id":  int(userID),
+		"username": username,
+		"iat":      now.Unix(),
+		"exp":      expiry.Unix(),
+	})
+
+	newTokenString, err := newToken.SignedString(secret)
+	if err != nil {
+		log.Printf("[AUT] [REF] Failed to create refresh token: %s", err)
+		http.Error(w, "Failed to refresh token.", http.StatusInternalServerError)
+		return
+	}
+
+	// Blacklist the old token
+	if jti != "" {
+		exp, ok := (*claims)["exp"].(float64)
+		if ok {
+			expiryTime := time.Unix(int64(exp), 0)
+			jwtBlacklist.Add(jti, expiryTime)
+		}
+	}
+
+	log.Printf("[AUT] [REF] Token refreshed for user %s", username)
+	json.NewEncoder(w).Encode(map[string]string{"token": newTokenString})
+}
+
+func (s *Server) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing authorization header.", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader {
+		http.Error(w, "Invalid token format.", http.StatusUnauthorized)
+		return
+	}
+
+	claims := &jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return secret, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid token.", http.StatusUnauthorized)
+		return
+	}
+
+	// Blacklist the token
+	if jti, ok := (*claims)["jti"].(string); ok {
+		if exp, ok := (*claims)["exp"].(float64); ok {
+			expiryTime := time.Unix(int64(exp), 0)
+			jwtBlacklist.Add(jti, expiryTime)
+			log.Printf("[AUT] [LOGOUT] Token blacklisted: %s", jti)
+		}
+	}
+
+	// Clean up user session from Redis
+	if userID, ok := (*claims)["user_id"].(float64); ok && s.hub != nil {
+		ctx := context.Background()
+		s.hub.redis.Del(ctx, fmt.Sprintf("user:%d:session", int(userID)))
+		s.hub.redis.Del(ctx, fmt.Sprintf("user:%d:channel", int(userID)))
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
 }
 
 func (s *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -197,10 +466,14 @@ func (s *Server) ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	}
 
 	claims := &jwt.MapClaims{}
-	token, e := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		// Validate the signing method to prevent algorithm confusion attacks
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return secret, nil
 	})
-	if e != nil || !token.Valid {
+	if err != nil || !token.Valid {
 		http.Error(w, "Invalid token.", http.StatusUnauthorized)
 		return
 	}
@@ -235,30 +508,60 @@ func (s *Server) ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) Security(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("auth")
-		if authHeader == "" {
-			http.Error(w, "Invalid authentication.", http.StatusUnauthorized)
-			return
+		// Security headers
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'")
+
+		// Check if route requires authentication
+		if strings.HasPrefix(r.URL.Path, "/api/protected/") || 
+		   strings.HasPrefix(r.URL.Path, "/api/logout") ||
+		   strings.HasPrefix(r.URL.Path, "/api/refresh") {
+			
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Missing authorization header.", http.StatusUnauthorized)
+				return
+			}
+
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenString == authHeader {
+				http.Error(w, "Invalid token format.", http.StatusUnauthorized)
+				return
+			}
+
+			claims := &jwt.MapClaims{}
+			token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+				// Validate signing algorithm to prevent algorithm confusion attacks
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+				}
+				return secret, nil
+			})
+
+			if err != nil || !token.Valid {
+				http.Error(w, "Invalid token.", http.StatusUnauthorized)
+				return
+			}
+
+			// Check if token is blacklisted
+			if jti, ok := (*claims)["jti"].(string); ok {
+				if jwtBlacklist.IsBlacklisted(jti) {
+					http.Error(w, "Token has been revoked.", http.StatusUnauthorized)
+					return
+				}
+			}
+
+			// Store user ID in context
+			if userID, ok := (*claims)["user_id"].(float64); ok {
+				ctx := context.WithValue(r.Context(), userIDKey, int(userID))
+				r = r.WithContext(ctx)
+			}
 		}
 
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			http.Error(w, "Invalid token format.", http.StatusUnauthorized)
-			return
-		}
-
-		claims := &jwt.MapClaims{}
-		token, e := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return secret, nil
-		})
-		if e != nil || !token.Valid {
-			http.Error(w, "Something went wrong with the authorisation token.", http.StatusUnauthorized)
-			return
-		}
-
-		uidFloat, _ := (*claims)["user_id"].(float64)
-		ctx := context.WithValue(r.Context(), userIDKey, int(uidFloat))
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -458,4 +761,20 @@ func (s *Server) GetEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(events)
+}
+
+// Cleanup routine for expired tokens and rate limits
+func (s *Server) startCleanupRoutine() {
+	ticker := time.NewTicker(time.Hour)
+	go func() {
+		for range ticker.C {
+			// Clean expired blacklisted tokens
+			jwtBlacklist.Cleanup()
+			
+			// Clean expired rate limit entries
+			authRateLimiter.Cleanup()
+			
+			log.Printf("[CLEANUP] Expired tokens and rate limits cleaned up")
+		}
+	}()
 }

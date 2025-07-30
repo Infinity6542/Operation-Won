@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/status.dart' as status;
+import 'secure_storage_service.dart';
 
 class WebSocketService extends ChangeNotifier {
   WebSocketChannel? _channel;
@@ -22,13 +23,28 @@ class WebSocketService extends ChangeNotifier {
   // Audio stream getter
   Stream<Uint8List> get audioStream => _audioStreamController.stream;
 
-  // Connect to WebSocket
-  Future<bool> connect(String url) async {
+  // Connect to WebSocket with JWT authentication
+  Future<bool> connect(String url, {String? channelId}) async {
     try {
       await disconnect(); // Disconnect existing connection
 
-      _currentUrl = url;
-      _channel = WebSocketChannel.connect(Uri.parse(url));
+      // Get JWT token for authentication
+      final token = await SecureStorageService.getToken();
+      if (token == null || token.isEmpty) {
+        debugPrint('[WebSocket] No valid token available for authentication');
+        return false;
+      }
+
+      // Add token and channel as query parameters
+      final uri = Uri.parse(url);
+      final authenticatedUri = uri.replace(queryParameters: {
+        ...uri.queryParameters,
+        'token': token,
+        if (channelId != null) 'channel': channelId,
+      });
+
+      _currentUrl = authenticatedUri.toString();
+      _channel = WebSocketChannel.connect(authenticatedUri);
 
       // Listen to the WebSocket stream
       _subscription = _channel!.stream.listen(
@@ -38,9 +54,12 @@ class WebSocketService extends ChangeNotifier {
       );
 
       _isConnected = true;
+      if (channelId != null) {
+        _currentChannelId = channelId;
+      }
       notifyListeners();
 
-      debugPrint('[WebSocket] Connected to $url');
+      debugPrint('[WebSocket] Connected to $url with authentication');
       return true;
     } catch (e) {
       debugPrint('[WebSocket] Connection failed: $e');
@@ -66,11 +85,36 @@ class WebSocketService extends ChangeNotifier {
     debugPrint('[WebSocket] Disconnected');
   }
 
-  // Join a channel
-  void joinChannel(String channelId) {
+  // Reconnect with fresh authentication (useful after token refresh)
+  Future<bool> reconnect() async {
+    if (_currentUrl == null) {
+      debugPrint('[WebSocket] Cannot reconnect: no previous URL');
+      return false;
+    }
+
+    // Extract base URL without query parameters
+    final uri = Uri.parse(_currentUrl!);
+    final baseUrl = '${uri.scheme}://${uri.host}:${uri.port}${uri.path}';
+    
+    return await connect(baseUrl, channelId: _currentChannelId);
+  }
+
+  // Join a channel (reconnects with new channel if needed)
+  Future<bool> joinChannel(String channelId) async {
+    if (_currentUrl == null) {
+      debugPrint('[WebSocket] Cannot join channel: not connected');
+      return false;
+    }
+
+    // If already connected, send channel change signal
+    if (_isConnected && _currentChannelId != channelId) {
+      sendSignal('channel_change', {'new_channel_id': channelId});
+    }
+
     _currentChannelId = channelId;
     notifyListeners();
     debugPrint('[WebSocket] Joined channel: $channelId');
+    return true;
   }
 
   // Send text signal (like PTT start/stop)
@@ -143,6 +187,16 @@ class WebSocketService extends ChangeNotifier {
   // Handle connection errors
   void _handleError(dynamic error) {
     debugPrint('[WebSocket] Connection error: $error');
+    
+    // Check if this is an authentication error
+    final errorString = error.toString().toLowerCase();
+    if (errorString.contains('401') || 
+        errorString.contains('unauthorized') || 
+        errorString.contains('invalid token')) {
+      debugPrint('[WebSocket] Authentication failed - token may be expired');
+      // The communication service should handle token refresh and reconnection
+    }
+    
     _isConnected = false;
     notifyListeners();
   }
@@ -153,14 +207,6 @@ class WebSocketService extends ChangeNotifier {
     _isConnected = false;
     _currentChannelId = null;
     notifyListeners();
-  }
-
-  // Reconnect to the same URL
-  Future<bool> reconnect() async {
-    if (_currentUrl != null) {
-      return await connect(_currentUrl!);
-    }
-    return false;
   }
 
   @override

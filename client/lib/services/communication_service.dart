@@ -110,9 +110,9 @@ class CommunicationService extends ChangeNotifier {
   // Connect to WebSocket using current settings
   Future<bool> connectWebSocket() async {
     final wsUrl = _settingsProvider.websocketEndpoint;
-    debugPrint('[Comm] Connecting to WebSocket: $wsUrl');
+    debugPrint('[Comm] Connecting to WebSocket: $wsUrl (Channel: $_currentChannelId)');
 
-    final success = await _webSocketService.connect(wsUrl);
+    final success = await _webSocketService.connect(wsUrl, channelId: _currentChannelId);
     if (success) {
       debugPrint('[Comm] WebSocket connected successfully');
     } else {
@@ -141,7 +141,7 @@ class CommunicationService extends ChangeNotifier {
     }
 
     _currentChannelId = channelId;
-    _webSocketService.joinChannel(channelId);
+    await _webSocketService.joinChannel(channelId);
 
     // Start audio playing mode to receive audio
     await _audioService.startPlaying();
@@ -161,6 +161,30 @@ class CommunicationService extends ChangeNotifier {
 
     debugPrint('[Comm] Left channel');
     notifyListeners();
+  }
+
+  // Reconnect WebSocket with fresh authentication (useful after token refresh)
+  Future<bool> reconnectWebSocket() async {
+    try {
+      debugPrint('[Comm] Reconnecting WebSocket with fresh authentication...');
+      final success = await _webSocketService.reconnect();
+      
+      if (success) {
+        debugPrint('[Comm] WebSocket reconnected successfully');
+        
+        // If we were in a channel, rejoin it
+        if (_currentChannelId != null) {
+          await _webSocketService.joinChannel(_currentChannelId!);
+        }
+      } else {
+        debugPrint('[Comm] Failed to reconnect WebSocket');
+      }
+      
+      return success;
+    } catch (e) {
+      debugPrint('[Comm] WebSocket reconnection error: $e');
+      return false;
+    }
   }
 
   // Start Push-to-Talk (PTT) - supports both hold and tap modes
