@@ -56,7 +56,7 @@ Operation Won/
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Backend** | Go 1.19+ | High-performance API server |
+| **Backend** | Go 1.23+ | High-performance API server |
 | **Database** | MySQL 8.0+ | Primary data storage |
 | **Cache** | Redis 7.0+ | Session & performance cache |
 | **Mobile** | Flutter 3.0+ | Cross-platform mobile app |

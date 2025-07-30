@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -428,6 +429,7 @@ class _LoginFormState extends State<LoginForm> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _showServerSelection = false;
 
   @override
   void dispose() {
@@ -491,6 +493,10 @@ class _LoginFormState extends State<LoginForm> {
               ),
             ),
             SizedBox(height: widget.isMobile ? 16 : 24),
+
+            // Server Selection
+            _buildServerSelector(),
+            SizedBox(height: widget.isMobile ? 12 : 16),
 
             // Username Field
             _buildTextField(
@@ -658,6 +664,209 @@ class _LoginFormState extends State<LoginForm> {
       ],
     );
   }
+
+  Widget _buildServerSelector() {
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _showServerSelection = !_showServerSelection;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF475569),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[600]!, width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.dns_outlined,
+                      color: Colors.grey[400],
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _getSelectedServerName(settingsProvider),
+                        style: TextStyle(
+                          color: Colors.grey[300],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      _showServerSelection ? Icons.expand_less : Icons.expand_more,
+                      color: Colors.grey[400],
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_showServerSelection) ...[
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF374151),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[600]!, width: 0.5),
+                ),
+                child: Column(
+                  children: [
+                    // Predefined servers
+                    ...SettingsProvider.predefinedEndpoints.map((endpoint) {
+                      final isSelected = settingsProvider.apiEndpoint == endpoint['api'];
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          Icons.radio_button_checked,
+                          color: isSelected ? const Color(0xFF3B82F6) : Colors.grey[500],
+                          size: 16,
+                        ),
+                        title: Text(
+                          endpoint['name']!,
+                          style: TextStyle(
+                            color: Colors.grey[200],
+                            fontSize: 13,
+                          ),
+                        ),
+                        subtitle: Text(
+                          endpoint['api']!,
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 11,
+                          ),
+                        ),
+                        onTap: () async {
+                          await settingsProvider.setApiEndpoint(endpoint['api']!);
+                          await settingsProvider.setWebsocketEndpoint(endpoint['websocket']!);
+                          setState(() {
+                            _showServerSelection = false;
+                          });
+                        },
+                      );
+                    }).toList(),
+                    // Custom server option
+                    const Divider(color: Colors.grey, height: 1),
+                    ListTile(
+                      dense: true,
+                      leading: Icon(
+                        Icons.edit_outlined,
+                        color: Colors.grey[400],
+                        size: 16,
+                      ),
+                      title: Text(
+                        'Custom Server',
+                        style: TextStyle(
+                          color: Colors.grey[200],
+                          fontSize: 13,
+                        ),
+                      ),
+                      onTap: () {
+                        _showCustomServerDialog(settingsProvider);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  String _getSelectedServerName(SettingsProvider settingsProvider) {
+    final currentEndpoint = settingsProvider.apiEndpoint;
+    
+    // Check if it matches a predefined endpoint
+    for (final endpoint in SettingsProvider.predefinedEndpoints) {
+      if (endpoint['api'] == currentEndpoint) {
+        return endpoint['name']!;
+      }
+    }
+    
+    // If it's a custom endpoint, show the URL
+    return currentEndpoint.length > 30 
+        ? '${currentEndpoint.substring(0, 27)}...'
+        : currentEndpoint;
+  }
+
+  void _showCustomServerDialog(SettingsProvider settingsProvider) {
+    final controller = TextEditingController(text: settingsProvider.apiEndpoint);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF374151),
+        title: Text(
+          'Custom Server',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'API Endpoint',
+                labelStyle: TextStyle(color: Colors.grey[400]),
+                hintText: 'https://api.example.com',
+                hintStyle: TextStyle(color: Colors.grey[500]),
+                filled: true,
+                fillColor: const Color(0xFF475569),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey[400]),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final apiUrl = controller.text.trim();
+              if (apiUrl.isNotEmpty) {
+                // Generate websocket URL from API URL
+                final wsUrl = apiUrl.replaceFirst('http', 'ws') + '/msg';
+                
+                await settingsProvider.setApiEndpoint(apiUrl);
+                await settingsProvider.setWebsocketEndpoint(wsUrl);
+                
+                setState(() {
+                  _showServerSelection = false;
+                });
+              }
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3B82F6),
+            ),
+            child: const Text(
+              'Save',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class RegisterForm extends StatefulWidget {
@@ -685,6 +894,7 @@ class _RegisterFormState extends State<RegisterForm> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _showServerSelection = false;
 
   @override
   void dispose() {
@@ -765,6 +975,13 @@ class _RegisterFormState extends State<RegisterForm> {
                     : (widget.isSmallScreen
                         ? 12
                         : (widget.isMobile ? 16 : 20))),
+
+            // Server Selection
+            _buildServerSelector(),
+            SizedBox(
+                height: widget.isVerySmallScreen
+                    ? 6
+                    : (widget.isSmallScreen ? 8 : (widget.isMobile ? 10 : 12))),
 
             // Username Field
             _buildTextField(
@@ -972,6 +1189,209 @@ class _RegisterFormState extends State<RegisterForm> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildServerSelector() {
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _showServerSelection = !_showServerSelection;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF475569),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[600]!, width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.dns_outlined,
+                      color: Colors.grey[400],
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _getSelectedServerName(settingsProvider),
+                        style: TextStyle(
+                          color: Colors.grey[300],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      _showServerSelection ? Icons.expand_less : Icons.expand_more,
+                      color: Colors.grey[400],
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_showServerSelection) ...[
+              const SizedBox(height: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF374151),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[600]!, width: 0.5),
+                ),
+                child: Column(
+                  children: [
+                    // Predefined servers
+                    ...SettingsProvider.predefinedEndpoints.map((endpoint) {
+                      final isSelected = settingsProvider.apiEndpoint == endpoint['api'];
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          Icons.radio_button_checked,
+                          color: isSelected ? const Color(0xFF3B82F6) : Colors.grey[500],
+                          size: 16,
+                        ),
+                        title: Text(
+                          endpoint['name']!,
+                          style: TextStyle(
+                            color: Colors.grey[200],
+                            fontSize: 13,
+                          ),
+                        ),
+                        subtitle: Text(
+                          endpoint['api']!,
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 11,
+                          ),
+                        ),
+                        onTap: () async {
+                          await settingsProvider.setApiEndpoint(endpoint['api']!);
+                          await settingsProvider.setWebsocketEndpoint(endpoint['websocket']!);
+                          setState(() {
+                            _showServerSelection = false;
+                          });
+                        },
+                      );
+                    }).toList(),
+                    // Custom server option
+                    const Divider(color: Colors.grey, height: 1),
+                    ListTile(
+                      dense: true,
+                      leading: Icon(
+                        Icons.edit_outlined,
+                        color: Colors.grey[400],
+                        size: 16,
+                      ),
+                      title: Text(
+                        'Custom Server',
+                        style: TextStyle(
+                          color: Colors.grey[200],
+                          fontSize: 13,
+                        ),
+                      ),
+                      onTap: () {
+                        _showCustomServerDialog(settingsProvider);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  String _getSelectedServerName(SettingsProvider settingsProvider) {
+    final currentEndpoint = settingsProvider.apiEndpoint;
+    
+    // Check if it matches a predefined endpoint
+    for (final endpoint in SettingsProvider.predefinedEndpoints) {
+      if (endpoint['api'] == currentEndpoint) {
+        return endpoint['name']!;
+      }
+    }
+    
+    // If it's a custom endpoint, show the URL
+    return currentEndpoint.length > 30 
+        ? '${currentEndpoint.substring(0, 27)}...'
+        : currentEndpoint;
+  }
+
+  void _showCustomServerDialog(SettingsProvider settingsProvider) {
+    final controller = TextEditingController(text: settingsProvider.apiEndpoint);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF374151),
+        title: Text(
+          'Custom Server',
+          style: TextStyle(color: Colors.grey[200]),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'API Endpoint',
+                labelStyle: TextStyle(color: Colors.grey[400]),
+                hintText: 'https://api.example.com',
+                hintStyle: TextStyle(color: Colors.grey[500]),
+                filled: true,
+                fillColor: const Color(0xFF475569),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey[400]),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final apiUrl = controller.text.trim();
+              if (apiUrl.isNotEmpty) {
+                // Generate websocket URL from API URL
+                final wsUrl = apiUrl.replaceFirst('http', 'ws') + '/msg';
+                
+                await settingsProvider.setApiEndpoint(apiUrl);
+                await settingsProvider.setWebsocketEndpoint(wsUrl);
+                
+                setState(() {
+                  _showServerSelection = false;
+                });
+              }
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3B82F6),
+            ),
+            child: const Text(
+              'Save',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

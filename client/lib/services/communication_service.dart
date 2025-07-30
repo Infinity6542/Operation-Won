@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import '../providers/settings_provider.dart';
 import 'websocket_service.dart';
