@@ -90,24 +90,24 @@ func main() {
 	go hub.Start()
 
 	server := NewServer(hub, db, client)
-	
+
 	// Start cleanup routine for JWT blacklist and rate limiting
 	server.startCleanupRoutine()
 
 	// Authentication endpoints (no security middleware)
 	http.HandleFunc("/auth/login", server.HandleAuth)
 	http.HandleFunc("/auth/register", server.HandleRegister)
-	
+
 	// JWT management endpoints (require authentication)
 	http.Handle("/api/refresh", server.Security(http.HandlerFunc(server.HandleRefreshToken)))
 	http.Handle("/api/logout", server.Security(http.HandlerFunc(server.HandleLogout)))
-	
+
 	// Protected API endpoints
 	http.Handle("/api/protected/channels/create", server.Security(http.HandlerFunc(server.CreateChannel)))
 	http.Handle("/api/protected/channels", server.Security(http.HandlerFunc(server.GetChannels)))
 	http.Handle("/api/protected/events/create", server.Security(http.HandlerFunc(server.CreateEvent)))
 	http.Handle("/api/protected/events", server.Security(http.HandlerFunc(server.GetEvents)))
-	
+
 	// WebSocket endpoint (requires special handling)
 	http.HandleFunc("/msg", func(w http.ResponseWriter, r *http.Request) {
 		server.ServeWs(hub, w, r)

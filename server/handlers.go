@@ -39,7 +39,7 @@ type JWTBlacklist struct {
 }
 
 var (
-	authRateLimiter = NewRateLimiter(5, time.Minute)     // 5 requests per minute for auth
+	authRateLimiter = NewRateLimiter(5, time.Minute) // 5 requests per minute for auth
 	jwtBlacklist    = NewJWTBlacklist()
 )
 
@@ -87,18 +87,18 @@ func (rl *RateLimiter) IsAllowed(clientIP string) bool {
 func (rl *RateLimiter) Cleanup() {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
-	
+
 	now := time.Now()
 	for clientIP, requests := range rl.requests {
 		validRequests := make([]time.Time, 0)
 		windowStart := now.Add(-rl.window)
-		
+
 		for _, req := range requests {
 			if req.After(windowStart) {
 				validRequests = append(validRequests, req)
 			}
 		}
-		
+
 		if len(validRequests) == 0 {
 			delete(rl.requests, clientIP)
 		} else {
@@ -116,25 +116,25 @@ func (jb *JWTBlacklist) Add(tokenID string, expiry time.Time) {
 func (jb *JWTBlacklist) IsBlacklisted(tokenID string) bool {
 	jb.mu.RLock()
 	defer jb.mu.RUnlock()
-	
+
 	expiry, exists := jb.tokens[tokenID]
 	if !exists {
 		return false
 	}
-	
+
 	// Clean expired tokens
 	if time.Now().After(expiry) {
 		delete(jb.tokens, tokenID)
 		return false
 	}
-	
+
 	return true
 }
 
 func (jb *JWTBlacklist) Cleanup() {
 	jb.mu.Lock()
 	defer jb.mu.Unlock()
-	
+
 	now := time.Now()
 	for tokenID, expiry := range jb.tokens {
 		if now.After(expiry) {
@@ -516,10 +516,10 @@ func (s *Server) Security(next http.Handler) http.Handler {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'")
 
 		// Check if route requires authentication
-		if strings.HasPrefix(r.URL.Path, "/api/protected/") || 
-		   strings.HasPrefix(r.URL.Path, "/api/logout") ||
-		   strings.HasPrefix(r.URL.Path, "/api/refresh") {
-			
+		if strings.HasPrefix(r.URL.Path, "/api/protected/") ||
+			strings.HasPrefix(r.URL.Path, "/api/logout") ||
+			strings.HasPrefix(r.URL.Path, "/api/refresh") {
+
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
 				http.Error(w, "Missing authorization header.", http.StatusUnauthorized)
@@ -770,10 +770,10 @@ func (s *Server) startCleanupRoutine() {
 		for range ticker.C {
 			// Clean expired blacklisted tokens
 			jwtBlacklist.Cleanup()
-			
+
 			// Clean expired rate limit entries
 			authRateLimiter.Cleanup()
-			
+
 			log.Printf("[CLEANUP] Expired tokens and rate limits cleaned up")
 		}
 	}()

@@ -33,18 +33,17 @@ class ApiService {
         },
         onError: (error, handler) async {
           // Handle 401 errors with automatic token refresh
-          if (error.response?.statusCode == 401 && 
+          if (error.response?.statusCode == 401 &&
               !_isPublicEndpoint(error.requestOptions.path) &&
               !error.requestOptions.path.contains('/refresh')) {
-            
             debugPrint('Token expired, attempting refresh...');
             final refreshed = await refreshToken();
-            
+
             if (refreshed) {
               // Retry the original request with new token
               final options = error.requestOptions;
               options.headers['Authorization'] = 'Bearer $_token';
-              
+
               try {
                 final response = await _dio.fetch(options);
                 return handler.resolve(response);
@@ -53,7 +52,7 @@ class ApiService {
               }
             }
           }
-          
+
           debugPrint('API Error: ${error.message}');
           handler.next(error);
         },
@@ -64,9 +63,9 @@ class ApiService {
   }
 
   bool _isPublicEndpoint(String path) {
-    return path.startsWith('/auth/') || 
-           path.startsWith('/health') ||
-           path.startsWith('/msg');
+    return path.startsWith('/auth/') ||
+        path.startsWith('/health') ||
+        path.startsWith('/msg');
   }
 
   // Method to update the base URL

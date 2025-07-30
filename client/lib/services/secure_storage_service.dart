@@ -39,19 +39,19 @@ class SecureStorageService {
   }) async {
     try {
       await _secureStorage.write(key: _tokenKey, value: token);
-      
+
       if (refreshToken != null) {
         await _secureStorage.write(key: _refreshTokenKey, value: refreshToken);
       }
-      
+
       if (userId != null) {
         await _secureStorage.write(key: _userIdKey, value: userId.toString());
       }
-      
+
       if (username != null) {
         await _secureStorage.write(key: _usernameKey, value: username);
       }
-      
+
       debugPrint('Auth data saved securely');
     } catch (e) {
       debugPrint('Error saving auth data: $e');
@@ -117,14 +117,14 @@ class SecureStorageService {
       if (token == null || token.isEmpty) {
         return false;
       }
-      
+
       // Basic JWT validation - check if it has three parts
       final parts = token.split('.');
       if (parts.length != 3) {
         debugPrint('Invalid JWT format');
         return false;
       }
-      
+
       // Decode payload to check expiration
       try {
         final payload = parts[1];
@@ -133,20 +133,20 @@ class SecureStorageService {
         while (normalized.length % 4 != 0) {
           normalized += '=';
         }
-        
+
         final decoded = utf8.decode(base64.decode(normalized));
         final payloadMap = json.decode(decoded) as Map<String, dynamic>;
-        
+
         if (payloadMap.containsKey('exp')) {
           final exp = payloadMap['exp'] as num;
           final currentTime = DateTime.now().millisecondsSinceEpoch / 1000;
-          
+
           if (currentTime >= exp) {
             debugPrint('Token has expired');
             return false;
           }
         }
-        
+
         return true;
       } catch (e) {
         debugPrint('Error validating token: $e');

@@ -95,7 +95,7 @@ class WebSocketService extends ChangeNotifier {
     // Extract base URL without query parameters
     final uri = Uri.parse(_currentUrl!);
     final baseUrl = '${uri.scheme}://${uri.host}:${uri.port}${uri.path}';
-    
+
     return await connect(baseUrl, channelId: _currentChannelId);
   }
 
@@ -187,16 +187,16 @@ class WebSocketService extends ChangeNotifier {
   // Handle connection errors
   void _handleError(dynamic error) {
     debugPrint('[WebSocket] Connection error: $error');
-    
+
     // Check if this is an authentication error
     final errorString = error.toString().toLowerCase();
-    if (errorString.contains('401') || 
-        errorString.contains('unauthorized') || 
+    if (errorString.contains('401') ||
+        errorString.contains('unauthorized') ||
         errorString.contains('invalid token')) {
       debugPrint('[WebSocket] Authentication failed - token may be expired');
       // The communication service should handle token refresh and reconnection
     }
-    
+
     _isConnected = false;
     notifyListeners();
   }

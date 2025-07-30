@@ -110,9 +110,11 @@ class CommunicationService extends ChangeNotifier {
   // Connect to WebSocket using current settings
   Future<bool> connectWebSocket() async {
     final wsUrl = _settingsProvider.websocketEndpoint;
-    debugPrint('[Comm] Connecting to WebSocket: $wsUrl (Channel: $_currentChannelId)');
+    debugPrint(
+        '[Comm] Connecting to WebSocket: $wsUrl (Channel: $_currentChannelId)');
 
-    final success = await _webSocketService.connect(wsUrl, channelId: _currentChannelId);
+    final success =
+        await _webSocketService.connect(wsUrl, channelId: _currentChannelId);
     if (success) {
       debugPrint('[Comm] WebSocket connected successfully');
     } else {
@@ -168,10 +170,10 @@ class CommunicationService extends ChangeNotifier {
     try {
       debugPrint('[Comm] Reconnecting WebSocket with fresh authentication...');
       final success = await _webSocketService.reconnect();
-      
+
       if (success) {
         debugPrint('[Comm] WebSocket reconnected successfully');
-        
+
         // If we were in a channel, rejoin it
         if (_currentChannelId != null) {
           await _webSocketService.joinChannel(_currentChannelId!);
@@ -179,7 +181,7 @@ class CommunicationService extends ChangeNotifier {
       } else {
         debugPrint('[Comm] Failed to reconnect WebSocket');
       }
-      
+
       return success;
     } catch (e) {
       debugPrint('[Comm] WebSocket reconnection error: $e');
