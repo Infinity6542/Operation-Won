@@ -10,7 +10,6 @@ import 'models/model_test.dart' as model_tests;
 
 void main() {
   group('=== OPERATION WON FLUTTER CLIENT TEST SUITE ===', () {
-    
     // Provider Tests
     group('🎯 PROVIDER TESTS', () {
       group('AuthProvider', auth_provider_tests.main);
@@ -33,7 +32,7 @@ void main() {
     // because they require native plugin implementations that aren't
     // available in the test environment. These would be tested with
     // integration tests on real devices.
-    
+
     // Future test categories to be added:
     // - Service Tests (API, WebSocket, Audio, Communication)
     // - Integration Tests (Provider + Service interactions)

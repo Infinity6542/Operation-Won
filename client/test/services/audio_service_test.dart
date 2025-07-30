@@ -42,7 +42,7 @@ void main() {
       test('should generate and set E2EE key', () async {
         // Generate key (will return null in test environment due to platform channel failure)
         final keyBytes = await audioService.generateNewE2EEKey();
-        
+
         if (keyBytes != null) {
           // If key generation succeeds (real device)
           expect(keyBytes.length, 32); // 256 bits = 32 bytes

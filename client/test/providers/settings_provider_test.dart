@@ -18,7 +18,7 @@ void main() {
     group('Initialization Tests', () {
       test('should initialize with default settings', () async {
         settingsProvider = SettingsProvider();
-        
+
         // Wait for async initialization
         await Future.delayed(Duration(milliseconds: 200));
 
@@ -31,24 +31,28 @@ void main() {
 
       test('should load predefined endpoints', () async {
         settingsProvider = SettingsProvider();
-        
+
         // Wait for async initialization
         await Future.delayed(Duration(milliseconds: 200));
 
         expect(SettingsProvider.predefinedEndpoints, isNotEmpty);
-        expect(SettingsProvider.predefinedEndpoints.first, containsPair('name', isA<String>()));
-        expect(SettingsProvider.predefinedEndpoints.first, containsPair('api', isA<String>()));
-        expect(SettingsProvider.predefinedEndpoints.first, containsPair('websocket', isA<String>()));
+        expect(SettingsProvider.predefinedEndpoints.first,
+            containsPair('name', isA<String>()));
+        expect(SettingsProvider.predefinedEndpoints.first,
+            containsPair('api', isA<String>()));
+        expect(SettingsProvider.predefinedEndpoints.first,
+            containsPair('websocket', isA<String>()));
       });
 
       test('should have consistent default endpoint configuration', () async {
         settingsProvider = SettingsProvider();
-        
+
         // Wait for async initialization
         await Future.delayed(Duration(milliseconds: 200));
 
         expect(settingsProvider.apiEndpoint, startsWith('http'));
-        expect(settingsProvider.websocketEndpoint, anyOf(startsWith('ws'), startsWith('http')));
+        expect(settingsProvider.websocketEndpoint,
+            anyOf(startsWith('ws'), startsWith('http')));
       });
     });
 
@@ -85,7 +89,7 @@ void main() {
       test('should persist theme mode changes', () async {
         const testTheme = 'light';
         await settingsProvider.setThemeMode(testTheme);
-        
+
         expect(settingsProvider.themeMode, testTheme);
       });
     });
@@ -117,7 +121,7 @@ void main() {
       test('should persist PTT mode changes', () async {
         const testMode = 'tap';
         await settingsProvider.setPttMode(testMode);
-        
+
         expect(settingsProvider.pttMode, testMode);
       });
     });
@@ -131,7 +135,7 @@ void main() {
 
       test('should toggle magic mic setting', () async {
         final initialState = settingsProvider.magicMicEnabled;
-        
+
         await settingsProvider.setMagicMicEnabled(!initialState);
         expect(settingsProvider.magicMicEnabled, !initialState);
 
@@ -166,7 +170,7 @@ void main() {
       test('should update API endpoint', () async {
         const testEndpoint = 'http://test-api.com';
         await settingsProvider.setApiEndpoint(testEndpoint);
-        
+
         expect(settingsProvider.apiEndpoint, testEndpoint);
       });
 
@@ -191,7 +195,7 @@ void main() {
       test('should persist API endpoint changes', () async {
         const testEndpoint = 'http://persistent-api.com';
         await settingsProvider.setApiEndpoint(testEndpoint);
-        
+
         expect(settingsProvider.apiEndpoint, testEndpoint);
       });
     });
@@ -206,7 +210,7 @@ void main() {
       test('should update WebSocket endpoint', () async {
         const testEndpoint = 'ws://test-ws.com';
         await settingsProvider.setWebsocketEndpoint(testEndpoint);
-        
+
         expect(settingsProvider.websocketEndpoint, testEndpoint);
       });
 
@@ -232,7 +236,7 @@ void main() {
       test('should persist WebSocket endpoint changes', () async {
         const testEndpoint = 'ws://persistent-ws.com';
         await settingsProvider.setWebsocketEndpoint(testEndpoint);
-        
+
         expect(settingsProvider.websocketEndpoint, testEndpoint);
       });
     });
@@ -264,7 +268,7 @@ void main() {
       test('should detect custom endpoint usage', () async {
         // Wait for initialization
         await Future.delayed(Duration(milliseconds: 200));
-        
+
         // Initially might be using predefined
         expect(settingsProvider.isUsingCustomEndpoint, isA<bool>());
       });
@@ -272,7 +276,7 @@ void main() {
       test('should get current predefined endpoint', () async {
         // Wait for initialization
         await Future.delayed(Duration(milliseconds: 200));
-        
+
         final currentEndpoint = settingsProvider.getCurrentPredefinedEndpoint();
         expect(currentEndpoint, anyOf(isNull, isA<Map<String, String>>()));
       });
@@ -283,7 +287,8 @@ void main() {
           // Missing api and websocket fields
         };
 
-        expect(() => settingsProvider.setPredefinedEndpoint(invalidEndpoint), throwsA(isA<TypeError>()));
+        expect(() => settingsProvider.setPredefinedEndpoint(invalidEndpoint),
+            throwsA(isA<TypeError>()));
       });
     });
 
@@ -338,7 +343,7 @@ void main() {
 
       test('should notify listeners on setting changes', () async {
         int notificationCount = 0;
-        
+
         settingsProvider.addListener(() {
           notificationCount++;
         });
@@ -381,9 +386,9 @@ void main() {
       });
 
       test('should handle multiple disposal calls', () {
-        // First disposal should work normally  
+        // First disposal should work normally
         expect(() => settingsProvider.dispose(), returnsNormally);
-        
+
         // Second disposal should fail since provider is disposed
         // But we don't want test to fail, so expect it to handle gracefully
         try {
@@ -398,13 +403,13 @@ void main() {
         for (int i = 0; i < 3; i++) {
           final provider = SettingsProvider();
           await Future.delayed(Duration(milliseconds: 100));
-          
+
           expect(provider.themeMode, isA<String>());
           expect(provider.pttMode, isA<String>());
           expect(provider.magicMicEnabled, isA<bool>());
           expect(provider.apiEndpoint, isA<String>());
           expect(provider.websocketEndpoint, isA<String>());
-          
+
           provider.dispose();
         }
       });

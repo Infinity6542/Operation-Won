@@ -51,15 +51,9 @@ void main() {
       });
 
       test('should handle provider lifecycle properly', () async {
-        // Use a separate provider for this test to avoid interference
-        final tempSettings = SettingsProvider();
-        final tempAuth = AuthProvider(settingsProvider: tempSettings);
+        authProvider = AuthProvider();
 
-        // Wait for initialization
-        await Future.delayed(Duration(milliseconds: 200));
-
-        expect(() => tempAuth.dispose(), returnsNormally);
-        expect(() => tempSettings.dispose(), returnsNormally);
+        expect(() => authProvider.dispose(), returnsNormally);
       });
     });
 
@@ -117,25 +111,9 @@ void main() {
       });
 
       test('should handle multiple operations sequentially', () async {
-        // These will fail due to no server, but should not crash
-        try {
-          await authProvider.login('test', 'password');
-        } catch (e) {
-          // Expected to fail in test environment
-        }
-
-        try {
-          await authProvider.register('test', 'test@example.com', 'password');
-        } catch (e) {
-          // Expected to fail in test environment
-        }
-
-        // Logout might fail due to secure storage, but should handle gracefully
-        try {
-          await authProvider.logout();
-        } catch (e) {
-          // Expected to fail in test environment due to secure storage
-        }
+        await authProvider.login('test', 'password');
+        await authProvider.register('test', 'test@example.com', 'password');
+        await authProvider.logout();
 
         expect(authProvider.isLoading, false);
       });
@@ -224,12 +202,7 @@ void main() {
       });
 
       test('should handle logout when not logged in', () async {
-        // Logout might fail due to secure storage in test environment
-        try {
-          await authProvider.logout();
-        } catch (e) {
-          // Expected to fail due to secure storage not being available
-        }
+        await authProvider.logout();
 
         expect(authProvider.isLoggedIn, false);
         expect(authProvider.user, isNull);
@@ -237,12 +210,7 @@ void main() {
       });
 
       test('should clear user data on logout', () async {
-        // Logout might fail due to secure storage in test environment
-        try {
-          await authProvider.logout();
-        } catch (e) {
-          // Expected to fail due to secure storage not being available
-        }
+        await authProvider.logout();
 
         expect(authProvider.user, isNull);
         expect(authProvider.isLoggedIn, false);

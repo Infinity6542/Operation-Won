@@ -57,7 +57,7 @@ void main() {
           ),
         );
 
-        expect(find.text('Event Channel'), findsWidgets);
+        expect(find.text('Event Channel'), findsOneWidget);
       });
 
       testWidgets('should be accessible', (tester) async {
