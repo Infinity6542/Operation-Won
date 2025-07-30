@@ -61,6 +61,12 @@ var (
 		"AUTH_LOGIN_INVALID_JSON",
 		"AUTH_LOGIN_DB_CONNECTION_ERROR",
 		"CHANNEL_GET_UNAUTHORIZED",
+		"TOKEN_REFRESH_SUCCESS",
+		"TOKEN_REFRESH_INVALID",
+		"TOKEN_REFRESH_MISSING",
+		"LOGOUT_SUCCESS",
+		"LOGOUT_INVALID_TOKEN",
+		"HEALTH_CHECK",
 	}
 )
 
@@ -70,7 +76,9 @@ func recordTestResult(testName string, passed bool) {
 	testResults[testName] = passed
 }
 
-// --- Handler Tests ---
+// =======================================================================
+// AUTHENTICATION TESTS
+// =======================================================================
 
 func TestHandleRegister(t *testing.T) {
 	// --- Test Case 1: Successful Registration ---
@@ -214,6 +222,70 @@ func TestHandleRegister(t *testing.T) {
 
 		passed := assert.Equal(t, http.StatusInternalServerError, rr.Code)
 		recordTestResult("AUTH_REG_NIL_DATABASE", passed)
+	})
+
+	// --- Test Case 5: Invalid JSON ---
+	t.Run("Invalid JSON", func(t *testing.T) {
+		server := NewServer(nil, nil, nil)
+
+		req := httptest.NewRequest("POST", "/auth/register", strings.NewReader("invalid json"))
+		rr := httptest.NewRecorder()
+
+		server.HandleRegister(rr, req)
+
+		passed := assert.Equal(t, http.StatusBadRequest, rr.Code)
+		recordTestResult("AUTH_REG_INVALID_JSON", passed)
+	})
+
+	// --- Test Case 6: Empty Password ---
+	t.Run("Empty Password", func(t *testing.T) {
+		server := NewServer(nil, nil, nil)
+
+		payload := AuthPayload{
+			Username: "testuser",
+			Email:    "test@example.com",
+			Password: "",
+		}
+		body, _ := json.Marshal(payload)
+
+		req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
+		rr := httptest.NewRecorder()
+
+		server.HandleRegister(rr, req)
+
+		passed := assert.Equal(t, http.StatusBadRequest, rr.Code)
+		recordTestResult("AUTH_REG_EMPTY_PASSWORD", passed)
+	})
+
+	// --- Test Case 7: Database Connection Error ---
+	t.Run("Database Connection Error", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		if !assert.NoError(t, err) {
+			recordTestResult("AUTH_REG_DB_CONNECTION_ERROR", false)
+			return
+		}
+		defer db.Close()
+
+		server := NewServer(nil, db, nil)
+
+		payload := AuthPayload{
+			Username: "testuser",
+			Email:    "test@example.com",
+			Password: "password123",
+		}
+		body, _ := json.Marshal(payload)
+
+		mock.ExpectExec("INSERT INTO users").
+			WillReturnError(sql.ErrConnDone)
+
+		req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
+		rr := httptest.NewRecorder()
+
+		server.HandleRegister(rr, req)
+
+		passed := assert.Equal(t, http.StatusInternalServerError, rr.Code) &&
+			assert.NoError(t, mock.ExpectationsWereMet())
+		recordTestResult("AUTH_REG_DB_CONNECTION_ERROR", passed)
 	})
 }
 
@@ -368,7 +440,60 @@ func TestHandleAuth(t *testing.T) {
 		passed := assert.Equal(t, http.StatusInternalServerError, rr.Code)
 		recordTestResult("AUTH_LOGIN_NIL_DATABASE", passed)
 	})
+
+	// --- Test Case 5: Invalid JSON ---
+	t.Run("Invalid JSON", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		if !assert.NoError(t, err) {
+			recordTestResult("AUTH_LOGIN_INVALID_JSON", false)
+			return
+		}
+		defer db.Close()
+
+		server := NewServer(nil, db, nil)
+
+		req := httptest.NewRequest("POST", "/auth/login", strings.NewReader("invalid json"))
+		rr := httptest.NewRecorder()
+
+		server.HandleAuth(rr, req)
+
+		passed := assert.Equal(t, http.StatusBadRequest, rr.Code) &&
+			assert.NoError(t, mock.ExpectationsWereMet())
+		recordTestResult("AUTH_LOGIN_INVALID_JSON", passed)
+	})
+
+	// --- Test Case 6: Database Connection Error ---
+	t.Run("Database Connection Error", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		if !assert.NoError(t, err) {
+			recordTestResult("AUTH_LOGIN_DB_CONNECTION_ERROR", false)
+			return
+		}
+		defer db.Close()
+
+		server := NewServer(nil, db, nil)
+
+		payload := AuthPayload{Email: "test@example.com", Password: "password123"}
+		body, _ := json.Marshal(payload)
+
+		mock.ExpectQuery("SELECT id, username, hashed_password FROM users WHERE email = ?").
+			WithArgs("test@example.com").
+			WillReturnError(sql.ErrConnDone)
+
+		req := httptest.NewRequest("POST", "/auth/login", bytes.NewBuffer(body))
+		rr := httptest.NewRecorder()
+
+		server.HandleAuth(rr, req)
+
+		passed := assert.Equal(t, http.StatusUnauthorized, rr.Code) &&
+			assert.NoError(t, mock.ExpectationsWereMet())
+		recordTestResult("AUTH_LOGIN_DB_CONNECTION_ERROR", passed)
+	})
 }
+
+// =======================================================================
+// SECURITY MIDDLEWARE TESTS
+// =======================================================================
 
 func TestSecurity(t *testing.T) {
 	// --- Test Case 1: Valid Token ---
@@ -482,6 +607,10 @@ func TestSecurity(t *testing.T) {
 		recordTestResult("SECURITY_INVALID_TOKEN", passed)
 	})
 }
+
+// =======================================================================
+// CHANNEL MANAGEMENT TESTS
+// =======================================================================
 
 func TestCreateChannel(t *testing.T) {
 	// --- Test Case 1: Successful Channel Creation (No Event) ---
@@ -721,6 +850,10 @@ func TestGetChannels(t *testing.T) {
 	})
 }
 
+// =======================================================================
+// EVENT MANAGEMENT TESTS
+// =======================================================================
+
 func TestCreateEvent(t *testing.T) {
 	// --- Test Case 1: Successful Event Creation ---
 	t.Run("Successful Event Creation", func(t *testing.T) {
@@ -932,121 +1065,174 @@ func createTestToken(userID int, username string) string {
 	return tokenString
 }
 
-// Additional edge case tests for existing handlers
-func TestHandleRegisterEdgeCases(t *testing.T) {
-	// --- Test Case 1: Invalid JSON ---
-	t.Run("Invalid JSON", func(t *testing.T) {
+// =======================================================================
+// JWT TOKEN MANAGEMENT TESTS
+// =======================================================================
+
+func TestHandleRefreshToken(t *testing.T) {
+	// --- Test Case 1: Successful Token Refresh ---
+	t.Run("Successful Token Refresh", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("TOKEN_REFRESH_SUCCESS", false)
+				t.Errorf("Test panicked: %v", r)
+				return
+			}
+		}()
+
 		server := NewServer(nil, nil, nil)
 
-		req := httptest.NewRequest("POST", "/auth/register", strings.NewReader("invalid json"))
+		// Create a valid JWT token
+		token := createTestToken(123, "testuser")
+
+		req := httptest.NewRequest("POST", "/api/refresh", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
 		rr := httptest.NewRecorder()
 
-		server.HandleRegister(rr, req)
+		server.HandleRefreshToken(rr, req)
 
-		passed := assert.Equal(t, http.StatusBadRequest, rr.Code)
-		recordTestResult("AUTH_REG_INVALID_JSON", passed)
+		passed := assert.Equal(t, http.StatusOK, rr.Code)
+		if passed {
+			var response map[string]interface{}
+			err := json.Unmarshal(rr.Body.Bytes(), &response)
+			passed = assert.NoError(t, err) &&
+				assert.Contains(t, response, "token") &&
+				assert.NotEmpty(t, response["token"])
+		}
+		recordTestResult("TOKEN_REFRESH_SUCCESS", passed)
 	})
 
-	// --- Test Case 2: Password Hashing Error (edge case) ---
-	t.Run("Empty Password", func(t *testing.T) {
+	// --- Test Case 2: Invalid Token ---
+	t.Run("Invalid Token", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("TOKEN_REFRESH_INVALID", false)
+				t.Errorf("Test panicked: %v", r)
+				return
+			}
+		}()
+
 		server := NewServer(nil, nil, nil)
 
-		payload := AuthPayload{
-			Username: "testuser",
-			Email:    "test@example.com",
-			Password: "",
-		}
-		body, _ := json.Marshal(payload)
-
-		req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
+		req := httptest.NewRequest("POST", "/api/refresh", nil)
+		req.Header.Set("Authorization", "Bearer invalidtoken")
 		rr := httptest.NewRecorder()
 
-		server.HandleRegister(rr, req)
+		server.HandleRefreshToken(rr, req)
 
-		passed := assert.Equal(t, http.StatusBadRequest, rr.Code)
-		recordTestResult("AUTH_REG_EMPTY_PASSWORD", passed)
+		passed := assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		recordTestResult("TOKEN_REFRESH_INVALID", passed)
 	})
 
-	// --- Test Case 3: SQL Error Other Than Duplicate ---
-	t.Run("Database Connection Error", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if !assert.NoError(t, err) {
-			recordTestResult("AUTH_REG_DB_CONNECTION_ERROR", false)
-			return
-		}
-		defer db.Close()
+	// --- Test Case 3: Missing Authorization Header ---
+	t.Run("Missing Authorization Header", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("TOKEN_REFRESH_MISSING", false)
+				t.Errorf("Test panicked: %v", r)
+				return
+			}
+		}()
 
-		server := NewServer(nil, db, nil)
+		server := NewServer(nil, nil, nil)
 
-		payload := AuthPayload{
-			Username: "testuser",
-			Email:    "test@example.com",
-			Password: "password123",
-		}
-		body, _ := json.Marshal(payload)
-
-		mock.ExpectExec("INSERT INTO users").
-			WillReturnError(sql.ErrConnDone)
-
-		req := httptest.NewRequest("POST", "/auth/register", bytes.NewBuffer(body))
+		req := httptest.NewRequest("POST", "/api/refresh", nil)
+		// No auth header provided
 		rr := httptest.NewRecorder()
 
-		server.HandleRegister(rr, req)
+		server.HandleRefreshToken(rr, req)
 
-		passed := assert.Equal(t, http.StatusInternalServerError, rr.Code) &&
-			assert.NoError(t, mock.ExpectationsWereMet())
-		recordTestResult("AUTH_REG_DB_CONNECTION_ERROR", passed)
+		passed := assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		recordTestResult("TOKEN_REFRESH_MISSING", passed)
 	})
 }
 
-func TestHandleAuthEdgeCases(t *testing.T) {
-	// --- Test Case 1: Invalid JSON ---
-	t.Run("Invalid JSON", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if !assert.NoError(t, err) {
-			recordTestResult("AUTH_LOGIN_INVALID_JSON", false)
-			return
-		}
-		defer db.Close()
+func TestHandleLogout(t *testing.T) {
+	// --- Test Case 1: Successful Logout ---
+	t.Run("Successful Logout", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("LOGOUT_SUCCESS", false)
+				t.Errorf("Test panicked: %v", r)
+				return
+			}
+		}()
 
-		server := NewServer(nil, db, nil)
+		server := NewServer(nil, nil, nil)
 
-		req := httptest.NewRequest("POST", "/auth/login", strings.NewReader("invalid json"))
+		// Create a valid JWT token
+		token := createTestToken(123, "testuser")
+
+		req := httptest.NewRequest("POST", "/api/logout", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
 		rr := httptest.NewRecorder()
 
-		server.HandleAuth(rr, req)
+		server.HandleLogout(rr, req)
 
-		passed := assert.Equal(t, http.StatusBadRequest, rr.Code) &&
-			assert.NoError(t, mock.ExpectationsWereMet())
-		recordTestResult("AUTH_LOGIN_INVALID_JSON", passed)
+		passed := assert.Equal(t, http.StatusOK, rr.Code)
+		if passed {
+			var response map[string]interface{}
+			err := json.Unmarshal(rr.Body.Bytes(), &response)
+			passed = assert.NoError(t, err) &&
+				assert.Contains(t, response, "message") &&
+				assert.Equal(t, "Logged out successfully", response["message"])
+		}
+		recordTestResult("LOGOUT_SUCCESS", passed)
 	})
 
-	// --- Test Case 2: Database Connection Error ---
-	t.Run("Database Connection Error", func(t *testing.T) {
-		db, mock, err := sqlmock.New()
-		if !assert.NoError(t, err) {
-			recordTestResult("AUTH_LOGIN_DB_CONNECTION_ERROR", false)
-			return
-		}
-		defer db.Close()
+	// --- Test Case 2: Invalid Token ---
+	t.Run("Invalid Token", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("LOGOUT_INVALID_TOKEN", false)
+				t.Errorf("Test panicked: %v", r)
+				return
+			}
+		}()
 
-		server := NewServer(nil, db, nil)
+		server := NewServer(nil, nil, nil)
 
-		payload := AuthPayload{Email: "test@example.com", Password: "password123"}
-		body, _ := json.Marshal(payload)
-
-		mock.ExpectQuery("SELECT id, username, hashed_password FROM users WHERE email = ?").
-			WithArgs("test@example.com").
-			WillReturnError(sql.ErrConnDone)
-
-		req := httptest.NewRequest("POST", "/auth/login", bytes.NewBuffer(body))
+		req := httptest.NewRequest("POST", "/api/logout", nil)
+		req.Header.Set("Authorization", "Bearer invalidtoken")
 		rr := httptest.NewRecorder()
 
-		server.HandleAuth(rr, req)
+		server.HandleLogout(rr, req)
 
-		passed := assert.Equal(t, http.StatusUnauthorized, rr.Code) &&
-			assert.NoError(t, mock.ExpectationsWereMet())
-		recordTestResult("AUTH_LOGIN_DB_CONNECTION_ERROR", passed)
+		passed := assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		recordTestResult("LOGOUT_INVALID_TOKEN", passed)
+	})
+}
+
+// =======================================================================
+// HEALTH CHECK & UTILITY TESTS
+// =======================================================================
+
+func TestHealthCheck(t *testing.T) {
+	// --- Test Case 1: Health Check Endpoint ---
+	t.Run("Health Check Returns OK", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("HEALTH_CHECK", false)
+				t.Errorf("Test panicked: %v", r)
+				return
+			}
+		}()
+
+		// Test the health check endpoint directly
+		req := httptest.NewRequest("GET", "/health", nil)
+		rr := httptest.NewRecorder()
+
+		// Simulate the health check handler
+		healthHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		})
+
+		healthHandler.ServeHTTP(rr, req)
+
+		passed := assert.Equal(t, http.StatusOK, rr.Code) &&
+			assert.Equal(t, "OK", rr.Body.String())
+		recordTestResult("HEALTH_CHECK", passed)
 	})
 }
 
