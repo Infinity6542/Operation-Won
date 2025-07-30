@@ -5,19 +5,14 @@ import 'package:flutter/foundation.dart';
 class SecureStorageService {
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
       preferencesKeyPrefix: 'opwon_secure_',
     ),
     iOptions: IOSOptions(
       groupId: 'com.opwon.client.secure',
       accessibility: KeychainAccessibility.first_unlock_this_device,
     ),
-    lOptions: LinuxOptions(
-      encryptedSharedPreferences: true,
-    ),
-    wOptions: WindowsOptions(
-      encryptedSharedPreferences: true,
-    ),
+    lOptions: LinuxOptions(),
+    wOptions: WindowsOptions(),
     mOptions: MacOsOptions(
       groupId: 'com.opwon.client.secure',
       accessibility: KeychainAccessibility.first_unlock_this_device,

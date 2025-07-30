@@ -382,12 +382,14 @@ func TestSecurity(t *testing.T) {
 		}()
 
 		server := NewServer(nil, nil, nil)
+		passed := true
 
 		// Create a test handler that the middleware will wrap
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			uid, ok := r.Context().Value(userIDKey).(int)
-			if !assert.True(t, ok) || !assert.Equal(t, 1, uid) {
-				recordTestResult("SECURITY_VALID_TOKEN", false)
+			if !ok || uid != 1 {
+				passed = false
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			w.WriteHeader(http.StatusOK)
@@ -402,7 +404,7 @@ func TestSecurity(t *testing.T) {
 
 		server.Security(testHandler).ServeHTTP(rr, req)
 
-		passed := assert.Equal(t, http.StatusOK, rr.Code)
+		passed = passed && assert.Equal(t, http.StatusOK, rr.Code)
 		recordTestResult("SECURITY_VALID_TOKEN", passed)
 	})
 
@@ -685,13 +687,54 @@ func TestGetChannels(t *testing.T) {
 			assert.NoError(t, mock.ExpectationsWereMet())
 		recordTestResult("CHANNEL_GET_DB_ERROR", passed)
 	})
+
+	// --- Test Case 3: Unauthorized Access (Missing User Context) ---
+	t.Run("Unauthorized Access", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("CHANNEL_GET_UNAUTHORIZED", false)
+			}
+		}()
+
+		// Use a real database connection but no user context
+		db, mock, err := sqlmock.New()
+		if !assert.NoError(t, err) {
+			recordTestResult("CHANNEL_GET_UNAUTHORIZED", false)
+			return
+		}
+		defer db.Close()
+
+		server := NewServer(nil, db, nil)
+
+		req := httptest.NewRequest("GET", "/channels", nil)
+		// Note: No user context provided in request - should be unauthorized
+		rr := httptest.NewRecorder()
+
+		server.GetChannels(rr, req)
+
+		// Should return 500 because no user context is provided
+		passed := assert.Equal(t, http.StatusInternalServerError, rr.Code)
+		recordTestResult("CHANNEL_GET_UNAUTHORIZED", passed)
+
+		// Verify that no database queries were made (since auth failed first)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
 }
 
 func TestCreateEvent(t *testing.T) {
 	// --- Test Case 1: Successful Event Creation ---
 	t.Run("Successful Event Creation", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("EVENT_CREATE_SUCCESS", false)
+			}
+		}()
+
 		db, mock, err := sqlmock.New()
-		assert.NoError(t, err)
+		if !assert.NoError(t, err) {
+			recordTestResult("EVENT_CREATE_SUCCESS", false)
+			return
+		}
 		defer db.Close()
 
 		server := NewServer(nil, db, nil)
@@ -721,12 +764,19 @@ func TestCreateEvent(t *testing.T) {
 
 		server.CreateEvent(rr, req)
 
-		assert.Equal(t, http.StatusCreated, rr.Code)
-		assert.NoError(t, mock.ExpectationsWereMet())
+		passed := assert.Equal(t, http.StatusCreated, rr.Code) &&
+			assert.NoError(t, mock.ExpectationsWereMet())
+		recordTestResult("EVENT_CREATE_SUCCESS", passed)
 	})
 
 	// --- Test Case 2: Missing Event Name ---
 	t.Run("Missing Event Name", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("EVENT_CREATE_MISSING_NAME", false)
+			}
+		}()
+
 		server := NewServer(nil, nil, nil)
 
 		payload := CrtEvent{
@@ -741,11 +791,18 @@ func TestCreateEvent(t *testing.T) {
 
 		server.CreateEvent(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		passed := assert.Equal(t, http.StatusBadRequest, rr.Code)
+		recordTestResult("EVENT_CREATE_MISSING_NAME", passed)
 	})
 
 	// --- Test Case 3: Invalid JSON ---
 	t.Run("Invalid JSON", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("EVENT_CREATE_INVALID_JSON", false)
+			}
+		}()
+
 		server := NewServer(nil, nil, nil)
 
 		req := httptest.NewRequest("POST", "/events/create", strings.NewReader("invalid json"))
@@ -754,11 +811,18 @@ func TestCreateEvent(t *testing.T) {
 
 		server.CreateEvent(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		passed := assert.Equal(t, http.StatusBadRequest, rr.Code)
+		recordTestResult("EVENT_CREATE_INVALID_JSON", passed)
 	})
 
 	// --- Test Case 4: Missing User Context ---
 	t.Run("Missing User Context", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("EVENT_CREATE_NO_USER", false)
+			}
+		}()
+
 		server := NewServer(nil, nil, nil)
 
 		payload := CrtEvent{
@@ -772,15 +836,25 @@ func TestCreateEvent(t *testing.T) {
 
 		server.CreateEvent(rr, req)
 
-		assert.Equal(t, http.StatusInternalServerError, rr.Code)
+		passed := assert.Equal(t, http.StatusInternalServerError, rr.Code)
+		recordTestResult("EVENT_CREATE_NO_USER", passed)
 	})
 }
 
 func TestGetEvents(t *testing.T) {
 	// --- Test Case 1: Successful Event Retrieval ---
 	t.Run("Successful Event Retrieval", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("EVENT_GET_SUCCESS", false)
+			}
+		}()
+
 		db, mock, err := sqlmock.New()
-		assert.NoError(t, err)
+		if !assert.NoError(t, err) {
+			recordTestResult("EVENT_GET_SUCCESS", false)
+			return
+		}
 		defer db.Close()
 
 		server := NewServer(nil, db, nil)
@@ -799,24 +873,34 @@ func TestGetEvents(t *testing.T) {
 
 		server.GetEvents(rr, req)
 
-		assert.Equal(t, http.StatusOK, rr.Code)
-
-		var events []EventResponse
-		err = json.Unmarshal(rr.Body.Bytes(), &events)
-		assert.NoError(t, err)
-		assert.Len(t, events, 2)
-		assert.Equal(t, "Event 1", events[0].EventName)
-		assert.True(t, events[0].IsOrganiser)
-		assert.Equal(t, "Event 2", events[1].EventName)
-		assert.False(t, events[1].IsOrganiser)
-
-		assert.NoError(t, mock.ExpectationsWereMet())
+		passed := assert.Equal(t, http.StatusOK, rr.Code)
+		if passed {
+			var events []EventResponse
+			err = json.Unmarshal(rr.Body.Bytes(), &events)
+			passed = assert.NoError(t, err) &&
+				assert.Len(t, events, 2) &&
+				assert.Equal(t, "Event 1", events[0].EventName) &&
+				assert.True(t, events[0].IsOrganiser) &&
+				assert.Equal(t, "Event 2", events[1].EventName) &&
+				assert.False(t, events[1].IsOrganiser)
+		}
+		passed = passed && assert.NoError(t, mock.ExpectationsWereMet())
+		recordTestResult("EVENT_GET_SUCCESS", passed)
 	})
 
 	// --- Test Case 2: Database Error ---
 	t.Run("Database Error", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				recordTestResult("EVENT_GET_DB_ERROR", false)
+			}
+		}()
+
 		db, mock, err := sqlmock.New()
-		assert.NoError(t, err)
+		if !assert.NoError(t, err) {
+			recordTestResult("EVENT_GET_DB_ERROR", false)
+			return
+		}
 		defer db.Close()
 
 		server := NewServer(nil, db, nil)
@@ -831,8 +915,9 @@ func TestGetEvents(t *testing.T) {
 
 		server.GetEvents(rr, req)
 
-		assert.Equal(t, http.StatusInternalServerError, rr.Code)
-		assert.NoError(t, mock.ExpectationsWereMet())
+		passed := assert.Equal(t, http.StatusInternalServerError, rr.Code) &&
+			assert.NoError(t, mock.ExpectationsWereMet())
+		recordTestResult("EVENT_GET_DB_ERROR", passed)
 	})
 }
 
@@ -967,6 +1052,10 @@ func TestHandleAuthEdgeCases(t *testing.T) {
 
 // TestMain runs before all tests and can run cleanup after
 func TestMain(m *testing.M) {
+	// Enable test mode to disable rate limiting
+	EnableTestMode()
+	defer DisableTestMode()
+
 	// Initialize all test results as not run
 	testMutex.Lock()
 	for _, testName := range testNames {
@@ -976,21 +1065,6 @@ func TestMain(m *testing.M) {
 
 	// Run all tests
 	code := m.Run()
-
-	// Add placeholder results for tests not yet updated
-	placeholderTests := []string{
-		"EVENT_CREATE_SUCCESS", "EVENT_CREATE_MISSING_NAME", "EVENT_CREATE_INVALID_JSON", "EVENT_CREATE_NO_USER",
-		"EVENT_GET_SUCCESS", "EVENT_GET_DB_ERROR", "CHANNEL_GET_UNAUTHORIZED",
-	}
-
-	testMutex.Lock()
-	for _, testName := range placeholderTests {
-		if _, exists := testResults[testName]; !exists {
-			// Assume these pass for now (they should be updated to track results properly)
-			testResults[testName] = true
-		}
-	}
-	testMutex.Unlock()
 
 	// Print test summary after all tests complete
 	printTestSummary()
