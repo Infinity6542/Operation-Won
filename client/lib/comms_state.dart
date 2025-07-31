@@ -151,6 +151,7 @@ class CommsState extends ChangeNotifier {
 
   @override
   void dispose() {
+    _communicationService?.removeListener(() {});
     _communicationService?.dispose();
     super.dispose();
   }

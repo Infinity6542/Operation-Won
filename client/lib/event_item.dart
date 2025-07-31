@@ -16,6 +16,7 @@ class EventItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer<ChannelProvider>(
       builder: (context, channelProvider, child) {
         final eventChannels =
@@ -23,6 +24,8 @@ class EventItem extends StatelessWidget {
 
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          elevation: 0,
+          color: theme.colorScheme.surfaceContainer,
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(12),
@@ -30,7 +33,6 @@ class EventItem extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Header with event info
                   Row(
@@ -40,14 +42,16 @@ class EventItem extends StatelessWidget {
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: event.isOrganiser
-                              ? const Color(0xFF059669)
-                              : const Color(0xFF3B82F6),
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.secondary,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           event.isOrganiser ? 'ORGANISER' : 'MEMBER',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: event.isOrganiser
+                                ? theme.colorScheme.onPrimary
+                                : theme.colorScheme.onSecondary,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -56,9 +60,8 @@ class EventItem extends StatelessWidget {
                       const Spacer(),
                       Text(
                         '${eventChannels.length} channels',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 12,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -68,23 +71,18 @@ class EventItem extends StatelessWidget {
                   // Event name
                   Text(
                     event.eventName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: theme.textTheme.titleMedium,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
 
                   // Event description
                   if (event.eventDescription.isNotEmpty) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       event.eventDescription,
-                      style: TextStyle(
-                        color: Colors.grey[300],
-                        fontSize: 13,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -93,51 +91,23 @@ class EventItem extends StatelessWidget {
 
                   // Channels preview
                   if (eventChannels.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      'Channels:',
-                      style: TextStyle(
-                        color: Colors.grey[400],
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 50,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount:
-                            eventChannels.length > 3 ? 3 : eventChannels.length,
-                        itemBuilder: (context, index) {
+                    const Spacer(),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: List.generate(
+                        eventChannels.length > 3 ? 3 : eventChannels.length,
+                        (index) {
                           if (index == 2 && eventChannels.length > 3) {
-                            return Container(
-                              width: 80,
-                              margin: const EdgeInsets.only(right: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF374151),
-                                borderRadius: BorderRadius.circular(8),
-                                border:
-                                    Border.all(color: const Color(0xFF6B7280)),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '+${eventChannels.length - 2}',
-                                  style: TextStyle(
-                                    color: Colors.grey[300],
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
+                            return Chip(
+                              label: Text('+${eventChannels.length - 2} more'),
+                              backgroundColor:
+                                  theme.colorScheme.surfaceContainerHighest,
                             );
                           }
-                          return Container(
-                            width: 120,
-                            margin: const EdgeInsets.only(right: 8),
-                            child: ChannelItem(
-                              channel: eventChannels[index],
-                              isCompact: true,
-                            ),
+                          return ChannelItem(
+                            channel: eventChannels[index],
+                            isCompact: true,
                           );
                         },
                       ),

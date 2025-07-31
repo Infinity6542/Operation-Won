@@ -294,34 +294,28 @@ class _EventDetailsDialogState extends State<EventDetailsDialog> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (channels.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 48,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No channels for this event yet',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SizeTransition(
+                        sizeFactor: animation,
+                        axisAlignment: -1.0,
+                        child: child,
                       ),
-                    ),
-                  )
-                else
-                  ...channels.map((channel) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: ChannelItem(channel: channel),
-                      )),
+                    );
+                  },
+                  child: isLoading
+                      ? const CircularProgressIndicator()
+                      : ListView.builder(
+                          itemCount: channels.length,
+                          itemBuilder: (context, index) {
+                            return ChannelItem(channel: channels[index]);
+                          },
+                        ),
+                ),
               ],
             ),
           ),

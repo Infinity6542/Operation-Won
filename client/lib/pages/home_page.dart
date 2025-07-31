@@ -28,94 +28,73 @@ class _HomePageState extends State<HomePage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       elevation: 0, // Ensure settings appears below snackbars
       enableDrag: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(25),
+          topRight: Radius.circular(25),
+        ),
+      ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.9,
         minChildSize: 0.5,
         maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF0F172A),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(25),
-              topRight: Radius.circular(25),
+        builder: (context, scrollController) => Column(
+          children: [
+            // Handle bar for dragging
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 20,
-                offset: Offset(0, -5),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Handle bar for dragging
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[600],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Header
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3B82F6),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        LucideIcons.cog,
-                        color: Colors.white,
-                        size: 24,
-                      ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Settings',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Icon(
+                      LucideIcons.cog,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 24,
                     ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(
-                        LucideIcons.x,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(color: Color(0xFF334155)),
-              // Settings content
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(25),
-                    topRight: Radius.circular(25),
                   ),
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: const SettingsView(),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Settings',
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
-                ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(
+                      LucideIcons.x,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            Divider(color: Theme.of(context).dividerColor),
+            // Settings content
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: const SettingsView(),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -156,14 +135,14 @@ class _HomePageState extends State<HomePage>
                     children: [
                       Icon(
                         LucideIcons.triangle,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onError,
                       ),
-                      SizedBox(width: 8),
-                      Text('Emergency channel activated'),
+                      const SizedBox(width: 8),
+                      const Text('Emergency channel activated'),
                     ],
                   ),
-                  backgroundColor: Colors.red,
-                  duration: Duration(seconds: 3),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  duration: const Duration(seconds: 3),
                 ),
               );
             },
@@ -177,22 +156,19 @@ class _HomePageState extends State<HomePage>
         elevation: 0,
         centerTitle: false,
         actions: [
-          GestureDetector(
-            onTap: () {
+          IconButton(
+            onPressed: () {
               _showSettingsBottomSheet(context);
             },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
-              child: Icon(
-                LucideIcons.cog,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+            icon: Icon(
+              LucideIcons.cog,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           )
         ],
         title: Text(
           'operation won',
-          style: Theme.of(context).textTheme.labelLarge,
+          style: Theme.of(context).textTheme.titleLarge,
         ),
       ),
     );

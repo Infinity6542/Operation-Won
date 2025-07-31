@@ -84,14 +84,38 @@ class MyApp extends StatelessWidget {
           },
         ),
       ],
-      child: Consumer<AppState>(
-        builder: (context, appState, child) {
-          debugPrint('App State loaded: ${appState.theme}');
-
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, child) {
           return MaterialApp(
             title: 'Operation Won',
-            debugShowCheckedModeBanner: false,
-            theme: appState.theme,
+            theme: ThemeData(
+              useMaterial3: true,
+              brightness: Brightness.light,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF0D47A1), // Deep Blue
+                brightness: Brightness.light,
+                secondary: const Color(0xFF4CAF50), // Green
+              ),
+            ),
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              brightness: Brightness.dark,
+              scaffoldBackgroundColor: Colors.black,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xFF0D47A1), // Deep Blue
+                brightness: Brightness.dark,
+                primary:
+                    const Color(0xFF42A5F5), // Lighter Blue for readability
+                secondary: const Color(0xFF66BB6A), // Green
+                background: Colors.black,
+                surface: const Color(0xFF121212), // Very dark grey for cards
+                onPrimary: Colors.white,
+                onSecondary: Colors.white,
+                onBackground: Colors.white,
+                onSurface: Colors.white,
+              ),
+            ),
+            themeMode: settings.themeMode,
             home: const OptimizedAuthenticationFlow(),
             routes: {
               'Channel': (context) => const Channel(),
@@ -99,6 +123,7 @@ class MyApp extends StatelessWidget {
               'HomePage': (context) => const HomePage(),
               'Splash': (context) => const Splash(),
             },
+            debugShowCheckedModeBanner: false,
           );
         },
       ),
@@ -166,19 +191,15 @@ class AuthenticationFlow extends StatelessWidget {
 
         // Show loading screen while initializing
         if (authProvider.isLoading) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0F172A),
+          return Scaffold(
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    color: Color(0xff59dafb),
-                  ),
+                  CircularProgressIndicator(),
                   SizedBox(height: 16),
                   Text(
                     'Loading...',
-                    style: TextStyle(color: Colors.white),
                   ),
                 ],
               ),

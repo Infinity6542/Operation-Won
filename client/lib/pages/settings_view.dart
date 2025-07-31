@@ -26,23 +26,48 @@ class _SettingsViewState extends State<SettingsView>
         final user = authProvider.user;
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // User Account Section
-              _buildSectionHeader('Account'),
+              _buildSectionHeader(context, 'Account'),
               const SizedBox(height: 12),
-              _buildUserCard(user, authProvider),
+              _buildUserCard(context, user, authProvider),
+              const SizedBox(height: 28),
+
+              // Appearance Section
+              _buildSectionHeader(context, 'Appearance'),
+              const SizedBox(height: 12),
+              _buildSettingsCard(context, [
+                _buildDropdownSetting(
+                  context,
+                  title: 'Theme',
+                  subtitle: 'Choose your preferred theme',
+                  value: settingsProvider.themeModeName,
+                  items: const [
+                    DropdownMenuItem(value: 'dark', child: Text('Dark')),
+                    DropdownMenuItem(value: 'light', child: Text('Light')),
+                    DropdownMenuItem(
+                        value: 'system', child: Text('System Default')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      settingsProvider.setThemeMode(value);
+                    }
+                  },
+                ),
+              ]),
               const SizedBox(height: 28),
 
               // Audio Settings Section
-              _buildSectionHeader('Audio Settings'),
+              _buildSectionHeader(context, 'Audio Settings'),
               const SizedBox(height: 12),
               Consumer<CommsState>(
                 builder: (context, commsState, child) {
-                  return _buildSettingsCard([
+                  return _buildSettingsCard(context, [
                     _buildSwitchSetting(
+                      context,
                       title: 'Magic Mic',
                       subtitle: 'Noise suppression and automatic gain control',
                       tooltip:
@@ -54,6 +79,7 @@ class _SettingsViewState extends State<SettingsView>
                     ),
                     const Divider(),
                     _buildDropdownSetting(
+                      context,
                       title: 'PTT Mode',
                       subtitle: 'Push-to-talk behavior',
                       tooltip:
@@ -64,11 +90,14 @@ class _SettingsViewState extends State<SettingsView>
                         DropdownMenuItem(value: 'tap', child: Text('Tap')),
                       ],
                       onChanged: (value) {
-                        settingsProvider.setPttMode(value!);
+                        if (value != null) {
+                          settingsProvider.setPttMode(value);
+                        }
                       },
                     ),
                     const Divider(),
                     _buildInfoTile(
+                      context,
                       title: 'End-to-End Encryption',
                       subtitle: commsState.hasE2EEKey
                           ? '🔒 Encryption active'
@@ -83,10 +112,11 @@ class _SettingsViewState extends State<SettingsView>
               const SizedBox(height: 32),
 
               // API Configuration Section
-              _buildSectionHeader('API Configuration'),
+              _buildSectionHeader(context, 'API Configuration'),
               const SizedBox(height: 12),
-              _buildSettingsCard([
+              _buildSettingsCard(context, [
                 _buildDropdownSetting(
+                  context,
                   title: 'Server Endpoint',
                   subtitle: 'Choose server to connect to',
                   tooltip: 'Select predefined server or use custom endpoint',
@@ -107,44 +137,66 @@ class _SettingsViewState extends State<SettingsView>
                   ],
                   onChanged: (value) {
                     if (value != 'Custom') {
-                      // Find the selected predefined endpoint
                       final selectedEndpoint = SettingsProvider
                           .predefinedEndpoints
                           .firstWhere((endpoint) => endpoint['name'] == value);
                       settingsProvider.setPredefinedEndpoint(selectedEndpoint);
                     }
-                    // For custom, we'll show the custom endpoint dialog
                     if (value == 'Custom') {
                       _showCustomEndpointDialog(context, settingsProvider);
                     }
                   },
                 ),
-                if (settingsProvider.isUsingCustomEndpoint) ...[
-                  const Divider(),
-                  _buildActionTile(
-                    title: 'API Endpoint',
-                    subtitle: settingsProvider.apiEndpoint,
-                    icon: LucideIcons.server,
-                    onTap: () =>
-                        _showCustomEndpointDialog(context, settingsProvider),
-                  ),
-                  const Divider(),
-                  _buildActionTile(
-                    title: 'WebSocket Endpoint',
-                    subtitle: settingsProvider.websocketEndpoint,
-                    icon: LucideIcons.radio,
-                    onTap: () =>
-                        _showCustomEndpointDialog(context, settingsProvider),
-                  ),
-                ],
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SizeTransition(
+                        sizeFactor: animation,
+                        axisAlignment: -1.0,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: settingsProvider.isUsingCustomEndpoint
+                      ? Column(
+                          key: const ValueKey('custom-fields'),
+                          children: [
+                            const Divider(),
+                            _buildActionTile(
+                              context,
+                              title: 'API Endpoint',
+                              subtitle: settingsProvider.apiEndpoint,
+                              icon: LucideIcons.server,
+                              onTap: () => _showCustomEndpointDialog(
+                                  context, settingsProvider),
+                            ),
+                            const Divider(),
+                            _buildActionTile(
+                              context,
+                              title: 'WebSocket Endpoint',
+                              subtitle: settingsProvider.websocketEndpoint,
+                              icon: LucideIcons.radio,
+                              onTap: () => _showCustomEndpointDialog(
+                                  context, settingsProvider),
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink(
+                          key: ValueKey('no-custom-fields')),
+                ),
                 const Divider(),
                 _buildActionTile(
+                  context,
                   title: 'Test Connection',
                   icon: LucideIcons.wifi,
                   onTap: () => _testConnection(context, settingsProvider),
                 ),
                 const Divider(),
                 _buildActionTile(
+                  context,
                   title: 'Test WebSocket',
                   subtitle: 'Test real-time communication',
                   icon: LucideIcons.radio,
@@ -154,42 +206,22 @@ class _SettingsViewState extends State<SettingsView>
               ]),
               const SizedBox(height: 32),
 
-              // Appearance Section
-              _buildSectionHeader('Appearance'),
-              const SizedBox(height: 16),
-              _buildSettingsCard([
-                _buildDropdownSetting(
-                  title: 'Theme',
-                  subtitle: 'Choose your preferred theme',
-                  value: settingsProvider.themeMode,
-                  items: const [
-                    DropdownMenuItem(value: 'dark', child: Text('Dark')),
-                    DropdownMenuItem(value: 'light', child: Text('Light')),
-                    DropdownMenuItem(
-                        value: 'system', child: Text('System Default')),
-                  ],
-                  onChanged: (value) {
-                    settingsProvider.setThemeMode(value!);
-                  },
-                ),
-              ]),
-              const SizedBox(height: 28),
-
               // About Section
-              _buildSectionHeader('About'),
+              _buildSectionHeader(context, 'About'),
               const SizedBox(height: 12),
-              _buildSettingsCard([
+              _buildSettingsCard(context, [
                 _buildInfoTile(
+                  context,
                   title: 'Version',
                   subtitle: '1.0.0',
                   icon: LucideIcons.info,
                 ),
                 const Divider(),
                 _buildActionTile(
+                  context,
                   title: 'Privacy Policy',
                   icon: LucideIcons.shield,
                   onTap: () {
-                    // TODO: Open privacy policy
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                           content: Text('Privacy Policy - Coming Soon')),
@@ -198,10 +230,10 @@ class _SettingsViewState extends State<SettingsView>
                 ),
                 const Divider(),
                 _buildActionTile(
+                  context,
                   title: 'Terms of Service',
                   icon: LucideIcons.fileText,
                   onTap: () {
-                    // TODO: Open terms of service
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                           content: Text('Terms of Service - Coming Soon')),
@@ -212,9 +244,10 @@ class _SettingsViewState extends State<SettingsView>
               const SizedBox(height: 28),
 
               // Danger Zone
-              _buildSectionHeader('Account Actions', isDestructive: true),
+              _buildSectionHeader(context, 'Account Actions',
+                  isDestructive: true),
               const SizedBox(height: 12),
-              _buildDangerCard(authProvider),
+              _buildDangerCard(context, authProvider),
               const SizedBox(height: 24),
             ],
           ),
@@ -223,29 +256,29 @@ class _SettingsViewState extends State<SettingsView>
     );
   }
 
-  Widget _buildSectionHeader(String title, {bool isDestructive = false}) {
+  Widget _buildSectionHeader(BuildContext context, String title,
+      {bool isDestructive = false}) {
+    final theme = Theme.of(context);
+    final color =
+        isDestructive ? theme.colorScheme.error : theme.colorScheme.primary;
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      padding: const EdgeInsets.only(left: 4, bottom: 8, top: 16),
       child: Row(
         children: [
           Container(
             width: 4,
             height: 20,
             decoration: BoxDecoration(
-              color: isDestructive
-                  ? const Color(0xFFDC2626)
-                  : const Color(0xFF3B82F6),
+              color: color,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(width: 12),
           Text(
             title,
-            style: TextStyle(
-              color: isDestructive ? const Color(0xFFDC2626) : Colors.white,
-              fontSize: 18,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
             ),
           ),
         ],
@@ -253,85 +286,45 @@ class _SettingsViewState extends State<SettingsView>
     );
   }
 
-  Widget _buildUserCard(dynamic user, AuthProvider authProvider) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1E293B),
-            Color(0xFF334155),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+  Widget _buildUserCard(
+      BuildContext context, dynamic user, AuthProvider authProvider) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainer,
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Row(
               children: [
-                // Enhanced User Avatar with status indicator
                 Stack(
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.5),
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 36,
-                        backgroundColor: const Color(0xFF3B82F6),
-                        child: Text(
-                          (user?.username?.isNotEmpty == true
-                              ? user.username[0].toUpperCase()
-                              : 'U'),
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                    CircleAvatar(
+                      radius: 32,
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      child: Text(
+                        (user?.username?.isNotEmpty == true
+                            ? user.username[0].toUpperCase()
+                            : 'U'),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),
-                    // Status indicator
                     Positioned(
-                      bottom: 2,
-                      right: 2,
+                      bottom: 0,
+                      right: 0,
                       child: Container(
                         width: 18,
                         height: 18,
                         decoration: BoxDecoration(
                           color: authProvider.isLoggedIn
-                              ? const Color(0xFF10B981)
-                              : const Color(0xFF6B7280),
+                              ? Colors.green
+                              : Colors.grey,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: const Color(0xFF1E293B),
+                            color: theme.colorScheme.surface,
                             width: 2,
                           ),
                         ),
@@ -339,74 +332,20 @@ class _SettingsViewState extends State<SettingsView>
                     ),
                   ],
                 ),
-                const SizedBox(width: 20),
-
-                // User Info
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         user?.username ?? 'Guest User',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                        style: theme.textTheme.titleLarge,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '@${user?.username ?? 'guest'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[400],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Status chip with better design
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: authProvider.isLoggedIn
-                              ? const Color(0xFF10B981).withValues(alpha: 0.2)
-                              : const Color(0xFF6B7280).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: authProvider.isLoggedIn
-                                ? const Color(0xFF10B981).withValues(alpha: 0.5)
-                                : const Color(0xFF6B7280)
-                                    .withValues(alpha: 0.5),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: authProvider.isLoggedIn
-                                    ? const Color(0xFF10B981)
-                                    : const Color(0xFF6B7280),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              authProvider.isLoggedIn ? 'Online' : 'Offline',
-                              style: TextStyle(
-                                color: authProvider.isLoggedIn
-                                    ? const Color(0xFF10B981)
-                                    : const Color(0xFF6B7280),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -414,36 +353,31 @@ class _SettingsViewState extends State<SettingsView>
                 ),
               ],
             ),
-
-            const SizedBox(height: 20),
-
-            // Account actions
-            Row(
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8.0, // gap between adjacent chips
+              runSpacing: 4.0, // gap between lines
+              alignment: WrapAlignment.center,
               children: [
-                Expanded(
-                  child: _buildAccountActionButton(
-                    icon: LucideIcons.pencil,
-                    label: 'Edit Profile',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Edit Profile - Coming Soon')),
-                      );
-                    },
-                  ),
+                TextButton.icon(
+                  icon: const Icon(LucideIcons.pencil, size: 16),
+                  label: const Text('Edit Profile'),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Edit Profile - Coming Soon')),
+                    );
+                  },
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildAccountActionButton(
-                    icon: LucideIcons.lock,
-                    label: 'Security',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Security Settings - Coming Soon')),
-                      );
-                    },
-                  ),
+                TextButton.icon(
+                  icon: const Icon(LucideIcons.lock, size: 16),
+                  label: const Text('Security'),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Security Settings - Coming Soon')),
+                    );
+                  },
                 ),
               ],
             ),
@@ -453,139 +387,53 @@ class _SettingsViewState extends State<SettingsView>
     );
   }
 
-  Widget _buildAccountActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF475569).withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: const Color(0xFF64748B).withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: const Color(0xFF94A3B8),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF94A3B8),
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+  Widget _buildSettingsCard(BuildContext context, List<Widget> children) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainer,
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildDangerCard(BuildContext context, AuthProvider authProvider) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.errorContainer,
+      child: _buildActionTile(
+        context,
+        title: 'Sign Out',
+        subtitle: 'Sign out of your account',
+        icon: LucideIcons.logOut,
+        isDestructive: true,
+        onTap: () => _showSignOutDialog(context, authProvider),
       ),
     );
   }
 
-  Widget _buildSettingsCard(List<Widget> children) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF475569).withValues(alpha: 0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(children: children),
-      ),
-    );
-  }
-
-  Widget _buildDangerCard(AuthProvider authProvider) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF991B1B).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFDC2626).withValues(alpha: 0.3),
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildActionTile(
-              title: 'Sign Out',
-              subtitle: 'Sign out of your account',
-              icon: LucideIcons.logOut,
-              isDestructive: true,
-              onTap: () => _showSignOutDialog(authProvider),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSwitchSetting({
+  Widget _buildSwitchSetting(
+    BuildContext context, {
     required String title,
     String? subtitle,
     String? tooltip,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    Widget content = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
+    final theme = Theme.of(context);
+    Widget content = SwitchListTile(
+      title: Text(title, style: theme.textTheme.titleMedium),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          : null,
+      value: value,
+      onChanged: onChanged,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
 
     if (tooltip != null) {
@@ -597,7 +445,8 @@ class _SettingsViewState extends State<SettingsView>
     return content;
   }
 
-  Widget _buildDropdownSetting<T>({
+  Widget _buildDropdownSetting<T>(
+    BuildContext context, {
     required String title,
     String? subtitle,
     String? tooltip,
@@ -605,44 +454,27 @@ class _SettingsViewState extends State<SettingsView>
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
   }) {
-    Widget content = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          DropdownButton<T>(
-            value: value,
-            items: items,
-            onChanged: onChanged,
-            underline: const SizedBox(),
-            style: Theme.of(context).textTheme.bodyMedium,
-            dropdownColor: Theme.of(context).colorScheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ],
+    final theme = Theme.of(context);
+    Widget content = ListTile(
+      title: Text(title, style: theme.textTheme.titleMedium),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          : null,
+      trailing: DropdownButton<T>(
+        value: value,
+        items: items,
+        onChanged: onChanged,
+        underline: const SizedBox(),
+        style: theme.textTheme.bodyMedium,
+        dropdownColor: theme.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
       ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
 
     if (tooltip != null) {
@@ -654,120 +486,62 @@ class _SettingsViewState extends State<SettingsView>
     return content;
   }
 
-  Widget _buildInfoTile({
+  Widget _buildInfoTile(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required IconData icon,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              icon,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
+    final theme = Theme.of(context);
+    return ListTile(
+      leading: Icon(icon, color: theme.colorScheme.onSurfaceVariant),
+      title: Text(title, style: theme.textTheme.titleMedium),
+      subtitle: Text(
+        subtitle,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
       ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 
-  Widget _buildActionTile({
+  Widget _buildActionTile(
+    BuildContext context, {
     required String title,
     String? subtitle,
     required IconData icon,
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isDestructive
-                    ? Theme.of(context).colorScheme.error
-                    : Theme.of(context).colorScheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: isDestructive
-                    ? Theme.of(context).colorScheme.onError
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: isDestructive
-                              ? Theme.of(context).colorScheme.error
-                              : Theme.of(context).colorScheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  if (subtitle != null) ...[
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Icon(
-              LucideIcons.chevronRight,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 20,
-            ),
-          ],
+    final theme = Theme.of(context);
+    final color = isDestructive
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurfaceVariant;
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: isDestructive ? theme.colorScheme.error : null,
         ),
       ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          : null,
+      trailing:
+          const Icon(LucideIcons.chevronRight, color: Colors.grey, size: 20),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
 
-  void _showSignOutDialog(AuthProvider authProvider) {
+  void _showSignOutDialog(BuildContext context, AuthProvider authProvider) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -796,8 +570,6 @@ class _SettingsViewState extends State<SettingsView>
                     margin: const EdgeInsets.all(16),
                   ),
                 );
-                // Let the AuthenticationWrapper handle the navigation automatically
-                // by listening to the auth state changes
               }
             },
             style: FilledButton.styleFrom(
@@ -810,7 +582,6 @@ class _SettingsViewState extends State<SettingsView>
     );
   }
 
-  // Show dialog for custom endpoint configuration
   void _showCustomEndpointDialog(
       BuildContext context, SettingsProvider settingsProvider) {
     final apiController =
@@ -853,10 +624,7 @@ class _SettingsViewState extends State<SettingsView>
             const SizedBox(height: 8),
             Text(
               'Make sure both endpoints point to the same server',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
@@ -892,10 +660,8 @@ class _SettingsViewState extends State<SettingsView>
     );
   }
 
-  // Test connection to the API
   void _testConnection(
       BuildContext context, SettingsProvider settingsProvider) async {
-    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -912,17 +678,15 @@ class _SettingsViewState extends State<SettingsView>
     );
 
     try {
-      // Create a temporary Dio instance for testing
       final dio = Dio();
       dio.options.baseUrl = settingsProvider.apiEndpoint;
       dio.options.connectTimeout = const Duration(seconds: 5);
       dio.options.receiveTimeout = const Duration(seconds: 3);
 
-      // Test the health endpoint
       final response = await dio.get('/health');
 
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.of(context).pop();
 
         if (response.statusCode == 200) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -943,7 +707,7 @@ class _SettingsViewState extends State<SettingsView>
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ Connection failed: ${e.toString()}'),
@@ -954,13 +718,10 @@ class _SettingsViewState extends State<SettingsView>
     }
   }
 
-  // Test WebSocket connection
   void _testWebSocketConnection(
       BuildContext context, SettingsProvider settingsProvider) async {
-    // Get CommsState from provider
     final commsState = Provider.of<CommsState>(context, listen: false);
 
-    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -977,11 +738,10 @@ class _SettingsViewState extends State<SettingsView>
     );
 
     try {
-      // Test the WebSocket connection
       final success = await commsState.testConnection();
 
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.of(context).pop();
 
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1002,7 +762,7 @@ class _SettingsViewState extends State<SettingsView>
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ WebSocket test failed: ${e.toString()}'),

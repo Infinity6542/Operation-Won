@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 class SettingsProvider extends ChangeNotifier {
   static const String _apiEndpointKey = 'api_endpoint';
@@ -25,10 +26,23 @@ class SettingsProvider extends ChangeNotifier {
   SharedPreferences? _prefs;
   bool _isLoaded = false;
 
+  // Debounce timer to prevent excessive SharedPreferences writes
+  Timer? _saveTimer;
+  static const Duration _saveDelay = Duration(milliseconds: 500);
+
   // Getters
   String get apiEndpoint => _apiEndpoint;
   String get websocketEndpoint => _websocketEndpoint;
-  String get themeMode => _themeMode;
+  ThemeMode get themeMode {
+    if (_themeMode == 'light') {
+      return ThemeMode.light;
+    } else if (_themeMode == 'dark') {
+      return ThemeMode.dark;
+    }
+    return ThemeMode.system;
+  }
+
+  String get themeModeName => _themeMode;
   String get pttMode => _pttMode;
   bool get magicMicEnabled => _magicMicEnabled;
   bool get isLoaded => _isLoaded;
@@ -92,7 +106,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setApiEndpoint(String endpoint) async {
     if (_apiEndpoint != endpoint) {
       _apiEndpoint = endpoint;
-      await _prefs?.setString(_apiEndpointKey, endpoint);
+      _debouncedSave(_apiEndpointKey, endpoint);
       notifyListeners();
     }
   }
@@ -101,7 +115,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setWebsocketEndpoint(String endpoint) async {
     if (_websocketEndpoint != endpoint) {
       _websocketEndpoint = endpoint;
-      await _prefs?.setString(_websocketEndpointKey, endpoint);
+      _debouncedSave(_websocketEndpointKey, endpoint);
       notifyListeners();
     }
   }
@@ -134,7 +148,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setThemeMode(String mode) async {
     if (_themeMode != mode) {
       _themeMode = mode;
-      await _prefs?.setString(_themeModeKey, mode);
+      _debouncedSave(_themeModeKey, mode);
       notifyListeners();
     }
   }
@@ -143,7 +157,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setPttMode(String mode) async {
     if (_pttMode != mode) {
       _pttMode = mode;
-      await _prefs?.setString(_pttModeKey, mode);
+      _debouncedSave(_pttModeKey, mode);
       notifyListeners();
     }
   }
@@ -152,7 +166,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setMagicMicEnabled(bool enabled) async {
     if (_magicMicEnabled != enabled) {
       _magicMicEnabled = enabled;
-      await _prefs?.setBool(_magicMicKey, enabled);
+      _debouncedSave(_magicMicKey, enabled);
       notifyListeners();
     }
   }
@@ -182,4 +196,27 @@ class SettingsProvider extends ChangeNotifier {
 
   // Check if using custom endpoint
   bool get isUsingCustomEndpoint => getCurrentPredefinedEndpoint() == null;
+
+  // Debounced save method to prevent excessive SharedPreferences writes
+  void _debouncedSave(String key, dynamic value) {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(_saveDelay, () async {
+      await _saveToPreferences(key, value);
+    });
+  }
+
+  // Save to SharedPreferences
+  Future<void> _saveToPreferences(String key, dynamic value) async {
+    if (value is String) {
+      await _prefs?.setString(key, value);
+    } else if (value is bool) {
+      await _prefs?.setBool(key, value);
+    }
+  }
+
+  @override
+  void dispose() {
+    _saveTimer?.cancel();
+    super.dispose();
+  }
 }

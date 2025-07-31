@@ -36,389 +36,150 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isMobile = screenWidth < 768;
-    final isSmallScreen = screenHeight < 700; // Detect small screens
-    final isVerySmallScreen = screenHeight < 600; // Very small screens
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor:
-          const Color(0xFF0F172A), // Dark background like the screenshot
       body: SafeArea(
-        child: Consumer<AuthProvider>(
-          builder: (context, authProvider, child) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: isMobile ? 16 : 48,
-                vertical: isVerySmallScreen ? 4 : (isSmallScreen ? 8 : 16),
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: isMobile ? double.infinity : 420,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // App Logo/Branding - Responsive size
-                      _buildHeader(isMobile, isSmallScreen, isVerySmallScreen),
-                      SizedBox(
-                          height: isVerySmallScreen
-                              ? 12
-                              : (isSmallScreen ? 16 : 24)),
-
-                      // Auth Form Container - Enhanced design with gradients and borders
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              const Color(0xFF1E293B),
-                              const Color(0xFF0F172A).withValues(alpha: 0.9),
-                            ],
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(context),
+                  const SizedBox(height: 32),
+                  Card(
+                    elevation: 0,
+                    color: theme.colorScheme.surfaceContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        children: [
+                          _buildTabBar(context),
+                          const SizedBox(height: 24),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder:
+                                (Widget child, Animation<double> animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(0.1, 0),
+                                    end: Offset.zero,
+                                  ).animate(CurvedAnimation(
+                                    parent: animation,
+                                    curve: Curves.easeInOut,
+                                  )),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: _currentIndex == 0
+                                ? LoginForm(key: const ValueKey('login'))
+                                : RegisterForm(key: const ValueKey('register')),
                           ),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color:
-                                const Color(0xFF475569).withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.4),
-                              blurRadius: 30,
-                              spreadRadius: 5,
-                              offset: const Offset(0, 15),
-                            ),
-                            BoxShadow(
-                              color: const Color(0xFF3B82F6)
-                                  .withValues(alpha: 0.1),
-                              blurRadius: 20,
-                              offset: const Offset(0, -5),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Tab Bar
-                            _buildTabBar(isSmallScreen, isVerySmallScreen),
-
-                            // Tab Views - Show only active form with smooth transitions
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              transitionBuilder:
-                                  (Widget child, Animation<double> animation) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: SlideTransition(
-                                    position: Tween<Offset>(
-                                      begin: const Offset(0.1, 0),
-                                      end: Offset.zero,
-                                    ).animate(CurvedAnimation(
-                                      parent: animation,
-                                      curve: Curves.easeInOut,
-                                    )),
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: _currentIndex == 0
-                                  ? LoginForm(
-                                      key: const ValueKey('login'),
-                                      authProvider: authProvider,
-                                      isMobile: isMobile,
-                                      isSmallScreen: isSmallScreen,
-                                      isVerySmallScreen: isVerySmallScreen)
-                                  : RegisterForm(
-                                      key: const ValueKey('register'),
-                                      authProvider: authProvider,
-                                      isMobile: isMobile,
-                                      isSmallScreen: isSmallScreen,
-                                      isVerySmallScreen: isVerySmallScreen),
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
-
-                      // Footer with responsive spacing
-                      SizedBox(
-                          height: isVerySmallScreen
-                              ? 8
-                              : (isSmallScreen ? 12 : 16)),
-                      _buildFooter(isMobile, isSmallScreen),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  _buildFooter(context),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(
-      bool isMobile, bool isSmallScreen, bool isVerySmallScreen) {
+  Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       children: [
-        // Enhanced App Logo with gradient and better shadows
-        Container(
-          width: isVerySmallScreen
-              ? 60
-              : (isSmallScreen ? 70 : (isMobile ? 80 : 100)),
-          height: isVerySmallScreen
-              ? 60
-              : (isSmallScreen ? 70 : (isMobile ? 80 : 100)),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF3B82F6),
-                Color(0xFF2563EB),
-                Color(0xFF1D4ED8),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(isVerySmallScreen
-                ? 15
-                : (isSmallScreen ? 18 : (isMobile ? 20 : 25))),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
-                blurRadius: 25,
-                spreadRadius: 2,
-                offset: const Offset(0, 10),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Icon(
-            Icons.radio_rounded,
-            size: isVerySmallScreen
-                ? 30
-                : (isSmallScreen ? 35 : (isMobile ? 40 : 50)),
-            color: Colors.white,
-          ),
+        Icon(
+          Icons.radio_rounded,
+          size: 64,
+          color: theme.colorScheme.primary,
         ),
-        SizedBox(
-            height: isVerySmallScreen
-                ? 12
-                : (isSmallScreen ? 16 : (isMobile ? 20 : 28))),
-
-        // App Name with improved typography
+        const SizedBox(height: 16),
         Text(
           'Operation Won',
-          style: TextStyle(
-            fontSize: isVerySmallScreen
-                ? 24
-                : (isSmallScreen ? 28 : (isMobile ? 32 : 40)),
+          style: theme.textTheme.headlineLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1.2,
-            shadows: [
-              Shadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                offset: const Offset(0, 2),
-                blurRadius: 4,
-              ),
-            ],
           ),
+          textAlign: TextAlign.center,
         ),
-        SizedBox(
-            height: isVerySmallScreen
-                ? 6
-                : (isSmallScreen ? 8 : (isMobile ? 10 : 14))),
-
-        // Subtitle with better styling
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E293B).withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-              width: 1,
-            ),
+        const SizedBox(height: 8),
+        Text(
+          'Secure Communication Platform',
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
-          child: Text(
-            'Secure Communication Platform',
-            style: TextStyle(
-              color: Colors.grey[300],
-              fontSize: isVerySmallScreen
-                  ? 12
-                  : (isSmallScreen ? 14 : (isMobile ? 15 : 16)),
-              fontWeight: FontWeight.w400,
-              letterSpacing: 0.5,
-            ),
-          ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  Widget _buildTabBar(bool isSmallScreen, bool isVerySmallScreen) {
-    return Container(
-      margin:
-          EdgeInsets.all(isVerySmallScreen ? 12 : (isSmallScreen ? 14 : 16)),
-      decoration: BoxDecoration(
-        color: const Color(0xFF334155),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF475569).withValues(alpha: 0.5),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+  Widget _buildTabBar(BuildContext context) {
+    final theme = Theme.of(context);
+    return TabBar(
+      controller: _tabController,
+      tabs: const [
+        Tab(text: 'Login'),
+        Tab(text: 'Register'),
+      ],
+      indicator: BoxDecoration(
+        borderRadius: BorderRadius.circular(50),
+        color: theme.colorScheme.primary,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: TabBar(
-          controller: _tabController,
-          indicator: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                Color(0xFF3B82F6),
-                Color(0xFF2563EB),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          indicatorSize: TabBarIndicatorSize.tab,
-          indicatorPadding: const EdgeInsets.all(6),
-          overlayColor: WidgetStateProperty.all(Colors.transparent),
-          splashFactory: NoSplash.splashFactory,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.grey[400],
-          labelStyle: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: isVerySmallScreen ? 14 : (isSmallScreen ? 15 : 16),
-            letterSpacing: 0.5,
-          ),
-          unselectedLabelStyle: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: isVerySmallScreen ? 14 : (isSmallScreen ? 15 : 16),
-            letterSpacing: 0.3,
-          ),
-          tabs: [
-            Tab(
-              height: isVerySmallScreen ? 44 : (isSmallScreen ? 48 : 52),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.login_rounded,
-                    size: isVerySmallScreen ? 16 : 18,
-                  ),
-                  const SizedBox(width: 6),
-                  const Text('Sign In'),
-                ],
-              ),
-            ),
-            Tab(
-              height: isVerySmallScreen ? 44 : (isSmallScreen ? 48 : 52),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.person_add_rounded,
-                    size: isVerySmallScreen ? 16 : 18,
-                  ),
-                  const SizedBox(width: 6),
-                  const Text('Sign Up'),
-                ],
-              ),
-            ),
-          ],
-        ),
+      indicatorSize: TabBarIndicatorSize.tab,
+      indicatorPadding: const EdgeInsets.all(4),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+      splashFactory: NoSplash.splashFactory,
+      labelColor: theme.colorScheme.onPrimary,
+      unselectedLabelColor: theme.colorScheme.onSurface,
+      labelStyle: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 16,
+      ),
+      unselectedLabelStyle: const TextStyle(
+        fontWeight: FontWeight.w500,
+        fontSize: 16,
       ),
     );
   }
 
-  Widget _buildFooter(bool isMobile, bool isSmallScreen) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B).withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF475569).withValues(alpha: 0.3),
-          width: 1,
+  Widget _buildFooter(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Text(
+          'By continuing, you agree to our Terms of Service and Privacy Policy',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.security_rounded,
-                size: 14,
-                color: Colors.grey[400],
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  'By continuing, you agree to our Terms of Service and Privacy Policy',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: isSmallScreen ? 11 : (isMobile ? 12 : 13),
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-            ],
+        const SizedBox(height: 8),
+        Text(
+          '© 2025 Operation Won. All rights reserved.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
           ),
-          SizedBox(height: isSmallScreen ? 8 : (isMobile ? 10 : 12)),
-          Text(
-            '© 2025 Operation Won. All rights reserved.',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: isSmallScreen ? 9 : (isMobile ? 10 : 11),
-              fontWeight: FontWeight.w300,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
 class LoginForm extends StatefulWidget {
-  final AuthProvider authProvider;
-  final bool isMobile;
-  final bool isSmallScreen;
-  final bool isVerySmallScreen;
-
-  const LoginForm(
-      {super.key,
-      required this.authProvider,
-      required this.isMobile,
-      required this.isSmallScreen,
-      required this.isVerySmallScreen});
+  const LoginForm({super.key});
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -429,7 +190,6 @@ class _LoginFormState extends State<LoginForm> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _showServerSelection = false;
 
   @override
   void dispose() {
@@ -440,25 +200,18 @@ class _LoginFormState extends State<LoginForm> {
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await widget.authProvider.login(
+    final success = await authProvider.login(
       _usernameController.text.trim(),
       _passwordController.text,
     );
 
     if (mounted) {
-      if (success) {
-        // Navigation will be handled by AuthenticationFlow
+      if (!success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Login successful'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.authProvider.error ?? 'Login failed'),
+            content: Text(authProvider.error ?? 'Login failed'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -468,58 +221,37 @@ class _LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(widget.isMobile ? 16 : 24),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back',
-              style: TextStyle(
-                fontSize: widget.isMobile ? 20 : 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+    final authProvider = Provider.of<AuthProvider>(context);
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildServerSelector(),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _usernameController,
+            decoration: const InputDecoration(
+              labelText: 'Username',
+              prefixIcon: Icon(Icons.person_outline),
+              border: OutlineInputBorder(),
             ),
-            SizedBox(height: widget.isMobile ? 4 : 8),
-            Text(
-              'Sign in to your account to continue',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: widget.isMobile ? 14 : 16,
-              ),
-            ),
-            SizedBox(height: widget.isMobile ? 16 : 24),
-
-            // Server Selection
-            _buildServerSelector(),
-            SizedBox(height: widget.isMobile ? 12 : 16),
-
-            // Username Field
-            _buildTextField(
-              controller: _usernameController,
-              label: 'Username',
-              hint: 'Enter your username',
-              icon: Icons.person_outline,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Username is required';
-                }
-                return null;
-              },
-            ),
-            SizedBox(height: widget.isMobile ? 12 : 16),
-
-            // Password Field
-            _buildTextField(
-              controller: _passwordController,
-              label: 'Password',
-              hint: 'Enter your password',
-              icon: Icons.lock_outline,
-              obscureText: _obscurePassword,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Username is required';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            decoration: InputDecoration(
+              labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_outline),
+              border: const OutlineInputBorder(),
               suffixIcon: IconButton(
                 onPressed: () {
                   setState(() {
@@ -528,349 +260,146 @@ class _LoginFormState extends State<LoginForm> {
                 },
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey[400],
                 ),
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Password is required';
-                }
-                return null;
-              },
             ),
-            SizedBox(height: widget.isMobile ? 20 : 24),
-
-            // Login Button
-            SizedBox(
-              width: double.infinity,
-              height: widget.isMobile ? 48 : 52,
-              child: FilledButton(
-                onPressed: widget.authProvider.isLoading ? null : _handleLogin,
-                child: widget.authProvider.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Text(
-                        'Sign In',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Password is required';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 48,
+            child: FilledButton(
+              onPressed: authProvider.isLoading ? null : _handleLogin,
+              child: authProvider.isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
-              ),
-            ),
-            SizedBox(height: widget.isMobile ? 12 : 16),
-
-            // Demo Credentials (for testing)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(widget.isMobile ? 12 : 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF334155),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Demo Credentials:',
-                    style: TextStyle(
-                      fontSize: widget.isMobile ? 12 : 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[300],
+                    )
+                  : const Text(
+                      'Sign In',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: widget.isMobile ? 4 : 6),
-                  Text(
-                    'Username: demo\nPassword: password123',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: widget.isMobile ? 11 : 12,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ],
-              ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          _buildDemoCredentials(context),
+        ],
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[300],
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: obscureText,
-          validator: validator,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            prefixIcon: Icon(icon, color: Colors.grey[400]),
-            suffixIcon: suffixIcon,
-            filled: true,
-            fillColor: const Color(0xFF475569),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFF3B82F6),
-                width: 2,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Colors.red,
-                width: 1,
-              ),
+  Widget _buildDemoCredentials(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Demo Credentials:',
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            'Username: demo\nPassword: password123',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildServerSelector() {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _showServerSelection = !_showServerSelection;
-                });
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF475569),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[600]!, width: 0.5),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.dns_outlined,
-                      color: Colors.grey[400],
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _getSelectedServerName(settingsProvider),
-                        style: TextStyle(
-                          color: Colors.grey[300],
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      _showServerSelection
-                          ? Icons.expand_less
-                          : Icons.expand_more,
-                      color: Colors.grey[400],
-                      size: 16,
-                    ),
-                  ],
-                ),
-              ),
+        return DropdownButtonFormField<String>(
+          value: settingsProvider.getCurrentPredefinedEndpoint()?['name'] ??
+              'Custom',
+          decoration: const InputDecoration(
+            labelText: 'Server',
+            prefixIcon: Icon(Icons.dns_outlined),
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            ...SettingsProvider.predefinedEndpoints.map((endpoint) {
+              return DropdownMenuItem(
+                value: endpoint['name'],
+                child: Text(endpoint['name']!),
+              );
+            }),
+            const DropdownMenuItem(
+              value: 'Custom',
+              child: Text('Custom Server'),
             ),
-            if (_showServerSelection) ...[
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF374151),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[600]!, width: 0.5),
-                ),
-                child: Column(
-                  children: [
-                    // Predefined servers
-                    ...SettingsProvider.predefinedEndpoints.map((endpoint) {
-                      final isSelected =
-                          settingsProvider.apiEndpoint == endpoint['api'];
-                      return ListTile(
-                        dense: true,
-                        leading: Icon(
-                          Icons.radio_button_checked,
-                          color: isSelected
-                              ? const Color(0xFF3B82F6)
-                              : Colors.grey[500],
-                          size: 16,
-                        ),
-                        title: Text(
-                          endpoint['name']!,
-                          style: TextStyle(
-                            color: Colors.grey[200],
-                            fontSize: 13,
-                          ),
-                        ),
-                        subtitle: Text(
-                          endpoint['api']!,
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 11,
-                          ),
-                        ),
-                        onTap: () async {
-                          await settingsProvider
-                              .setApiEndpoint(endpoint['api']!);
-                          await settingsProvider
-                              .setWebsocketEndpoint(endpoint['websocket']!);
-                          setState(() {
-                            _showServerSelection = false;
-                          });
-                        },
-                      );
-                    }).toList(),
-                    // Custom server option
-                    const Divider(color: Colors.grey, height: 1),
-                    ListTile(
-                      dense: true,
-                      leading: Icon(
-                        Icons.edit_outlined,
-                        color: Colors.grey[400],
-                        size: 16,
-                      ),
-                      title: Text(
-                        'Custom Server',
-                        style: TextStyle(
-                          color: Colors.grey[200],
-                          fontSize: 13,
-                        ),
-                      ),
-                      onTap: () {
-                        _showCustomServerDialog(settingsProvider);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
+          onChanged: (value) {
+            if (value != 'Custom') {
+              final selectedEndpoint = SettingsProvider.predefinedEndpoints
+                  .firstWhere((endpoint) => endpoint['name'] == value);
+              settingsProvider.setPredefinedEndpoint(selectedEndpoint);
+            } else {
+              _showCustomServerDialog(context, settingsProvider);
+            }
+          },
         );
       },
     );
   }
 
-  String _getSelectedServerName(SettingsProvider settingsProvider) {
-    final currentEndpoint = settingsProvider.apiEndpoint;
-
-    // Check if it matches a predefined endpoint
-    for (final endpoint in SettingsProvider.predefinedEndpoints) {
-      if (endpoint['api'] == currentEndpoint) {
-        return endpoint['name']!;
-      }
-    }
-
-    // If it's a custom endpoint, show the URL
-    return currentEndpoint.length > 30
-        ? '${currentEndpoint.substring(0, 27)}...'
-        : currentEndpoint;
-  }
-
-  void _showCustomServerDialog(SettingsProvider settingsProvider) {
+  void _showCustomServerDialog(
+      BuildContext context, SettingsProvider settingsProvider) {
     final controller =
         TextEditingController(text: settingsProvider.apiEndpoint);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF374151),
-        title: Text(
-          'Custom Server',
-          style: TextStyle(color: Colors.grey[200]),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'API Endpoint',
-                labelStyle: TextStyle(color: Colors.grey[400]),
-                hintText: 'https://api.example.com',
-                hintStyle: TextStyle(color: Colors.grey[500]),
-                filled: true,
-                fillColor: const Color(0xFF475569),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
+        title: const Text('Custom Server'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'API Endpoint',
+            hintText: 'https://api.example.com',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey[400]),
-            ),
+            child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () async {
               final apiUrl = controller.text.trim();
               if (apiUrl.isNotEmpty) {
-                // Generate websocket URL from API URL
                 final wsUrl = apiUrl.replaceFirst('http', 'ws') + '/msg';
-
                 await settingsProvider.setApiEndpoint(apiUrl);
                 await settingsProvider.setWebsocketEndpoint(wsUrl);
-
-                setState(() {
-                  _showServerSelection = false;
-                });
               }
-              Navigator.of(context).pop();
+              if (mounted) Navigator.of(context).pop();
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-            ),
-            child: const Text(
-              'Save',
-              style: TextStyle(color: Colors.white),
-            ),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -879,17 +408,7 @@ class _LoginFormState extends State<LoginForm> {
 }
 
 class RegisterForm extends StatefulWidget {
-  final AuthProvider authProvider;
-  final bool isMobile;
-  final bool isSmallScreen;
-  final bool isVerySmallScreen;
-
-  const RegisterForm(
-      {super.key,
-      required this.authProvider,
-      required this.isMobile,
-      required this.isSmallScreen,
-      required this.isVerySmallScreen});
+  const RegisterForm({super.key});
 
   @override
   State<RegisterForm> createState() => _RegisterFormState();
@@ -903,7 +422,6 @@ class _RegisterFormState extends State<RegisterForm> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _showServerSelection = false;
 
   @override
   void dispose() {
@@ -916,26 +434,19 @@ class _RegisterFormState extends State<RegisterForm> {
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await widget.authProvider.register(
+    final success = await authProvider.register(
       _usernameController.text.trim(),
       _emailController.text.trim(),
       _passwordController.text,
     );
 
     if (mounted) {
-      if (success) {
-        // Navigation will be handled by AuthenticationFlow
+      if (!success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Registration successful'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.authProvider.error ?? 'Registration failed'),
+            content: Text(authProvider.error ?? 'Registration failed'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -945,102 +456,56 @@ class _RegisterFormState extends State<RegisterForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(widget.isVerySmallScreen
-          ? 12
-          : (widget.isSmallScreen ? 14 : (widget.isMobile ? 16 : 24))),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Create account',
-              style: TextStyle(
-                fontSize: widget.isVerySmallScreen
-                    ? 18
-                    : (widget.isSmallScreen ? 19 : (widget.isMobile ? 20 : 24)),
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+    final authProvider = Provider.of<AuthProvider>(context);
+    return Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            controller: _usernameController,
+            decoration: const InputDecoration(
+              labelText: 'Username',
+              prefixIcon: Icon(Icons.person_outline),
+              border: OutlineInputBorder(),
             ),
-            SizedBox(
-                height: widget.isVerySmallScreen
-                    ? 2
-                    : (widget.isSmallScreen ? 3 : (widget.isMobile ? 4 : 8))),
-            Text(
-              'Join the secure communication platform',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontSize: widget.isVerySmallScreen
-                    ? 12
-                    : (widget.isSmallScreen ? 13 : (widget.isMobile ? 14 : 16)),
-              ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Username is required';
+              }
+              if (value.trim().length < 3) {
+                return 'Username must be at least 3 characters';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _emailController,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              prefixIcon: Icon(Icons.email_outlined),
+              border: OutlineInputBorder(),
             ),
-            SizedBox(
-                height: widget.isVerySmallScreen
-                    ? 10
-                    : (widget.isSmallScreen
-                        ? 12
-                        : (widget.isMobile ? 16 : 20))),
-
-            // Server Selection
-            _buildServerSelector(),
-            SizedBox(
-                height: widget.isVerySmallScreen
-                    ? 6
-                    : (widget.isSmallScreen ? 8 : (widget.isMobile ? 10 : 12))),
-
-            // Username Field
-            _buildTextField(
-              controller: _usernameController,
-              label: 'Username',
-              hint: 'Choose a username',
-              icon: Icons.person_outline,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Username is required';
-                }
-                if (value.trim().length < 3) {
-                  return 'Username must be at least 3 characters';
-                }
-                return null;
-              },
-            ),
-            SizedBox(
-                height: widget.isVerySmallScreen
-                    ? 6
-                    : (widget.isSmallScreen ? 8 : (widget.isMobile ? 10 : 12))),
-
-            // Email Field
-            _buildTextField(
-              controller: _emailController,
-              label: 'Email',
-              hint: 'Enter your email address',
-              icon: Icons.email_outlined,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Email is required';
-                }
-                if (!value.contains('@')) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
-            ),
-            SizedBox(
-                height: widget.isVerySmallScreen
-                    ? 6
-                    : (widget.isSmallScreen ? 8 : (widget.isMobile ? 10 : 12))),
-
-            // Password Field
-            _buildTextField(
-              controller: _passwordController,
-              label: 'Password',
-              hint: 'Create a password',
-              icon: Icons.lock_outline,
-              obscureText: _obscurePassword,
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Email is required';
+              }
+              if (!value.contains('@')) {
+                return 'Please enter a valid email';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            decoration: InputDecoration(
+              labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_outline),
+              border: const OutlineInputBorder(),
               suffixIcon: IconButton(
                 onPressed: () {
                   setState(() {
@@ -1049,31 +514,24 @@ class _RegisterFormState extends State<RegisterForm> {
                 },
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey[400],
                 ),
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Password is required';
-                }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
             ),
-            SizedBox(
-                height: widget.isVerySmallScreen
-                    ? 6
-                    : (widget.isSmallScreen ? 8 : (widget.isMobile ? 10 : 12))),
-
-            // Confirm Password Field
-            _buildTextField(
-              controller: _confirmPasswordController,
-              label: 'Confirm Password',
-              hint: 'Confirm your password',
-              icon: Icons.lock_outline,
-              obscureText: _obscureConfirmPassword,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Password is required';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _confirmPasswordController,
+            obscureText: _obscureConfirmPassword,
+            decoration: InputDecoration(
+              labelText: 'Confirm Password',
+              prefixIcon: const Icon(Icons.lock_outline),
+              border: const OutlineInputBorder(),
               suffixIcon: IconButton(
                 onPressed: () {
                   setState(() {
@@ -1084,328 +542,40 @@ class _RegisterFormState extends State<RegisterForm> {
                   _obscureConfirmPassword
                       ? Icons.visibility_off
                       : Icons.visibility,
-                  color: Colors.grey[400],
-                ),
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please confirm your password';
-                }
-                if (value != _passwordController.text) {
-                  return 'Passwords do not match';
-                }
-                return null;
-              },
-            ),
-            SizedBox(
-                height: widget.isVerySmallScreen
-                    ? 10
-                    : (widget.isSmallScreen
-                        ? 12
-                        : (widget.isMobile ? 14 : 18))),
-
-            // Register Button
-            SizedBox(
-              width: double.infinity,
-              height: widget.isVerySmallScreen
-                  ? 44
-                  : (widget.isSmallScreen ? 46 : (widget.isMobile ? 48 : 52)),
-              child: FilledButton(
-                onPressed:
-                    widget.authProvider.isLoading ? null : _handleRegister,
-                child: widget.authProvider.isLoading
-                    ? SizedBox(
-                        width: widget.isVerySmallScreen ? 16 : 20,
-                        height: widget.isVerySmallScreen ? 16 : 20,
-                        child: const CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : Text(
-                        'Create Account',
-                        style: TextStyle(
-                          fontSize: widget.isVerySmallScreen
-                              ? 14
-                              : (widget.isSmallScreen ? 15 : 16),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required IconData icon,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[300],
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: obscureText,
-          validator: validator,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            prefixIcon: Icon(icon, color: Colors.grey[400]),
-            suffixIcon: suffixIcon,
-            filled: true,
-            fillColor: const Color(0xFF475569),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFF3B82F6),
-                width: 2,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Colors.red,
-                width: 1,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildServerSelector() {
-    return Consumer<SettingsProvider>(
-      builder: (context, settingsProvider, child) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _showServerSelection = !_showServerSelection;
-                });
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF475569),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[600]!, width: 0.5),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.dns_outlined,
-                      color: Colors.grey[400],
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _getSelectedServerName(settingsProvider),
-                        style: TextStyle(
-                          color: Colors.grey[300],
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      _showServerSelection
-                          ? Icons.expand_less
-                          : Icons.expand_more,
-                      color: Colors.grey[400],
-                      size: 16,
-                    ),
-                  ],
                 ),
               ),
             ),
-            if (_showServerSelection) ...[
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF374151),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[600]!, width: 0.5),
-                ),
-                child: Column(
-                  children: [
-                    // Predefined servers
-                    ...SettingsProvider.predefinedEndpoints.map((endpoint) {
-                      final isSelected =
-                          settingsProvider.apiEndpoint == endpoint['api'];
-                      return ListTile(
-                        dense: true,
-                        leading: Icon(
-                          Icons.radio_button_checked,
-                          color: isSelected
-                              ? const Color(0xFF3B82F6)
-                              : Colors.grey[500],
-                          size: 16,
-                        ),
-                        title: Text(
-                          endpoint['name']!,
-                          style: TextStyle(
-                            color: Colors.grey[200],
-                            fontSize: 13,
-                          ),
-                        ),
-                        subtitle: Text(
-                          endpoint['api']!,
-                          style: TextStyle(
-                            color: Colors.grey[400],
-                            fontSize: 11,
-                          ),
-                        ),
-                        onTap: () async {
-                          await settingsProvider
-                              .setApiEndpoint(endpoint['api']!);
-                          await settingsProvider
-                              .setWebsocketEndpoint(endpoint['websocket']!);
-                          setState(() {
-                            _showServerSelection = false;
-                          });
-                        },
-                      );
-                    }),
-                    // Custom server option
-                    const Divider(color: Colors.grey, height: 1),
-                    ListTile(
-                      dense: true,
-                      leading: Icon(
-                        Icons.edit_outlined,
-                        color: Colors.grey[400],
-                        size: 16,
-                      ),
-                      title: Text(
-                        'Custom Server',
-                        style: TextStyle(
-                          color: Colors.grey[200],
-                          fontSize: 13,
-                        ),
-                      ),
-                      onTap: () {
-                        _showCustomServerDialog(settingsProvider);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-
-  String _getSelectedServerName(SettingsProvider settingsProvider) {
-    final currentEndpoint = settingsProvider.apiEndpoint;
-
-    // Check if it matches a predefined endpoint
-    for (final endpoint in SettingsProvider.predefinedEndpoints) {
-      if (endpoint['api'] == currentEndpoint) {
-        return endpoint['name']!;
-      }
-    }
-
-    // If it's a custom endpoint, show the URL
-    return currentEndpoint.length > 30
-        ? '${currentEndpoint.substring(0, 27)}...'
-        : currentEndpoint;
-  }
-
-  void _showCustomServerDialog(SettingsProvider settingsProvider) {
-    final controller =
-        TextEditingController(text: settingsProvider.apiEndpoint);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF374151),
-        title: Text(
-          'Custom Server',
-          style: TextStyle(color: Colors.grey[200]),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'API Endpoint',
-                labelStyle: TextStyle(color: Colors.grey[400]),
-                hintText: 'https://api.example.com',
-                hintStyle: TextStyle(color: Colors.grey[500]),
-                filled: true,
-                fillColor: const Color(0xFF475569),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey[400]),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final apiUrl = controller.text.trim();
-              if (apiUrl.isNotEmpty) {
-                // Generate websocket URL from API URL
-                final wsUrl = apiUrl.replaceFirst('http', 'ws') + '/msg';
-
-                await settingsProvider.setApiEndpoint(apiUrl);
-                await settingsProvider.setWebsocketEndpoint(wsUrl);
-
-                setState(() {
-                  _showServerSelection = false;
-                });
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Confirm Password is required';
               }
-              if (mounted) Navigator.of(context).pop();
+              if (value != _passwordController.text) {
+                return 'Passwords do not match';
+              }
+              return null;
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-            ),
-            child: const Text(
-              'Save',
-              style: TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 48,
+            child: FilledButton(
+              onPressed: authProvider.isLoading ? null : _handleRegister,
+              child: authProvider.isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Sign Up',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],
