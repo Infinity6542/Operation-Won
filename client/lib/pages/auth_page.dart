@@ -215,6 +215,9 @@ class _LoginFormState extends State<LoginForm> {
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
+      } else {
+        // Login successful - permissions will be requested by AuthStateListener
+        debugPrint('[AuthPage] Login successful');
       }
     }
   }
@@ -450,6 +453,9 @@ class _RegisterFormState extends State<RegisterForm> {
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
+      } else {
+        // Registration successful - permissions will be requested by AuthStateListener
+        debugPrint('[AuthPage] Registration successful');
       }
     }
   }

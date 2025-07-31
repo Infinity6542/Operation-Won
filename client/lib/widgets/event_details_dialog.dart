@@ -136,41 +136,20 @@ class _EventDetailsDialogState extends State<EventDetailsDialog> {
   }
 
   Widget _buildEventDetails() {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Event Name
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.title,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Event Name',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  event!.eventName,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
+        _buildInfoCard(
+          theme,
+          icon: Icons.title,
+          title: 'Event Name',
+          content: Text(
+            event!.eventName,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),
@@ -178,149 +157,114 @@ class _EventDetailsDialogState extends State<EventDetailsDialog> {
 
         // Event Description
         if (event!.eventDescription.isNotEmpty) ...[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.description,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Description',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    event!.eventDescription,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ],
-              ),
+          _buildInfoCard(
+            theme,
+            icon: Icons.description,
+            title: 'Description',
+            content: Text(
+              event!.eventDescription,
+              style: theme.textTheme.bodyLarge,
             ),
           ),
           const SizedBox(height: 16),
         ],
 
         // Event Role
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      event!.isOrganiser
-                          ? Icons.admin_panel_settings
-                          : Icons.person,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Your Role',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: event!.isOrganiser
-                        ? Colors.amber.withValues(alpha: 0.2)
-                        : Colors.blue.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: event!.isOrganiser ? Colors.amber : Colors.blue,
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    event!.isOrganiser ? 'Organiser' : 'Participant',
-                    style: TextStyle(
-                      color: event!.isOrganiser
-                          ? Colors.amber[800]
-                          : Colors.blue[800],
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
+        _buildInfoCard(
+          theme,
+          icon: event!.isOrganiser ? Icons.admin_panel_settings : Icons.person,
+          title: 'Your Role',
+          content: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: event!.isOrganiser
+                  ? theme.colorScheme.secondaryContainer
+                  : theme.colorScheme.tertiaryContainer,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: event!.isOrganiser
+                    ? theme.colorScheme.secondary
+                    : theme.colorScheme.tertiary,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              event!.isOrganiser ? 'Organiser' : 'Participant',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: event!.isOrganiser
+                    ? theme.colorScheme.onSecondaryContainer
+                    : theme.colorScheme.onTertiaryContainer,
+              ),
             ),
           ),
         ),
         const SizedBox(height: 16),
 
         // Event Channels
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.chat,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Event Channels',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    ),
-                  ],
+        _buildInfoCard(
+          theme,
+          icon: Icons.chat,
+          title: 'Event Channels',
+          content: Column(
+            children: [
+              if (channels.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8.0),
+                  child: Text('No channels found for this event.'),
+                )
+              else
+                ...channels.map(
+                  (channel) => Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: ChannelItem(channel: channel),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder:
-                      (Widget child, Animation<double> animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SizeTransition(
-                        sizeFactor: animation,
-                        axisAlignment: -1.0,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: isLoading
-                      ? const CircularProgressIndicator()
-                      : ListView.builder(
-                          itemCount: channels.length,
-                          itemBuilder: (context, index) {
-                            return ChannelItem(channel: channels[index]);
-                          },
-                        ),
-                ),
-              ],
-            ),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildInfoCard(ThemeData theme,
+      {required IconData icon,
+      required String title,
+      required Widget content}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: theme.cardTheme.shape is RoundedRectangleBorder
+                ? (theme.cardTheme.shape as RoundedRectangleBorder).side.color
+                : Colors.transparent),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          content,
+        ],
+      ),
     );
   }
 }

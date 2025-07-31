@@ -4,6 +4,7 @@ import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:operation_won/channel.dart';
 import 'package:operation_won/comms_state.dart';
 import 'package:operation_won/globals/app_state.dart';
+import 'package:operation_won/home_view.dart';
 import 'package:operation_won/pages/auth_page.dart';
 import 'package:operation_won/pages/home_page.dart';
 import 'package:operation_won/pages/splash.dart';
@@ -11,7 +12,6 @@ import 'package:operation_won/providers/auth_provider.dart';
 import 'package:operation_won/providers/channel_provider.dart';
 import 'package:operation_won/providers/event_provider.dart';
 import 'package:operation_won/providers/settings_provider.dart';
-import 'package:operation_won/widgets/optimized_auth_flow.dart';
 import 'package:operation_won/widgets/auth_state_listener.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -58,12 +58,18 @@ class MyApp extends StatelessWidget {
           },
         ),
         ChangeNotifierProxyProvider<SettingsProvider, AuthProvider>(
-          create: (context) => AuthProvider(),
+          create: (context) =>
+              AuthProvider(), // Initial creation without settings
           update: (context, settingsProvider, authProvider) {
-            if (authProvider == null) {
+            // Only recreate if settings are loaded and current provider doesn't have settings
+            if (settingsProvider.isLoaded &&
+                authProvider != null &&
+                authProvider.settingsProvider == null) {
+              authProvider.dispose(); // Properly dispose the old one
               return AuthProvider(settingsProvider: settingsProvider);
             }
-            return authProvider;
+            return authProvider ??
+                AuthProvider(settingsProvider: settingsProvider);
           },
         ),
         ChangeNotifierProxyProvider<SettingsProvider, EventProvider>(
@@ -90,35 +96,65 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             title: 'Operation Won',
             theme: ThemeData(
-              useMaterial3: true,
-              brightness: Brightness.light,
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF0D47A1), // Deep Blue
+                seedColor: Colors.deepPurple,
                 brightness: Brightness.light,
-                secondary: const Color(0xFF4CAF50), // Green
               ),
+              useMaterial3: true,
             ),
             darkTheme: ThemeData(
-              useMaterial3: true,
-              brightness: Brightness.dark,
-              scaffoldBackgroundColor: Colors.black,
               colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF0D47A1), // Deep Blue
+                seedColor: const Color(0xFF2196F3), // Material Blue
                 brightness: Brightness.dark,
-                primary:
-                    const Color(0xFF42A5F5), // Lighter Blue for readability
-                secondary: const Color(0xFF66BB6A), // Green
-                background: Colors.black,
-                surface: const Color(0xFF121212), // Very dark grey for cards
-                onPrimary: Colors.white,
-                onSecondary: Colors.white,
-                onBackground: Colors.white,
+                primary: const Color(0xFF2196F3), // Blue primary
+                secondary: const Color(0xFF4CAF50), // Green secondary
+                surface: Colors.black, // AMOLED black
                 onSurface: Colors.white,
+                background: Colors.black, // AMOLED black
+                onBackground: Colors.white,
+                surfaceContainer: const Color(0xFF1A1A1A),
+                surfaceContainerHighest: const Color(0xFF2A2A2A),
               ),
+              scaffoldBackgroundColor: Colors.black, // AMOLED black
+              cardTheme: CardThemeData(
+                elevation: 0,
+                color: const Color(0xFF1A1A1A), // Slightly off-black
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: const Color(0xFF333333),
+                    width: 1,
+                  ),
+                ),
+              ),
+              filledButtonTheme: FilledButtonThemeData(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF2196F3),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              textButtonTheme: TextButtonThemeData(
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF2196F3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+              ),
+              useMaterial3: true,
             ),
-            themeMode: settings.themeMode,
+            themeMode: ThemeMode.dark, // Enforce dark mode
             home: AuthStateListener(
-              child: const OptimizedAuthenticationFlow(),
+              child: const AuthenticationFlow(),
             ),
             routes: {
               'Channel': (context) => const Channel(),

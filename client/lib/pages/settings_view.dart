@@ -611,7 +611,7 @@ class _SettingsViewState extends State<SettingsView>
               controller: apiController,
               decoration: const InputDecoration(
                 labelText: 'API Endpoint',
-                hintText: 'http://localhost:8000',
+                hintText: 'http://192.168.3.45:8000',
                 prefixIcon: Icon(LucideIcons.server),
                 border: OutlineInputBorder(),
               ),
@@ -621,7 +621,7 @@ class _SettingsViewState extends State<SettingsView>
               controller: wsController,
               decoration: const InputDecoration(
                 labelText: 'WebSocket Endpoint',
-                hintText: 'ws://localhost:8000/msg',
+                hintText: 'ws://192.168.3.45:8000/msg',
                 prefixIcon: Icon(LucideIcons.radio),
                 border: OutlineInputBorder(),
               ),

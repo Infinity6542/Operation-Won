@@ -22,6 +22,8 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
   @override
   bool get wantKeepAlive => true;
 
+  bool _hasTriggeredInitialLoad = false;
+
   @override
   void initState() {
     super.initState();
@@ -47,13 +49,22 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
 
     return Selector3<AuthProvider, EventProvider, ChannelProvider,
         _HomeViewState>(
-      selector: (context, authProvider, eventProvider, channelProvider) =>
-          _HomeViewState(
-        user: authProvider.user,
-        events: eventProvider.events,
-        isLoading: eventProvider.isLoading || channelProvider.isLoading,
-        standaloneChannels: channelProvider.getChannelsForEvent(null),
-      ),
+      selector: (context, authProvider, eventProvider, channelProvider) {
+        // Load data when user becomes authenticated for the first time
+        if (authProvider.user != null && !_hasTriggeredInitialLoad) {
+          _hasTriggeredInitialLoad = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _loadData();
+          });
+        }
+
+        return _HomeViewState(
+          user: authProvider.user,
+          events: eventProvider.events,
+          isLoading: eventProvider.isLoading || channelProvider.isLoading,
+          standaloneChannels: channelProvider.getChannelsForEvent(null),
+        );
+      },
       builder: (context, homeState, child) {
         return Scaffold(
           backgroundColor: Colors.transparent,
@@ -251,39 +262,58 @@ class _WelcomeSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return OptimizedConsumer<AuthProvider, String?>(
       selector: (context, authProvider) => authProvider.user?.username,
       builder: (context, username, child) {
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 24,
-                  child: Icon(Icons.person),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome back!',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      Text(
-                        username ?? 'User',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                      ),
-                    ],
-                  ),
-                ),
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                theme.colorScheme.primary.withOpacity(0.3),
+                theme.colorScheme.surface.withOpacity(0.1),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            borderRadius: BorderRadius.circular(16),
+            border:
+                Border.all(color: theme.colorScheme.primary.withOpacity(0.4)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: theme.colorScheme.primary,
+                child: Icon(
+                  Icons.person_outline,
+                  color: theme.colorScheme.onPrimary,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back,',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.8),
+                      ),
+                    ),
+                    Text(
+                      username ?? 'User',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -297,25 +327,29 @@ class _EmptyEventsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(Icons.event, size: 48, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'No events yet',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Create your first event to get started',
-              style: TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.event, size: 48, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No events yet',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Create your first event to get started',
+            style: TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -326,25 +360,29 @@ class _EmptyChannelsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(Icons.chat, size: 48, color: Colors.grey),
-            SizedBox(height: 16),
-            Text(
-              'No channels yet',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Create your first channel to start communicating',
-              style: TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.chat, size: 48, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No channels yet',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Create your first channel to start communicating',
+            style: TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

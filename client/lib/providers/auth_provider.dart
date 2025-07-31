@@ -15,6 +15,7 @@ class AuthProvider extends ChangeNotifier {
   String? get error => _error;
   JWTClaims? get user => _user;
   bool get isLoggedIn => _apiService.isLoggedIn;
+  SettingsProvider? get settingsProvider => _settingsProvider;
 
   AuthProvider({SettingsProvider? settingsProvider})
       : _settingsProvider = settingsProvider {
@@ -24,10 +25,14 @@ class AuthProvider extends ChangeNotifier {
 
   void _initializeApiService() {
     if (_settingsProvider != null) {
+      debugPrint(
+          'AuthProvider: Using settings provider endpoint: ${_settingsProvider.apiEndpoint}');
       _apiService = ApiService(baseUrl: _settingsProvider.apiEndpoint);
       // Listen to settings changes to update API endpoint
       _settingsProvider.addListener(_onSettingsChanged);
     } else {
+      debugPrint(
+          'AuthProvider: No settings provider, using default API service');
       _apiService = ApiService();
     }
   }

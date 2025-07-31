@@ -10,8 +10,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _magicMicKey = 'magic_mic_enabled';
 
   // Default values
-  static const String _defaultApiEndpoint = 'http://localhost:8000';
-  static const String _defaultWebsocketEndpoint = 'ws://localhost:8000/msg';
+  static const String _defaultApiEndpoint = 'http://192.168.3.45:8000';
+  static const String _defaultWebsocketEndpoint = 'ws://192.168.3.45:8000/msg';
   static const String _defaultThemeMode = 'dark';
   static const String _defaultPttMode = 'hold';
   static const bool _defaultMagicMicEnabled = true;
@@ -60,6 +60,11 @@ class SettingsProvider extends ChangeNotifier {
       'websocket': 'ws://10.0.2.2:8000/msg',
     },
     {
+      'name': 'Local Network (Current)',
+      'api': 'http://192.168.3.45:8000',
+      'websocket': 'ws://192.168.3.45:8000/msg',
+    },
+    {
       'name': 'Local Network (WiFi)',
       'api': 'http://192.168.1.100:8000',
       'websocket': 'ws://192.168.1.100:8000/msg',
@@ -92,6 +97,10 @@ class SettingsProvider extends ChangeNotifier {
       _pttMode = _prefs?.getString(_pttModeKey) ?? _defaultPttMode;
       _magicMicEnabled =
           _prefs?.getBool(_magicMicKey) ?? _defaultMagicMicEnabled;
+
+      debugPrint('SettingsProvider: Loaded API endpoint: $_apiEndpoint');
+      debugPrint(
+          'SettingsProvider: Loaded WebSocket endpoint: $_websocketEndpoint');
 
       _isLoaded = true;
       notifyListeners();
@@ -180,6 +189,19 @@ class SettingsProvider extends ChangeNotifier {
     _magicMicEnabled = _defaultMagicMicEnabled;
 
     await _prefs?.clear();
+    debugPrint(
+        'SettingsProvider: Reset to defaults - API: $_apiEndpoint, WS: $_websocketEndpoint');
+    notifyListeners();
+  }
+
+  // Clear cached endpoints to force use of defaults
+  Future<void> clearEndpointCache() async {
+    await _prefs?.remove(_apiEndpointKey);
+    await _prefs?.remove(_websocketEndpointKey);
+    _apiEndpoint = _defaultApiEndpoint;
+    _websocketEndpoint = _defaultWebsocketEndpoint;
+    debugPrint(
+        'SettingsProvider: Cleared endpoint cache - API: $_apiEndpoint, WS: $_websocketEndpoint');
     notifyListeners();
   }
 

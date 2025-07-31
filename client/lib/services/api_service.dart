@@ -7,16 +7,23 @@ import '../models/event_model.dart';
 import 'secure_storage_service.dart';
 
 class ApiService {
-  static const String defaultBaseURL = 'http://localhost:8000';
+  static const String defaultBaseURL = 'http://192.168.3.45:8000';
   final Dio _dio;
   String? _token;
   String _baseUrl = defaultBaseURL;
 
-  ApiService({String? baseUrl}) : _dio = Dio() {
-    _baseUrl = baseUrl ?? defaultBaseURL;
-    _dio.options.baseUrl = _baseUrl;
-    _dio.options.connectTimeout = const Duration(seconds: 10);
-    _dio.options.receiveTimeout = const Duration(seconds: 10);
+  ApiService({String? baseUrl})
+      : _baseUrl = baseUrl ?? defaultBaseURL,
+        _dio = Dio(BaseOptions(
+          baseUrl: baseUrl ?? defaultBaseURL,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+          sendTimeout: const Duration(seconds: 10),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        )) {
+    debugPrint('ApiService initialized with base URL: $_baseUrl');
 
     // Add request interceptor for auth token and automatic refresh
     _dio.interceptors.add(
@@ -336,6 +343,38 @@ class ApiService {
     }
   } // Debug version
 
+  Future<void> deleteChannel(String channelUuid) async {
+    try {
+      debugPrint('[API] Deleting channel: $channelUuid');
+      final response =
+          await _dio.delete('/api/protected/channels/$channelUuid/delete');
+      debugPrint('[API] Channel deletion response: ${response.data}');
+    } on DioException catch (e) {
+      debugPrint('[API] DioException deleting channel: ${e.message}');
+      debugPrint('[API] Response data: ${e.response?.data}');
+      throw _handleError(e);
+    } catch (e) {
+      debugPrint('[API] General exception deleting channel: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteEvent(String eventUuid) async {
+    try {
+      debugPrint('[API] Deleting event: $eventUuid');
+      final response =
+          await _dio.delete('/api/protected/events/$eventUuid/delete');
+      debugPrint('[API] Event deletion response: ${response.data}');
+    } on DioException catch (e) {
+      debugPrint('[API] DioException deleting event: ${e.message}');
+      debugPrint('[API] Response data: ${e.response?.data}');
+      throw _handleError(e);
+    } catch (e) {
+      debugPrint('[API] General exception deleting event: $e');
+      rethrow;
+    }
+  }
+
   // Token management
   bool get isLoggedIn {
     if (_token == null) return false;
@@ -386,7 +425,14 @@ class ApiService {
   }
 
   String _handleError(DioException e) {
+    debugPrint('DioException occurred: ${e.type}');
+    debugPrint('Error message: ${e.message}');
+    debugPrint('Request URI: ${e.requestOptions.uri}');
+
     if (e.response != null) {
+      debugPrint('Response status code: ${e.response!.statusCode}');
+      debugPrint('Response data: ${e.response!.data}');
+
       final statusCode = e.response!.statusCode;
       final data = e.response!.data;
 
@@ -413,7 +459,20 @@ class ApiService {
           return 'Request failed with status $statusCode';
       }
     } else {
-      return 'Network error. Please check your connection.';
+      // Network/connection errors
+      debugPrint('No response received - connection error');
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+          return 'Connection timeout. Please check your internet connection.';
+        case DioExceptionType.sendTimeout:
+          return 'Request timeout. Please try again.';
+        case DioExceptionType.receiveTimeout:
+          return 'Response timeout. Please try again.';
+        case DioExceptionType.connectionError:
+          return 'Connection failed. Please check the server address and your network connection.';
+        default:
+          return 'Network error. Please check your connection and server address.';
+      }
     }
   }
 }

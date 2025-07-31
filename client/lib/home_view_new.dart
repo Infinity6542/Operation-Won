@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'event_item.dart';
@@ -29,7 +28,7 @@ class _HomeViewState extends State<HomeView>
   bool get wantKeepAlive => true;
 
   late TabController _tabController;
-  bool _isSpeedDialOpen = false;
+  final MenuController _menuController = MenuController();
 
   @override
   void initState() {
@@ -70,100 +69,37 @@ class _HomeViewState extends State<HomeView>
 
         return Scaffold(
           backgroundColor: Colors.black,
-          body: Stack(
-            children: [
-              SafeArea(
-                child: Column(
-                  children: [
-                    // Custom App Bar
-                    _buildAppBar(theme, user?.username),
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Custom App Bar
+                _buildAppBar(theme, user?.username),
 
-                    // Communication Status Bar
-                    _buildCommsStatusBar(theme),
+                // Communication Status Bar
+                _buildCommsStatusBar(theme),
 
-                    // Tab Bar
-                    _buildTabBar(theme),
+                // Tab Bar
+                _buildTabBar(theme),
 
-                    // Content
-                    Expanded(
-                      child: EnhancedRefreshIndicator(
-                        onRefresh: _loadData,
-                        child: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildEventsTab(context, eventProvider),
-                            _buildChannelsTab(context, channelProvider),
-                          ],
-                        ),
-                      ),
+                // Content
+                Expanded(
+                  child: EnhancedRefreshIndicator(
+                    onRefresh: _loadData,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildEventsTab(context, eventProvider),
+                        _buildChannelsTab(context, channelProvider),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              // Scrim overlay when speed dial is open
-              // Overlay for dismissing speed dial
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                opacity: _isSpeedDialOpen ? 1.0 : 0.0,
-                child: _isSpeedDialOpen
-                    ? Positioned.fill(
-                        child: IgnorePointer(
-                          ignoring: false,
-                          child: GestureDetector(
-                            onTap: () {
-                              // Light haptic feedback when dismissing speed dial
-                              HapticFeedback.lightImpact();
-                              setState(() {
-                                _isSpeedDialOpen = false;
-                              });
-                            },
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              // PTT Button positioned at bottom left when channel is active
-              Consumer<CommsState>(
-                builder: (context, commsState, child) {
-                  if (commsState.currentChannelId == null) {
-                    return const SizedBox.shrink();
-                  }
-                  return Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 88, // Leave space for the FAB
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainer,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: PTTButton(
-                        size: 56,
-                        onPermissionDenied: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Microphone permission required'),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
+              ],
+            ),
           ),
           floatingActionButton: _buildFloatingActionButton(theme),
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerFloat,
         );
       },
     );
@@ -177,7 +113,7 @@ class _HomeViewState extends State<HomeView>
           CircleAvatar(
             radius: 20,
             backgroundColor: theme.colorScheme.primary,
-            child: const Icon(
+            child: Icon(
               LucideIcons.user,
               size: 20,
               color: Colors.white,
@@ -205,11 +141,7 @@ class _HomeViewState extends State<HomeView>
             ),
           ),
           IconButton(
-            onPressed: () {
-              // Light haptic feedback for settings menu access
-              HapticFeedback.lightImpact();
-              _showSettingsMenu();
-            },
+            onPressed: _showSettingsMenu,
             icon: const Icon(LucideIcons.settings),
             style: IconButton.styleFrom(
               backgroundColor: theme.colorScheme.surfaceContainer,
@@ -231,7 +163,7 @@ class _HomeViewState extends State<HomeView>
             color: theme.colorScheme.surfaceContainer,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: theme.colorScheme.outline.withValues(alpha: 0.2),
+              color: theme.colorScheme.outline.withOpacity(0.2),
             ),
           ),
           child: Row(
@@ -281,10 +213,6 @@ class _HomeViewState extends State<HomeView>
       ),
       child: TabBar(
         controller: _tabController,
-        onTap: (index) {
-          // Selection haptic feedback for tab changes
-          HapticFeedback.selectionClick();
-        },
         dividerColor: Colors.transparent,
         indicator: BoxDecoration(
           color: theme.colorScheme.primary,
@@ -427,11 +355,7 @@ class _HomeViewState extends State<HomeView>
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: () {
-                // Medium haptic feedback for primary actions
-                HapticFeedback.mediumImpact();
-                onAction();
-              },
+              onPressed: onAction,
               icon: const Icon(LucideIcons.plus),
               label: Text(actionText),
             ),
@@ -442,232 +366,95 @@ class _HomeViewState extends State<HomeView>
   }
 
   Widget _buildFloatingActionButton(ThemeData theme) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        // Speed dial options - show when menu is open
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          height: _isSpeedDialOpen ? null : 0,
-          child: ClipRect(
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              opacity: _isSpeedDialOpen ? 1.0 : 0.0,
-              child: _isSpeedDialOpen
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Event button (appears first when opening, disappears last when closing)
-                        _buildAnimatedSpeedDialItem(
-                          icon: LucideIcons.calendar,
-                          label: 'Event',
-                          onTap: () {
-                            setState(() {
-                              _isSpeedDialOpen = false;
-                            });
-                            _showCreateEventDialog();
-                          },
-                          theme: theme,
-                          delay: _isSpeedDialOpen
-                              ? 0
-                              : 50, // Delay when closing (goes second)
-                          duration: 400,
-                        ),
-                        const SizedBox(
-                            height: 16), // Increased spacing for larger buttons
-                        // Channel button (appears second when opening, disappears first when closing)
-                        _buildAnimatedSpeedDialItem(
-                          icon: LucideIcons.messageSquare,
-                          label: 'Channel',
-                          onTap: () {
-                            setState(() {
-                              _isSpeedDialOpen = false;
-                            });
-                            _showCreateChannelDialog();
-                          },
-                          theme: theme,
-                          delay: _isSpeedDialOpen
-                              ? 50
-                              : 0, // Delay when opening, no delay when closing (goes first)
-                          duration: 450,
-                        ),
-                        const SizedBox(
-                            height: 20), // More space before main FAB
-                      ],
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ),
-        ),
-        // Main FAB
-        TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          tween: Tween(begin: 1.0, end: _isSpeedDialOpen ? 1.1 : 1.0),
-          builder: (context, scale, child) {
-            return Transform.scale(
-              scale: scale,
-              child: FloatingActionButton(
-                onPressed: () {
-                  // Light haptic feedback for FAB interaction
-                  HapticFeedback.lightImpact();
-                  setState(() {
-                    _isSpeedDialOpen = !_isSpeedDialOpen;
-                  });
-                },
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
-                elevation: _isSpeedDialOpen ? 8 : 6,
-                child: AnimatedRotation(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  turns: _isSpeedDialOpen ? 0.125 : 0, // 45 degree rotation
-                  child: const Icon(LucideIcons.plus),
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAnimatedSpeedDialItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required ThemeData theme,
-    required int delay,
-    required int duration,
-  }) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: duration),
-      curve: Curves.easeInOut,
-      tween: Tween(begin: 0.0, end: _isSpeedDialOpen ? 1.0 : 0.0),
-      builder: (context, value, child) {
-        // Apply delay by modifying the animation curve
-        double delayedValue = value;
-        if (delay > 0) {
-          final delayFactor = delay / duration.toDouble();
-          if (_isSpeedDialOpen) {
-            // When opening: delay the start
-            delayedValue = value > delayFactor
-                ? (value - delayFactor) / (1 - delayFactor)
-                : 0.0;
-          } else {
-            // When closing: delay the start by starting earlier
-            delayedValue =
-                value < (1 - delayFactor) ? value / (1 - delayFactor) : 1.0;
-          }
-        }
-
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - delayedValue)),
-          child: Transform.scale(
-            scale: 0.8 + (0.2 * delayedValue),
-            child: Opacity(
-              opacity: delayedValue,
-              child: _buildSpeedDialOption(
-                icon: icon,
-                label: label,
-                onTap: onTap,
-                theme: theme,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSpeedDialOption({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required ThemeData theme,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Label with enhanced styling
-        TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) {
-            return Transform.scale(
-              scale: 0.9 + (0.1 * value),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainer,
-                  borderRadius:
-                      BorderRadius.circular(24), // More rounded to match FAB
-                  border: Border.all(
-                    color: theme.colorScheme.outline.withValues(alpha: 0.2),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.colorScheme.shadow.withValues(alpha: 0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  label,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16, // Scaled up text
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(width: 16),
-        // Square FAB matching the main FAB size
-        TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) {
-            return Transform.scale(
-              scale: 0.8 + (0.2 * value),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                child: SizedBox(
-                  width: 56, // Same size as regular FAB
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          // PTT Button
+          Consumer<CommsState>(
+            builder: (context, commsState, child) {
+              if (commsState.currentChannelId == null) {
+                return const SizedBox.shrink();
+              }
+              return Expanded(
+                child: Container(
                   height: 56,
-                  child: FloatingActionButton(
-                    onPressed: () {
-                      // Medium haptic feedback for speed dial action selection
-                      HapticFeedback.mediumImpact();
-                      onTap();
-                    },
-                    backgroundColor: theme.colorScheme.surfaceContainer,
-                    foregroundColor: theme.colorScheme.primary,
-                    elevation: 4,
-                    heroTag: label, // Prevent hero animation conflicts
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(16), // Square-ish but rounded
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: theme.colorScheme.outline.withOpacity(0.2),
                     ),
-                    child: Icon(icon, size: 24), // Larger icon to match scale
+                  ),
+                  child: PTTButton(
+                    size: 56,
+                    onPermissionDenied: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Microphone permission required'),
+                        ),
+                      );
+                    },
                   ),
                 ),
+              );
+            },
+          ),
+          Consumer<CommsState>(
+            builder: (context, commsState, child) {
+              return SizedBox(
+                width: commsState.currentChannelId != null ? 12 : 0,
+              );
+            },
+          ),
+          // Material 3 Create Menu
+          MenuAnchor(
+            controller: _menuController,
+            alignmentOffset: const Offset(-40, -10),
+            style: MenuStyle(
+              backgroundColor:
+                  WidgetStateProperty.all(theme.colorScheme.surfaceContainer),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
-            );
-          },
-        ),
-      ],
+            ),
+            menuChildren: [
+              MenuItemButton(
+                leadingIcon: Icon(
+                  LucideIcons.calendar,
+                  color: theme.colorScheme.primary,
+                ),
+                child: const Text('Create Event'),
+                onPressed: () {
+                  _menuController.close();
+                  _showCreateEventDialog();
+                },
+              ),
+              MenuItemButton(
+                leadingIcon: Icon(
+                  LucideIcons.messageSquare,
+                  color: theme.colorScheme.primary,
+                ),
+                child: const Text('Create Channel'),
+                onPressed: () {
+                  _menuController.close();
+                  _showCreateChannelDialog();
+                },
+              ),
+            ],
+            child: FloatingActionButton(
+              onPressed: () {
+                _menuController.isOpen
+                    ? _menuController.close()
+                    : _menuController.open();
+              },
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
+              child: const Icon(LucideIcons.plus),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -689,8 +476,7 @@ class _HomeViewState extends State<HomeView>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color:
-                    theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -756,8 +542,6 @@ class _HomeViewState extends State<HomeView>
                       title: 'Sign Out',
                       subtitle: 'Sign out of your account',
                       onTap: () async {
-                        // Heavy haptic feedback for destructive actions
-                        HapticFeedback.heavyImpact();
                         Navigator.pop(context);
                         await authProvider.logout();
                       },
@@ -799,11 +583,7 @@ class _HomeViewState extends State<HomeView>
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
-      onTap: () {
-        // Light haptic feedback for settings menu navigation
-        HapticFeedback.lightImpact();
-        onTap();
-      },
+      onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
     );
   }
@@ -921,8 +701,6 @@ class _HomeViewState extends State<HomeView>
   }
 
   void _showEventDetails(String eventUuid) {
-    // Light haptic feedback for event selection
-    HapticFeedback.lightImpact();
     showDialog(
       context: context,
       builder: (context) => EventDetailsDialog(eventUuid: eventUuid),
@@ -930,8 +708,6 @@ class _HomeViewState extends State<HomeView>
   }
 
   void _openChannel(String channelUuid) {
-    // Medium haptic feedback for channel joining (more impactful action)
-    HapticFeedback.mediumImpact();
     final commsState = Provider.of<CommsState>(context, listen: false);
     commsState.joinChannel(channelUuid);
 

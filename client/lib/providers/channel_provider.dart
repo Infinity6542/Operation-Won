@@ -50,6 +50,13 @@ class ChannelProvider extends ChangeNotifier {
       debugPrint('[ChannelProvider] Loading channels...');
       _channels = await _apiService.getChannels();
       debugPrint('[ChannelProvider] Loaded ${_channels.length} channels');
+
+      // Debug: Print channel details for troubleshooting
+      for (final channel in _channels) {
+        debugPrint(
+            '[ChannelProvider] Channel: ${channel.channelName} (UUID: ${channel.channelUuid}, EventUUID: ${channel.eventUuid})');
+      }
+
       _setLoading(false);
     } catch (e) {
       debugPrint('[ChannelProvider] Error loading channels: $e');
@@ -80,13 +87,48 @@ class ChannelProvider extends ChangeNotifier {
     }
   }
 
-  List<ChannelResponse> getChannelsForEvent(String? eventUuid) {
-    if (eventUuid == null) {
-      return _channels.where((channel) => channel.eventUuid == null).toList();
+  Future<bool> deleteChannel(String channelUuid) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      debugPrint('[ChannelProvider] Deleting channel: $channelUuid');
+      await _apiService.deleteChannel(channelUuid);
+      debugPrint(
+          '[ChannelProvider] Channel deleted successfully, refreshing list...');
+      await loadChannels(); // Refresh the list
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      debugPrint('[ChannelProvider] Error deleting channel: $e');
+      _setError(e.toString());
+      _setLoading(false);
+      return false;
     }
-    return _channels
-        .where((channel) => channel.eventUuid == eventUuid)
-        .toList();
+  }
+
+  List<ChannelResponse> getChannelsForEvent(String? eventUuid) {
+    debugPrint('[ChannelProvider] Getting channels for event: $eventUuid');
+
+    List<ChannelResponse> result;
+    if (eventUuid == null) {
+      result = _channels.where((channel) => channel.eventUuid == null).toList();
+      debugPrint(
+          '[ChannelProvider] Found ${result.length} channels with no event UUID');
+    } else {
+      result =
+          _channels.where((channel) => channel.eventUuid == eventUuid).toList();
+      debugPrint(
+          '[ChannelProvider] Found ${result.length} channels for event $eventUuid');
+    }
+
+    // Debug: Print matching channels
+    for (final channel in result) {
+      debugPrint(
+          '[ChannelProvider] - ${channel.channelName} (${channel.channelUuid})');
+    }
+
+    return result;
   }
 
   void _setLoading(bool loading) {

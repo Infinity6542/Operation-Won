@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../providers/channel_provider.dart';
 import '../providers/event_provider.dart';
@@ -83,232 +84,283 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.width < 600;
 
     return Consumer<EventProvider>(
       builder: (context, eventProvider, child) {
         return Dialog(
+          backgroundColor: theme.colorScheme.surface,
           insetPadding: EdgeInsets.all(isSmallScreen ? 16 : 40),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxHeight: screenSize.height * 0.85,
               maxWidth: isSmallScreen ? screenSize.width - 32 : 500,
               minWidth: isSmallScreen ? screenSize.width - 32 : 300,
             ),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  child: Row(
                     children: [
-                      // Header
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(
-                              Icons.chat_bubble_outline,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Text(
-                              'Create New Channel',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: isSmallScreen ? 18 : 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.close, color: Colors.grey),
-                            padding: EdgeInsets.all(isSmallScreen ? 4 : 8),
-                            constraints: BoxConstraints(
-                              minWidth: isSmallScreen ? 32 : 40,
-                              minHeight: isSmallScreen ? 32 : 40,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: isSmallScreen ? 16 : 24),
-
-                      // Channel Name Field
-                      Text(
-                        'Channel Name',
-                        style: TextStyle(
-                          color: Colors.grey[300],
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _nameController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Enter channel name',
-                          hintStyle: TextStyle(color: Colors.grey[400]),
-                          filled: true,
-                          fillColor: const Color(0xFF374151),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: Color(0xFF6B7280)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: Color(0xFF6B7280)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: Color(0xFF10B981)),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide:
-                                const BorderSide(color: Color(0xFFDC2626)),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Channel name is required';
-                          }
-                          if (value.trim().length < 2) {
-                            return 'Channel name must be at least 2 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      SizedBox(height: isSmallScreen ? 12 : 16),
-
-                      // Event Selection
-                      Text(
-                        'Link to Event (Optional)',
-                        style: TextStyle(
-                          color: Colors.grey[300],
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                       Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF374151),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF6B7280)),
+                          color: theme.colorScheme.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<EventResponse?>(
-                            value: _selectedEvent,
-                            hint: Text(
-                              isSmallScreen
-                                  ? 'Select event or standalone'
-                                  : 'Select an event (or leave as standalone)',
-                              style: TextStyle(color: Colors.grey[400]),
-                            ),
-                            dropdownColor: const Color(0xFF374151),
-                            style: const TextStyle(color: Colors.white),
-                            icon: const Icon(Icons.arrow_drop_down,
-                                color: Colors.grey),
-                            items: [
-                              const DropdownMenuItem<EventResponse?>(
-                                value: null,
-                                child: Text(
-                                  'Standalone Channel',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                              ...eventProvider.events.map((event) {
-                                return DropdownMenuItem<EventResponse>(
-                                  value: event,
-                                  child: Text(
-                                    event.eventName,
-                                    style: const TextStyle(color: Colors.white),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                );
-                              }),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedEvent = value;
-                              });
-                            },
+                        child: Icon(
+                          LucideIcons.messageSquare,
+                          color: theme.colorScheme.primary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          'Create New Channel',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _selectedEvent == null
-                            ? 'This will create a standalone channel'
-                            : 'This channel will be linked to "${_selectedEvent!.eventName}"',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 12,
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(LucideIcons.x),
+                        style: IconButton.styleFrom(
+                          backgroundColor: theme.colorScheme.surfaceContainer,
+                          foregroundColor: theme.colorScheme.onSurfaceVariant,
+                          padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
                         ),
-                      ),
-                      SizedBox(height: isSmallScreen ? 16 : 24),
-
-                      // Action Buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                            child: Text(
-                              'Cancel',
-                              style: TextStyle(color: Colors.grey[400]),
-                            ),
-                          ),
-                          SizedBox(width: isSmallScreen ? 8 : 12),
-                          FilledButton(
-                            onPressed: _isLoading ? null : _createChannel,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF10B981),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isSmallScreen ? 16 : 24,
-                                vertical: isSmallScreen ? 10 : 12,
-                              ),
-                            ),
-                            child: _isLoading
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white),
-                                    ),
-                                  )
-                                : Text(isSmallScreen
-                                    ? 'Create'
-                                    : 'Create Channel'),
-                          ),
-                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
+
+                // Form Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Channel Name Field
+                          Text(
+                            'Channel Name *',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              hintText: 'Enter channel name',
+                              prefixIcon: const Icon(LucideIcons.hash),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: theme.colorScheme.surfaceContainer,
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Channel name is required';
+                              }
+                              if (value.trim().length < 2) {
+                                return 'Channel name must be at least 2 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          SizedBox(height: isSmallScreen ? 16 : 20),
+
+                          // Event Selection
+                          Text(
+                            'Link to Event',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainer,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color:
+                                    theme.colorScheme.outline.withOpacity(0.2),
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<EventResponse?>(
+                                value: _selectedEvent,
+                                hint: Text(
+                                  'Select event (optional)',
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                dropdownColor:
+                                    theme.colorScheme.surfaceContainer,
+                                icon: Icon(
+                                  LucideIcons.chevronDown,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                items: [
+                                  DropdownMenuItem<EventResponse?>(
+                                    value: null,
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          LucideIcons.messageSquare,
+                                          size: 16,
+                                          color: theme
+                                              .colorScheme.onSurfaceVariant,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Text('Standalone Channel'),
+                                      ],
+                                    ),
+                                  ),
+                                  ...eventProvider.events.map((event) {
+                                    return DropdownMenuItem<EventResponse>(
+                                      value: event,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            LucideIcons.calendar,
+                                            size: 16,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              event.eventName,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedEvent = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  LucideIcons.info,
+                                  size: 16,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _selectedEvent == null
+                                        ? 'This will create a standalone channel for general communication'
+                                        : 'This channel will be linked to "${_selectedEvent!.eventName}" event',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: isSmallScreen ? 20 : 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Action Buttons
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: theme.colorScheme.outline.withOpacity(0.2),
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () => Navigator.of(context).pop(),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton.icon(
+                          onPressed: _isLoading ? null : _createChannel,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: _isLoading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(LucideIcons.plus),
+                          label: Text(
+                              _isLoading ? 'Creating...' : 'Create Channel'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         );

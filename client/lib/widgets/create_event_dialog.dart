@@ -84,142 +84,194 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenSize = MediaQuery.of(context).size;
     final isSmallScreen = screenSize.width < 600;
 
     return Dialog(
+      backgroundColor: theme.colorScheme.surface,
       insetPadding: EdgeInsets.all(isSmallScreen ? 16 : 40),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: screenSize.height * 0.85,
           maxWidth: isSmallScreen ? screenSize.width - 32 : 500,
           minWidth: isSmallScreen ? screenSize.width - 32 : 300,
         ),
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.1),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
                 children: [
-                  // Header
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          LucideIcons.calendar,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          'Create New Event',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: isSmallScreen ? 18 : 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(LucideIcons.x, color: Colors.grey),
-                        padding: EdgeInsets.all(isSmallScreen ? 4 : 8),
-                        constraints: BoxConstraints(
-                          minWidth: isSmallScreen ? 32 : 40,
-                          minHeight: isSmallScreen ? 32 : 40,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: isSmallScreen ? 16 : 24),
-
-                  // Event Name Field
-                  Text(
-                    'Event Name',
-                    style: TextStyle(
-                      color: Colors.grey[300],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      LucideIcons.calendar,
+                      color: theme.colorScheme.primary,
+                      size: 24,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter event name',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Event name is required';
-                      }
-                      if (value.trim().length < 3) {
-                        return 'Event name must be at least 3 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  SizedBox(height: isSmallScreen ? 12 : 16),
-
-                  // Event Description Field
-                  Text(
-                    'Description',
-                    style: TextStyle(
-                      color: Colors.grey[300],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _descriptionController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter event description (optional)',
-                    ),
-                  ),
-                  SizedBox(height: isSmallScreen ? 16 : 24),
-
-                  // Action Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Create New Event',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 12),
-                      FilledButton(
-                        onPressed: _isLoading ? null : _createEvent,
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              )
-                            : const Text('Create Event'),
-                      ),
-                    ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(LucideIcons.x),
+                    style: IconButton.styleFrom(
+                      backgroundColor: theme.colorScheme.surfaceContainer,
+                      foregroundColor: theme.colorScheme.onSurfaceVariant,
+                      padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
+
+            // Form Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Event Name Field
+                      Text(
+                        'Event Name *',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          hintText: 'Enter event name',
+                          prefixIcon: const Icon(LucideIcons.type),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: theme.colorScheme.surfaceContainer,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Event name is required';
+                          }
+                          if (value.trim().length < 3) {
+                            return 'Event name must be at least 3 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: isSmallScreen ? 16 : 20),
+
+                      // Event Description Field
+                      Text(
+                        'Description',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _descriptionController,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          hintText: 'Enter event description (optional)',
+                          prefixIcon: const Padding(
+                            padding: EdgeInsets.only(bottom: 60),
+                            child: Icon(LucideIcons.fileText),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: theme.colorScheme.surfaceContainer,
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                      SizedBox(height: isSmallScreen ? 20 : 24),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Action Buttons
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outline.withOpacity(0.2),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed:
+                          _isLoading ? null : () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton.icon(
+                      onPressed: _isLoading ? null : _createEvent,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(LucideIcons.plus),
+                      label: Text(_isLoading ? 'Creating...' : 'Create Event'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -54,6 +54,13 @@ class EventProvider extends ChangeNotifier {
       debugPrint('[EventProvider] Loading events...');
       _events = await _apiService.getEvents();
       debugPrint('[EventProvider] Loaded ${_events.length} events');
+
+      // Debug: Print event details for troubleshooting
+      for (final event in _events) {
+        debugPrint(
+            '[EventProvider] Event: ${event.eventName} (UUID: ${event.eventUuid})');
+      }
+
       _setLoading(false);
     } catch (e) {
       debugPrint('[EventProvider] Error loading events: $e');
@@ -78,6 +85,26 @@ class EventProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('[EventProvider] Error creating event: $e');
+      _setError(e.toString());
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  Future<bool> deleteEvent(String eventUuid) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      debugPrint('[EventProvider] Deleting event: $eventUuid');
+      await _apiService.deleteEvent(eventUuid);
+      debugPrint(
+          '[EventProvider] Event deleted successfully, refreshing list...');
+      await loadEvents(); // Refresh the list
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      debugPrint('[EventProvider] Error deleting event: $e');
       _setError(e.toString());
       _setLoading(false);
       return false;

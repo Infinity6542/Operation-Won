@@ -25,9 +25,11 @@ class _AuthStateListenerState extends State<AuthStateListener> {
 
         if (_wasLoggedIn != null && _wasLoggedIn != isCurrentlyLoggedIn) {
           // State changed, handle appropriately
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (isCurrentlyLoggedIn) {
-              // User just logged in, refresh all data
+              // User just logged in, wait a bit longer for API service to be ready
+              await Future.delayed(const Duration(milliseconds: 300));
+              // Then refresh all data and request permissions
               StateSynchronizationService.handleSignIn(context);
             }
             // Note: Sign out is handled in the settings view where logout is triggered
