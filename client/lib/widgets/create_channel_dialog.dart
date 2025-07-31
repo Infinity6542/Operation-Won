@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/channel_provider.dart';
 import '../providers/event_provider.dart';
 import '../models/event_model.dart';
+import '../services/state_synchronization_service.dart';
 
 class CreateChannelDialog extends StatefulWidget {
   const CreateChannelDialog({super.key});
@@ -45,6 +46,10 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
         });
 
         if (success) {
+          // Notify state synchronization service about channel creation
+          await StateSynchronizationService.handleChannelCreated(
+              context, _nameController.text.trim());
+
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

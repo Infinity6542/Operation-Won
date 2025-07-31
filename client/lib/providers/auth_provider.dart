@@ -98,6 +98,7 @@ class AuthProvider extends ChangeNotifier {
       await _apiService.logout();
       _user = null;
       _clearError();
+      debugPrint('[AuthProvider] User logged out successfully');
     } finally {
       _setLoading(false);
     }

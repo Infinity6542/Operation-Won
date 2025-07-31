@@ -12,6 +12,7 @@ import 'package:operation_won/providers/channel_provider.dart';
 import 'package:operation_won/providers/event_provider.dart';
 import 'package:operation_won/providers/settings_provider.dart';
 import 'package:operation_won/widgets/optimized_auth_flow.dart';
+import 'package:operation_won/widgets/auth_state_listener.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -116,7 +117,9 @@ class MyApp extends StatelessWidget {
               ),
             ),
             themeMode: settings.themeMode,
-            home: const OptimizedAuthenticationFlow(),
+            home: AuthStateListener(
+              child: const OptimizedAuthenticationFlow(),
+            ),
             routes: {
               'Channel': (context) => const Channel(),
               'AuthPage': (context) => const AuthPage(),

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../comms_state.dart';
+import '../services/state_synchronization_service.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -557,7 +558,11 @@ class _SettingsViewState extends State<SettingsView>
           FilledButton(
             onPressed: () async {
               Navigator.of(context).pop(); // Close the confirm dialog
+
+              // Handle sign out with proper state synchronization
+              await StateSynchronizationService.handleSignOut(context);
               await authProvider.logout();
+
               if (context.mounted) {
                 // Close the settings bottom sheet
                 Navigator.of(context).pop();

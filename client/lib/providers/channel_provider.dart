@@ -111,4 +111,12 @@ class ChannelProvider extends ChangeNotifier {
   }
 
   void clearError() => _clearError();
+
+  /// Clear all cached channels data
+  void clearData() {
+    _channels.clear();
+    _clearError();
+    notifyListeners();
+    debugPrint('[ChannelProvider] Data cleared');
+  }
 }

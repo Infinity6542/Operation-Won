@@ -106,4 +106,12 @@ class EventProvider extends ChangeNotifier {
   }
 
   void clearError() => _clearError();
+
+  /// Clear all cached events data
+  void clearData() {
+    _events.clear();
+    _clearError();
+    notifyListeners();
+    debugPrint('[EventProvider] Data cleared');
+  }
 }

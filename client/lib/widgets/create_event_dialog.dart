@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../providers/event_provider.dart';
+import '../services/state_synchronization_service.dart';
 
 class CreateEventDialog extends StatefulWidget {
   const CreateEventDialog({super.key});
@@ -42,6 +43,10 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
 
       if (mounted) {
         if (success) {
+          // Notify state synchronization service about event creation
+          await StateSynchronizationService.handleEventCreated(
+              context, _nameController.text.trim());
+
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

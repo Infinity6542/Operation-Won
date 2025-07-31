@@ -11,6 +11,8 @@ import 'widgets/create_event_dialog.dart';
 import 'widgets/event_details_dialog.dart';
 import 'widgets/create_channel_dialog.dart';
 import 'widgets/ptt_button.dart';
+import 'widgets/enhanced_refresh_indicator.dart';
+import 'services/state_synchronization_service.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -33,14 +35,8 @@ class _HomeViewState extends State<HomeView>
   }
 
   Future<void> _loadData() async {
-    final eventProvider = Provider.of<EventProvider>(context, listen: false);
-    final channelProvider =
-        Provider.of<ChannelProvider>(context, listen: false);
-
-    await Future.wait([
-      eventProvider.loadEvents(),
-      channelProvider.loadChannels(),
-    ]);
+    // Use the state synchronization service for consistent data loading
+    await StateSynchronizationService.forceRefreshAll(context);
   }
 
   @override
@@ -53,7 +49,7 @@ class _HomeViewState extends State<HomeView>
 
         return Scaffold(
           backgroundColor: Colors.transparent,
-          body: RefreshIndicator(
+          body: EnhancedRefreshIndicator(
             onRefresh: _loadData,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
