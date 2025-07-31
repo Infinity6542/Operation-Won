@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/websocket"
@@ -129,6 +130,22 @@ func main() {
 	http.Handle("/api/protected/channels", corsHandler(server.Security(http.HandlerFunc(server.GetChannels))))
 	http.Handle("/api/protected/events/create", corsHandler(server.Security(http.HandlerFunc(server.CreateEvent))))
 	http.Handle("/api/protected/events", corsHandler(server.Security(http.HandlerFunc(server.GetEvents))))
+
+	// Delete endpoints
+	http.HandleFunc("/api/protected/channels/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/delete") && r.Method == http.MethodDelete {
+			corsHandler(server.Security(http.HandlerFunc(server.DeleteChannel))).ServeHTTP(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
+	http.HandleFunc("/api/protected/events/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/delete") && r.Method == http.MethodDelete {
+			corsHandler(server.Security(http.HandlerFunc(server.DeleteEvent))).ServeHTTP(w, r)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
 
 	// WebSocket endpoint (requires special handling)
 	http.Handle("/msg", corsHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

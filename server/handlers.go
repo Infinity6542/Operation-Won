@@ -183,6 +183,7 @@ type ChannelResponse struct {
 	ChannelUUID string  `json:"channel_uuid"`
 	ChannelName string  `json:"channel_name"`
 	EventUUID   *string `json:"event_uuid"`
+	IsCreator   bool    `json:"is_creator"`
 }
 
 type CrtEvent struct {
@@ -745,15 +746,16 @@ func (s *Server) GetChannels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simplified query to get all channels user has access to
-	query := `SELECT DISTINCT c.channel_uuid, c.channel_name, e.event_uuid 
+	// Modified query to include creator information
+	query := `SELECT DISTINCT c.channel_uuid, c.channel_name, e.event_uuid, 
+			  (c.created_by = ?) as is_creator
 			  FROM channels c 
 			  LEFT JOIN events e ON c.event_id = e.id 
 			  LEFT JOIN channel_members cm ON c.id = cm.channel_id 
 			  LEFT JOIN event_members em ON e.id = em.event_id 
 			  WHERE cm.user_id = ? OR em.user_id = ?`
 
-	rows, e := s.db.Query(query, uid, uid)
+	rows, e := s.db.Query(query, uid, uid, uid)
 	if e != nil {
 		log.Printf("[CHN] [GET] Failed to get channel list for user %d: %v", uid, e)
 		http.Error(w, "Failed to get channel list for user", http.StatusInternalServerError)
@@ -765,13 +767,15 @@ func (s *Server) GetChannels(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var ch ChannelResponse
 		var eventUUID sql.NullString
-		if e := rows.Scan(&ch.ChannelUUID, &ch.ChannelName, &eventUUID); e != nil {
+		var isCreator bool
+		if e := rows.Scan(&ch.ChannelUUID, &ch.ChannelName, &eventUUID, &isCreator); e != nil {
 			log.Printf("[CHN] [DTB] Failed to scan channel row: %v", e)
 			continue
 		}
 		if eventUUID.Valid {
 			ch.EventUUID = &eventUUID.String
 		}
+		ch.IsCreator = isCreator
 		channels = append(channels, ch)
 	}
 
@@ -875,6 +879,138 @@ func (s *Server) GetEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(events)
+}
+
+// Delete channel handler
+func (s *Server) DeleteChannel(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract channel UUID from URL path
+	path := strings.TrimPrefix(r.URL.Path, "/api/protected/channels/")
+	channelUuid := strings.TrimSuffix(path, "/delete")
+
+	if channelUuid == "" || channelUuid == path {
+		http.Error(w, "Channel UUID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get user ID from context
+	userID, ok := r.Context().Value(userIDKey).(int)
+	if !ok {
+		http.Error(w, "Invalid user context", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if channel exists and user is the creator
+	var channelID, createdBy int
+	var channelName string
+
+	err := s.db.QueryRow(`
+		SELECT id, channel_name, created_by 
+		FROM channels 
+		WHERE channel_uuid = ?
+	`, channelUuid).Scan(&channelID, &channelName, &createdBy)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "Channel not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("[ERR] Failed to query channel: %v", err)
+		http.Error(w, "Failed to delete channel", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if user is the creator
+	if createdBy != userID {
+		http.Error(w, "Only the channel creator can delete this channel", http.StatusForbidden)
+		return
+	}
+
+	// Delete the channel (CASCADE will handle related records)
+	_, err = s.db.Exec(`DELETE FROM channels WHERE channel_uuid = ?`, channelUuid)
+	if err != nil {
+		log.Printf("[ERR] Failed to delete channel: %v", err)
+		http.Error(w, "Failed to delete channel", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[LOG] Channel '%s' (UUID: %s) deleted by user %d", channelName, channelUuid, userID)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Channel deleted successfully",
+	})
+}
+
+// Delete event handler
+func (s *Server) DeleteEvent(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract event UUID from URL path
+	path := strings.TrimPrefix(r.URL.Path, "/api/protected/events/")
+	eventUuid := strings.TrimSuffix(path, "/delete")
+
+	if eventUuid == "" || eventUuid == path {
+		http.Error(w, "Event UUID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get user ID from context
+	userID, ok := r.Context().Value(userIDKey).(int)
+	if !ok {
+		http.Error(w, "Invalid user context", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if event exists and user is the organizer
+	var eventID, organiserUserID int
+	var eventName string
+
+	err := s.db.QueryRow(`
+		SELECT id, event_name, organiser_user_id 
+		FROM events 
+		WHERE event_uuid = ?
+	`, eventUuid).Scan(&eventID, &eventName, &organiserUserID)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, "Event not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		log.Printf("[ERR] Failed to query event: %v", err)
+		http.Error(w, "Failed to delete event", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if user is the organizer
+	if organiserUserID != userID {
+		http.Error(w, "Only the event organizer can delete this event", http.StatusForbidden)
+		return
+	}
+
+	// Delete the event (CASCADE will handle related records)
+	_, err = s.db.Exec(`DELETE FROM events WHERE event_uuid = ?`, eventUuid)
+	if err != nil {
+		log.Printf("[ERR] Failed to delete event: %v", err)
+		http.Error(w, "Failed to delete event", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[LOG] Event '%s' (UUID: %s) deleted by user %d", eventName, eventUuid, userID)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Event deleted successfully",
+	})
 }
 
 // Cleanup routine for expired tokens and rate limits
