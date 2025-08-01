@@ -5,9 +5,8 @@ import '../providers/auth_provider.dart';
 import '../pages/auth_page.dart';
 import '../pages/home_page.dart';
 
-/// Optimized authentication flow using Selector for better performance
-class OptimizedAuthenticationFlow extends StatelessWidget {
-  const OptimizedAuthenticationFlow({super.key});
+class AuthenticationFlow extends StatelessWidget {
+  const AuthenticationFlow({super.key});
 
   @override
   Widget build(BuildContext context) {

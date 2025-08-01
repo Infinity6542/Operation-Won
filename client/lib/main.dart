@@ -4,7 +4,6 @@ import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:operation_won/channel.dart';
 import 'package:operation_won/comms_state.dart';
 import 'package:operation_won/globals/app_state.dart';
-import 'package:operation_won/home_view.dart';
 import 'package:operation_won/pages/auth_page.dart';
 import 'package:operation_won/pages/home_page.dart';
 import 'package:operation_won/pages/splash.dart';

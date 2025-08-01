@@ -11,8 +11,11 @@ class ApiService {
   final Dio _dio;
   String? _token;
   String _baseUrl = defaultBaseURL;
+  
+  // Callback for when authentication fails (token revoked/invalid)
+  Function()? onAuthenticationFailed;
 
-  ApiService({String? baseUrl})
+  ApiService({String? baseUrl, this.onAuthenticationFailed})
       : _baseUrl = baseUrl ?? defaultBaseURL,
         _dio = Dio(BaseOptions(
           baseUrl: baseUrl ?? defaultBaseURL,
@@ -33,6 +36,22 @@ class ApiService {
           if (!_isPublicEndpoint(options.path)) {
             if (_token != null) {
               options.headers['Authorization'] = 'Bearer $_token';
+            } else {
+              // Reject requests to protected endpoints when no token is available
+              debugPrint('No token available for protected endpoint: ${options.path}');
+              final response = Response(
+                requestOptions: options,
+                statusCode: 401,
+                statusMessage: 'No authentication token available',
+                data: {'error': 'Authentication required. Please log in.'},
+              );
+              handler.reject(DioException(
+                requestOptions: options,
+                response: response,
+                type: DioExceptionType.badResponse,
+                message: 'Authentication required. Please log in.',
+              ));
+              return;
             }
           }
           options.headers['Content-Type'] = 'application/json';
@@ -43,6 +62,19 @@ class ApiService {
           if (error.response?.statusCode == 401 &&
               !_isPublicEndpoint(error.requestOptions.path) &&
               !error.requestOptions.path.contains('/refresh')) {
+            
+            final responseData = error.response?.data?.toString() ?? '';
+            
+            // Check if token has been revoked
+            if (responseData.contains('Token has been revoked') || 
+                responseData.contains('revoked')) {
+              debugPrint('Token has been revoked, clearing auth data...');
+              await _clearToken();
+              onAuthenticationFailed?.call();
+              handler.next(error);
+              return;
+            }
+            
             debugPrint('Token expired, attempting refresh...');
             final refreshed = await refreshToken();
 
@@ -57,6 +89,11 @@ class ApiService {
               } catch (e) {
                 debugPrint('Retry after refresh failed: $e');
               }
+            } else {
+              // Refresh failed, clear token
+              debugPrint('Token refresh failed, clearing auth data...');
+              await _clearToken();
+              onAuthenticationFailed?.call();
             }
           }
 
@@ -93,11 +130,30 @@ class ApiService {
   // Public method to ensure token is loaded before checking auth state
   Future<void> initializeToken() async {
     await _loadToken();
+    debugPrint('[API] Token initialized. Token exists: ${_token != null}');
+    if (_token != null) {
+      debugPrint('[API] Token preview: ${_token!.substring(0, 20)}...');
+      final claims = decodeToken();
+      if (claims != null) {
+        final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        final isExpired = claims.exp <= now;
+        debugPrint('[API] Token expires at: ${claims.exp}, Current time: $now, Expired: $isExpired');
+        
+        // Don't clear expired tokens automatically - let the refresh mechanism handle it
+        // This allows the refresh interceptor to attempt token refresh before clearing
+        if (isExpired) {
+          debugPrint('[API] Token is expired but keeping for potential refresh');
+        }
+      } else {
+        debugPrint('[API] Failed to decode token, clearing invalid token');
+        await _clearToken();
+      }
+    }
   }
 
   Future<void> _saveToken(String token) async {
+    _token = token; // Set token first to avoid race conditions
     await SecureStorageService.saveAuthData(token: token);
-    _token = token;
   }
 
   Future<void> _clearToken() async {
@@ -171,12 +227,16 @@ class ApiService {
   // Token refresh functionality
   Future<bool> refreshToken() async {
     try {
+      // Load the latest token from storage in case it was updated elsewhere
+      await _loadToken();
+      
       // Use the current token (even if expired) for refresh
       if (_token == null) {
         debugPrint('No token available for refresh');
         return false;
       }
 
+      debugPrint('Attempting token refresh with existing token...');
       final response = await _dio.post(
         '/api/refresh',
         options: Options(
@@ -192,9 +252,20 @@ class ApiService {
         debugPrint('Token refreshed successfully');
         return true;
       }
+      debugPrint('Token refresh response did not contain new token');
       return false;
     } catch (e) {
       debugPrint('Token refresh failed: $e');
+      
+      // Check if the error indicates the token was revoked
+      if (e.toString().contains('Token has been revoked') || 
+          e.toString().contains('revoked') ||
+          e.toString().contains('401')) {
+        debugPrint('Token appears to be revoked during refresh, clearing local auth data...');
+        await _clearToken();
+        onAuthenticationFailed?.call();
+      }
+      
       return false;
     }
   }
@@ -258,6 +329,32 @@ class ApiService {
       throw _handleError(e);
     } catch (e) {
       debugPrint('[API] General exception creating event: $e');
+      rethrow;
+    }
+  }
+
+  Future<String> joinEvent(String inviteCode) async {
+    try {
+      debugPrint('[API] Joining event with invite code: $inviteCode');
+      final response = await _dio.post(
+        '/api/protected/events/join',
+        data: {'invite_code': inviteCode},
+      );
+
+      debugPrint('[API] Join event response: ${response.data}');
+      
+      // Extract event name from response if available
+      if (response.data is Map && response.data['event_name'] != null) {
+        return response.data['event_name'].toString();
+      }
+      
+      return 'Event'; // Fallback name
+    } on DioException catch (e) {
+      debugPrint('[API] DioException joining event: ${e.message}');
+      debugPrint('[API] Response data: ${e.response?.data}');
+      throw _handleError(e);
+    } catch (e) {
+      debugPrint('[API] General exception joining event: $e');
       rethrow;
     }
   }
@@ -377,18 +474,32 @@ class ApiService {
 
   // Token management
   bool get isLoggedIn {
-    if (_token == null) return false;
+    if (_token == null) {
+      debugPrint('[API] isLoggedIn: false (no token)');
+      return false;
+    }
 
     try {
       final claims = decodeToken();
-      if (claims == null) return false;
+      if (claims == null) {
+        debugPrint('[API] isLoggedIn: false (invalid token)');
+        return false;
+      }
 
       // Check if token is expired
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      return claims.exp > now;
+      final isValid = claims.exp > now;
+      debugPrint('[API] isLoggedIn: $isValid (expires: ${claims.exp}, now: $now)');
+      return isValid;
     } catch (e) {
+      debugPrint('[API] isLoggedIn: false (decode error: $e)');
       return false;
     }
+  }
+
+  // Check if we have any token that could potentially be used for refresh
+  bool get hasTokenForRefresh {
+    return _token != null && _token!.isNotEmpty;
   }
 
   String? get token => _token;

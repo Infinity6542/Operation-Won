@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/state_synchronization_service.dart';
 
-/// Enhanced refresh indicator that uses state synchronization service
-class EnhancedRefreshIndicator extends StatelessWidget {
-  const EnhancedRefreshIndicator({
+class CustomRefreshIndicator extends StatelessWidget {
+  const CustomRefreshIndicator({
     super.key,
     required this.child,
     this.onRefresh,

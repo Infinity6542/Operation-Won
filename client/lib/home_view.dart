@@ -11,8 +11,9 @@ import 'providers/channel_provider.dart';
 import 'widgets/create_event_dialog.dart';
 import 'widgets/event_details_dialog.dart';
 import 'widgets/create_channel_dialog.dart';
-import 'widgets/ptt_button.dart';
-import 'widgets/enhanced_refresh_indicator.dart';
+import 'widgets/join_event_dialog.dart';
+import 'widgets/ptt_gesture_zone.dart';
+import 'widgets/refresh_indicator.dart';
 import 'services/state_synchronization_service.dart';
 import 'pages/settings_view.dart';
 
@@ -86,7 +87,7 @@ class _HomeViewState extends State<HomeView>
 
                     // Content
                     Expanded(
-                      child: EnhancedRefreshIndicator(
+                      child: CustomRefreshIndicator(
                         onRefresh: _loadData,
                         child: TabBarView(
                           controller: _tabController,
@@ -101,69 +102,49 @@ class _HomeViewState extends State<HomeView>
                 ),
               ),
               // Scrim overlay when speed dial is open
-              // Overlay for dismissing speed dial
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                opacity: _isSpeedDialOpen ? 1.0 : 0.0,
-                child: _isSpeedDialOpen
-                    ? Positioned.fill(
-                        child: IgnorePointer(
-                          ignoring: false,
-                          child: GestureDetector(
-                            onTap: () {
-                              // Light haptic feedback when dismissing speed dial
-                              HapticFeedback.lightImpact();
-                              setState(() {
-                                _isSpeedDialOpen = false;
-                              });
-                            },
-                            child: Container(
-                              color: Colors.black.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+              // Backdrop for speed dial with proper fade in/out animation
+              Positioned.fill(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200), // Faster backdrop animation
+                  curve: Curves.easeInOut,
+                  opacity: _isSpeedDialOpen ? 1.0 : 0.0,
+                  child: IgnorePointer(
+                    ignoring: !_isSpeedDialOpen,
+                    child: GestureDetector(
+                      onTap: () {
+                        // Light haptic feedback when dismissing speed dial
+                        HapticFeedback.lightImpact();
+                        setState(() {
+                          _isSpeedDialOpen = false;
+                        });
+                      },
+                      child: Container(
+                        color: Colors.black.withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              // PTT Button positioned at bottom left when channel is active
-              Consumer<CommsState>(
-                builder: (context, commsState, child) {
-                  if (commsState.currentChannelId == null) {
-                    return const SizedBox.shrink();
-                  }
-                  return Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 88, // Leave space for the FAB
-                    child: Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainer,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      child: PTTButton(
-                        size: 56,
-                        onPermissionDenied: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Microphone permission required'),
-                            ),
-                          );
-                        },
-                      ),
+              // PTT Gesture Zone covering bottom third of screen
+              PTTGestureZone(
+                onPermissionDenied: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Microphone permission required'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
                     ),
                   );
                 },
               ),
+              
+              // Floating Action Button fixed at bottom-right corner
+              Positioned(
+                bottom: 16, // 16px from bottom edge
+                right: 16,  // 16px from right edge
+                child: _buildFloatingActionButton(theme, authProvider),
+              ),
             ],
           ),
-          floatingActionButton: _buildFloatingActionButton(theme),
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
       },
     );
@@ -441,70 +422,76 @@ class _HomeViewState extends State<HomeView>
     );
   }
 
-  Widget _buildFloatingActionButton(ThemeData theme) {
+  Widget _buildFloatingActionButton(ThemeData theme, AuthProvider authProvider) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         // Speed dial options - show when menu is open
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          height: _isSpeedDialOpen ? null : 0,
-          child: ClipRect(
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              opacity: _isSpeedDialOpen ? 1.0 : 0.0,
-              child: _isSpeedDialOpen
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Event button (appears first when opening, disappears last when closing)
-                        _buildAnimatedSpeedDialItem(
-                          icon: LucideIcons.calendar,
-                          label: 'Event',
-                          onTap: () {
-                            setState(() {
-                              _isSpeedDialOpen = false;
-                            });
-                            _showCreateEventDialog();
-                          },
-                          theme: theme,
-                          delay: _isSpeedDialOpen
-                              ? 0
-                              : 50, // Delay when closing (goes second)
-                          duration: 400,
-                        ),
-                        const SizedBox(
-                            height: 16), // Increased spacing for larger buttons
-                        // Channel button (appears second when opening, disappears first when closing)
-                        _buildAnimatedSpeedDialItem(
-                          icon: LucideIcons.messageSquare,
-                          label: 'Channel',
-                          onTap: () {
-                            setState(() {
-                              _isSpeedDialOpen = false;
-                            });
-                            _showCreateChannelDialog();
-                          },
-                          theme: theme,
-                          delay: _isSpeedDialOpen
-                              ? 50
-                              : 0, // Delay when opening, no delay when closing (goes first)
-                          duration: 450,
-                        ),
-                        const SizedBox(
-                            height: 20), // More space before main FAB
-                      ],
-                    )
-                  : const SizedBox.shrink(),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Join Event button (appears first when opening)
+            _buildAnimatedSpeedDialItem(
+              icon: LucideIcons.userPlus,
+              label: 'Join Event',
+              onTap: () {
+                setState(() {
+                  _isSpeedDialOpen = false;
+                });
+                _showJoinEventDialog();
+              },
+              theme: theme,
+              delay: _isSpeedDialOpen ? 0 : 60,
+              duration: 230,
             ),
-          ),
+            const SizedBox(height: 8),
+            // Event button (appears second when opening)
+            _buildAnimatedSpeedDialItem(
+              icon: LucideIcons.calendar,
+              label: 'Create Event',
+              onTap: () {
+                setState(() {
+                  _isSpeedDialOpen = false;
+                });
+                _showCreateEventDialog();
+              },
+              theme: theme,
+              delay: _isSpeedDialOpen ? 15 : 45,
+              duration: 250,
+            ),
+            const SizedBox(height: 8),
+            // Channel button (appears third when opening)
+            _buildAnimatedSpeedDialItem(
+              icon: LucideIcons.messageSquare,
+              label: 'Create Channel',
+              onTap: () {
+                setState(() {
+                  _isSpeedDialOpen = false;
+                });
+                // Check authentication before showing dialog
+                if (authProvider.isLoggedIn) {
+                  _showCreateChannelDialog();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Please log in to create channels.'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              },
+              theme: theme,
+              delay: _isSpeedDialOpen ? 30 : 30,
+              duration: 280,
+            ),
+            const SizedBox(
+                height: 20), // More space before main FAB
+          ],
         ),
         // Main FAB
         TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 200), // Faster main FAB animation
           curve: Curves.easeInOut,
           tween: Tween(begin: 1.0, end: _isSpeedDialOpen ? 1.1 : 1.0),
           builder: (context, scale, child) {
@@ -522,7 +509,7 @@ class _HomeViewState extends State<HomeView>
                 foregroundColor: Colors.white,
                 elevation: _isSpeedDialOpen ? 8 : 6,
                 child: AnimatedRotation(
-                  duration: const Duration(milliseconds: 300),
+                  duration: const Duration(milliseconds: 200), // Faster rotation
                   curve: Curves.easeInOut,
                   turns: _isSpeedDialOpen ? 0.125 : 0, // 45 degree rotation
                   child: const Icon(LucideIcons.plus),
@@ -725,30 +712,35 @@ class _HomeViewState extends State<HomeView>
                       title: 'Profile',
                       subtitle: authProvider.user?.username ?? 'Unknown User',
                       onTap: _showProfileDialog,
+                      theme: theme,
                     ),
                     _buildSettingsItem(
                       icon: LucideIcons.bell,
                       title: 'Notifications',
                       subtitle: 'Manage your notification preferences',
                       onTap: _showNotificationsSettings,
+                      theme: theme,
                     ),
                     _buildSettingsItem(
                       icon: LucideIcons.shield,
                       title: 'Privacy & Security',
                       subtitle: 'Control your privacy settings',
                       onTap: _showPrivacySettings,
+                      theme: theme,
                     ),
                     _buildSettingsItem(
                       icon: LucideIcons.settings,
                       title: 'App Settings',
                       subtitle: 'Theme, language, and more',
                       onTap: _navigateToSettingsPage,
+                      theme: theme,
                     ),
                     _buildSettingsItem(
                       icon: LucideIcons.info,
                       title: 'Help & Support',
                       subtitle: 'Get help and contact support',
                       onTap: _showHelpAndSupport,
+                      theme: theme,
                     ),
                     const Divider(),
                     _buildSettingsItem(
@@ -762,6 +754,7 @@ class _HomeViewState extends State<HomeView>
                         await authProvider.logout();
                       },
                       isDestructive: true,
+                      theme: theme,
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -779,9 +772,9 @@ class _HomeViewState extends State<HomeView>
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    required ThemeData theme,
     bool isDestructive = false,
   }) {
-    final theme = Theme.of(context);
     final iconColor =
         isDestructive ? theme.colorScheme.error : theme.colorScheme.primary;
     final titleColor =
@@ -860,9 +853,10 @@ class _HomeViewState extends State<HomeView>
   void _showNotificationsSettings() {
     Navigator.pop(context); // Close the bottom sheet first
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Notification settings coming soon'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: const Text('Notification settings coming soon'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -870,9 +864,10 @@ class _HomeViewState extends State<HomeView>
   void _showPrivacySettings() {
     Navigator.pop(context); // Close the bottom sheet first
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Privacy settings coming soon'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: const Text('Privacy settings coming soon'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -913,6 +908,13 @@ class _HomeViewState extends State<HomeView>
     );
   }
 
+  void _showJoinEventDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const JoinEventDialog(),
+    );
+  }
+
   void _showCreateChannelDialog() {
     showDialog(
       context: context,
@@ -935,11 +937,6 @@ class _HomeViewState extends State<HomeView>
     final commsState = Provider.of<CommsState>(context, listen: false);
     commsState.joinChannel(channelUuid);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Joined channel for communication'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    // No snackbar notification needed for channel joining
   }
 }

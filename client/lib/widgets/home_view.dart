@@ -10,14 +10,14 @@ import '../widgets/create_channel_dialog.dart';
 import '../widgets/event_details_dialog.dart';
 import '../utils/performance_utils.dart';
 
-class OptimizedHomeView extends StatefulWidget {
-  const OptimizedHomeView({super.key});
+class HomeView extends StatefulWidget {
+  const HomeView({super.key});
 
   @override
-  State<OptimizedHomeView> createState() => _OptimizedHomeViewState();
+  State<HomeView> createState() => _HomeViewState();
 }
 
-class _OptimizedHomeViewState extends State<OptimizedHomeView>
+class _HomeViewState extends State<HomeView>
     with AutomaticKeepAliveClientMixin, PerformanceOptimizationMixin {
   @override
   bool get wantKeepAlive => true;
@@ -48,7 +48,7 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
     super.build(context);
 
     return Selector3<AuthProvider, EventProvider, ChannelProvider,
-        _HomeViewState>(
+        _HomeViewData>(
       selector: (context, authProvider, eventProvider, channelProvider) {
         // Load data when user becomes authenticated for the first time
         if (authProvider.user != null && !_hasTriggeredInitialLoad) {
@@ -58,7 +58,7 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
           });
         }
 
-        return _HomeViewState(
+        return _HomeViewData(
           user: authProvider.user,
           events: eventProvider.events,
           isLoading: eventProvider.isLoading || channelProvider.isLoading,
@@ -76,18 +76,15 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // User welcome section - optimized with const
                   const _WelcomeSection(),
                   const SizedBox(height: 24),
 
-                  // Events section - optimized with memoization
                   MemoizedWidget(
                     dependencies: [homeState.events.length],
                     builder: () => _buildEventsSection(homeState.events),
                   ),
                   const SizedBox(height: 24),
 
-                  // Standalone channels section - optimized with memoization
                   MemoizedWidget(
                     dependencies: [homeState.standaloneChannels.length],
                     builder: () => _buildStandaloneChannelsSection(
@@ -97,7 +94,7 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
               ),
             ),
           ),
-          floatingActionButton: const _OptimizedFloatingActionButtons(),
+          floatingActionButton: const _FloatingActionButtons(),
         );
       },
     );
@@ -127,15 +124,17 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
         if (events.isEmpty)
           const _EmptyEventsWidget()
         else
-          OptimizedListView(
+          ListView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: events.length,
-            itemBuilder: (context, index) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: EventItem(
-                event: events[index],
-                onTap: () => _showEventDetails(events[index].eventUuid),
+            children: List.generate(
+              events.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: EventItem(
+                  event: events[index],
+                  onTap: () => _showEventDetails(events[index].eventUuid),
+                ),
               ),
             ),
           ),
@@ -167,13 +166,15 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
         if (channels.isEmpty)
           const _EmptyChannelsWidget()
         else
-          OptimizedListView(
+          ListView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: channels.length,
-            itemBuilder: (context, index) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: ChannelItem(channel: channels[index]),
+            children: List.generate(
+              channels.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ChannelItem(channel: channels[index]),
+              ),
             ),
           ),
       ],
@@ -203,8 +204,8 @@ class _OptimizedHomeViewState extends State<OptimizedHomeView>
 }
 
 // Immutable state class for better performance
-class _HomeViewState {
-  const _HomeViewState({
+class _HomeViewData {
+  const _HomeViewData({
     required this.user,
     required this.events,
     required this.isLoading,
@@ -219,7 +220,7 @@ class _HomeViewState {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is _HomeViewState &&
+      other is _HomeViewData &&
           runtimeType == other.runtimeType &&
           user == other.user &&
           _listsEqual(events, other.events) &&
@@ -256,14 +257,13 @@ class _HomeViewState {
   }
 }
 
-// Optimized const welcome section
 class _WelcomeSection extends StatelessWidget {
   const _WelcomeSection();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return OptimizedConsumer<AuthProvider, String?>(
+    return Selector<AuthProvider, String?>(
       selector: (context, authProvider) => authProvider.user?.username,
       builder: (context, username, child) {
         return Container(
@@ -321,7 +321,6 @@ class _WelcomeSection extends StatelessWidget {
   }
 }
 
-// Optimized empty state widgets
 class _EmptyEventsWidget extends StatelessWidget {
   const _EmptyEventsWidget();
 
@@ -389,26 +388,100 @@ class _EmptyChannelsWidget extends StatelessWidget {
 }
 
 // Optimized floating action buttons
-class _OptimizedFloatingActionButtons extends StatelessWidget {
-  const _OptimizedFloatingActionButtons();
+class _FloatingActionButtons extends StatefulWidget {
+  const _FloatingActionButtons();
+
+  @override
+  State<_FloatingActionButtons> createState() => _FloatingActionButtonsState();
+}
+
+class _FloatingActionButtonsState extends State<_FloatingActionButtons>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _topButtonAnimation;
+  late Animation<double> _bottomButtonAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    // Bottom button (Create Channel) animates in first, out last
+    _bottomButtonAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.5, curve: Curves.elasticOut),
+      reverseCurve: const Interval(0.5, 1.0, curve: Curves.easeInBack),
+    ));
+
+    // Top button (Create Event) animates in second, out first
+    _topButtonAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.3, 0.8, curve: Curves.elasticOut),
+      reverseCurve: const Interval(0.0, 0.5, curve: Curves.easeInBack),
+    ));
+
+    // Start the animation when the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _animationController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        FloatingActionButton.small(
-          onPressed: () => _showCreateEventDialog(context),
-          heroTag: "createEvent",
-          tooltip: 'Create Event',
-          child: const Icon(Icons.event_available),
+        // Top button (Create Event) - animates in second, out first
+        AnimatedBuilder(
+          animation: _topButtonAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _topButtonAnimation.value,
+              child: Opacity(
+                opacity: _topButtonAnimation.value,
+                child: FloatingActionButton.small(
+                  onPressed: () => _showCreateEventDialog(context),
+                  heroTag: "createEvent",
+                  tooltip: 'Create Event',
+                  child: const Icon(Icons.event_available),
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 8),
-        FloatingActionButton.small(
-          onPressed: () => _showCreateChannelDialog(context),
-          heroTag: "createChannel",
-          tooltip: 'Create Channel',
-          child: const Icon(Icons.chat),
+        // Bottom button (Create Channel) - animates in first, out last
+        AnimatedBuilder(
+          animation: _bottomButtonAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _bottomButtonAnimation.value,
+              child: Opacity(
+                opacity: _bottomButtonAnimation.value,
+                child: FloatingActionButton.small(
+                  onPressed: () => _showCreateChannelDialog(context),
+                  heroTag: "createChannel",
+                  tooltip: 'Create Channel',
+                  child: const Icon(Icons.chat),
+                ),
+              ),
+            );
+          },
         ),
       ],
     );

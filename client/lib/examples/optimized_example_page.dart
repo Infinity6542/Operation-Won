@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../utils/enhanced_error_handler.dart';
 import '../utils/connection_test_util.dart';
 import '../utils/widget_cache.dart';
-import '../widgets/optimized_user_card.dart';
-import '../widgets/optimized_settings_section.dart';
+import '../widgets/user_card.dart';
+import '../widgets/settings_section.dart';
 
 /// Example demonstrating how to use the new performance optimizations
 class OptimizedExamplePage extends StatefulWidget {
@@ -30,14 +30,14 @@ class _OptimizedExamplePageState extends State<OptimizedExamplePage>
             _buildSection(
               'Optimized User Card',
               'Uses Selector to only rebuild when user data changes',
-              const OptimizedUserCard(),
+                                UserCard(),
             ),
 
             // Example 2: Optimized Settings Section
             _buildSection(
               'Optimized Settings',
               'Each setting only rebuilds when its specific value changes',
-              const OptimizedSettingsSection(),
+                                SettingsSection(),
             ),
 
             // Example 3: Cached Widgets

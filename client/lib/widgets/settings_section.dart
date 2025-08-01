@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 
-/// Optimized settings section that only rebuilds specific parts when needed
-class OptimizedSettingsSection extends StatelessWidget {
-  const OptimizedSettingsSection({super.key});
+class SettingsSection extends StatelessWidget {
+  const SettingsSection({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -391,6 +391,8 @@ void main() {
             eventName: 'Serialized Event',
             eventDescription: 'Description for serialization',
             isOrganiser: true,
+            createdAt: DateTime.parse('2024-01-01T10:00:00Z'),
+            updatedAt: DateTime.parse('2024-01-01T10:00:00Z'),
           );
 
           final json = response.toJson();
@@ -477,6 +479,8 @@ void main() {
           eventName: 'Test Event',
           eventDescription: 'Test Description',
           isOrganiser: true,
+          createdAt: DateTime.parse('2024-01-01T10:00:00Z'),
+          updatedAt: DateTime.parse('2024-01-01T10:00:00Z'),
         );
 
         final json = originalEvent.toJson();

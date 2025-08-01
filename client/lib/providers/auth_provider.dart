@@ -27,13 +27,18 @@ class AuthProvider extends ChangeNotifier {
     if (_settingsProvider != null) {
       debugPrint(
           'AuthProvider: Using settings provider endpoint: ${_settingsProvider.apiEndpoint}');
-      _apiService = ApiService(baseUrl: _settingsProvider.apiEndpoint);
+      _apiService = ApiService(
+        baseUrl: _settingsProvider.apiEndpoint,
+        onAuthenticationFailed: _handleAuthenticationFailure,
+      );
       // Listen to settings changes to update API endpoint
       _settingsProvider.addListener(_onSettingsChanged);
     } else {
       debugPrint(
           'AuthProvider: No settings provider, using default API service');
-      _apiService = ApiService();
+      _apiService = ApiService(
+        onAuthenticationFailed: _handleAuthenticationFailure,
+      );
     }
   }
 
@@ -43,10 +48,32 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  void _handleAuthenticationFailure() {
+    debugPrint('[AuthProvider] Authentication failed - token revoked/invalid');
+    _user = null;
+    _clearError();
+    _setLoading(false); // Ensure loading state is cleared
+    // Force notify listeners to update UI state immediately
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+
+  bool _isDisposed = false;
+
   @override
   void dispose() {
+    if (_isDisposed) return; // Prevent duplicate disposal
+    
     _settingsProvider?.removeListener(_onSettingsChanged);
-    super.dispose();
+    _isDisposed = true;
+    
+    try {
+      super.dispose();
+    } catch (e) {
+      // Ignore disposal errors during hot reload
+      debugPrint('[AuthProvider] Ignoring disposal error during hot reload: $e');
+    }
   }
 
   Future<void> _initialize() async {
@@ -113,21 +140,27 @@ class AuthProvider extends ChangeNotifier {
   void _setLoading(bool loading) {
     if (_isLoading != loading) {
       _isLoading = loading;
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 
   void _setError(String error) {
     if (_error != error) {
       _error = error;
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 
   void _clearError() {
     if (_error != null) {
       _error = null;
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 

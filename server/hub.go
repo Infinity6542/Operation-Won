@@ -359,6 +359,36 @@ func (c *Client) handleSignal(s Signal) {
 			}
 		}
 
+	case "channel_change":
+		// Handle channel change requests from client
+		var payload struct {
+			NewChannelID string `json:"new_channel_id"`
+		}
+		
+		if err := json.Unmarshal(s.Payload, &payload); err != nil {
+			log.Printf("[HUB] [CHN] Failed to unmarshal channel_change payload: %v", err)
+			return
+		}
+
+		if payload.NewChannelID == "" {
+			log.Printf("[HUB] [CHN] Invalid channel change request: empty channel ID")
+			return
+		}
+
+		// Create channel change request
+		req := &ChannelChangeRequest{
+			Client:       c,
+			NewChannelID: payload.NewChannelID,
+		}
+
+		// Send to hub for processing
+		select {
+		case c.hub.changeChannel <- req:
+			log.Printf("[HUB] [CHN] Channel change request submitted for user %d: %s -> %s", c.UserID, c.ChannelID, payload.NewChannelID)
+		default:
+			log.Printf("[HUB] [CHN] Failed to submit channel change request for user %d", c.UserID)
+		}
+
 	default:
 		log.Printf("[WBS] [SIG] Received unknown signal from client '%s', consider updating the server.", s.Type)
 	}

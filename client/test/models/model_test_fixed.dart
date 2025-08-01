@@ -391,6 +391,8 @@ void main() {
             eventName: 'Serialized Event',
             eventDescription: 'Description for serialization',
             isOrganiser: true,
+            createdAt: DateTime.parse('2024-01-01T10:00:00Z'),
+            updatedAt: DateTime.parse('2024-01-01T10:00:00Z'),
           );
 
           final json = response.toJson();
@@ -470,16 +472,16 @@ void main() {
         expect(() => EventResponse.fromJson(complexEventJson), returnsNormally);
       });
 
-      test('should maintain data integrity through serialization', () {
+        test('should maintain data integrity through serialization', () {
         // Test round-trip serialization
         final originalEvent = EventResponse(
           eventUuid: 'test-uuid',
           eventName: 'Test Event',
           eventDescription: 'Test Description',
           isOrganiser: true,
-        );
-
-        final json = originalEvent.toJson();
+          createdAt: DateTime.parse('2024-01-01T10:00:00Z'),
+          updatedAt: DateTime.parse('2024-01-01T10:00:00Z'),
+        );        final json = originalEvent.toJson();
         final deserializedEvent = EventResponse.fromJson(json);
 
         expect(deserializedEvent.eventUuid, originalEvent.eventUuid);

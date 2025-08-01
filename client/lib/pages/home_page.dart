@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:operation_won/home_view.dart';
-import 'package:operation_won/widgets/floating_ptt_button.dart';
+import 'package:operation_won/services/permission_service.dart';
 
 @NowaGenerated()
 class HomePage extends StatefulWidget {
@@ -19,9 +18,34 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with AutomaticKeepAliveClientMixin {
   int? pageIndex = 0;
+  bool _permissionRequested = false;
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Request microphone permission when the home page is first loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _requestPermissionsIfNeeded();
+    });
+  }
+
+  Future<void> _requestPermissionsIfNeeded() async {
+    if (_permissionRequested) return;
+    
+    _permissionRequested = true;
+    
+    try {
+      final hasPermission = await PermissionService.hasMicrophonePermission();
+      if (!hasPermission && mounted) {
+        await PermissionService.requestMicrophonePermissionAtStartup(context);
+      }
+    } catch (e) {
+      debugPrint('Error requesting permissions: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,28 +71,6 @@ class _HomePageState extends State<HomePage>
                 )
               ],
             ),
-          ),
-          // Floating PTT Button
-          FloatingPTTButton(
-            onEmergencyActivated: () {
-              // Show emergency mode notification
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(
-                        LucideIcons.triangle,
-                        color: Theme.of(context).colorScheme.onError,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('Emergency channel activated'),
-                    ],
-                  ),
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            },
           ),
         ],
       ),

@@ -6,6 +6,8 @@ import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../comms_state.dart';
 import '../services/state_synchronization_service.dart';
+import '../widgets/ptt_gesture_guide.dart';
+import '../services/permission_service.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
@@ -112,6 +114,30 @@ class _SettingsViewState extends State<SettingsView>
               ),
               const SizedBox(height: 32),
 
+              // Permissions Section
+              _buildSectionHeader(context, 'Permissions'),
+              const SizedBox(height: 12),
+              _buildSettingsCard(context, [
+                _buildActionTile(
+                  context,
+                  title: 'Microphone Permission',
+                  subtitle: 'Required for Push-to-Talk',
+                  icon: LucideIcons.mic,
+                  onTap: () => PermissionService.showPermissionStatusDialog(context),
+                ),
+                const Divider(),
+                _buildActionTile(
+                  context,
+                  title: 'Request All Permissions',
+                  subtitle: 'Grant required permissions',
+                  icon: LucideIcons.shield,
+                  onTap: () async {
+                    await PermissionService.requestMicrophonePermissionAtStartup(context);
+                  },
+                ),
+              ]),
+              const SizedBox(height: 32),
+
               // API Configuration Section
               _buildSectionHeader(context, 'API Configuration'),
               const SizedBox(height: 12),
@@ -211,6 +237,14 @@ class _SettingsViewState extends State<SettingsView>
               _buildSectionHeader(context, 'About'),
               const SizedBox(height: 12),
               _buildSettingsCard(context, [
+                _buildActionTile(
+                  context,
+                  title: 'PTT Gesture Guide',
+                  subtitle: 'Learn the new PTT gestures',
+                  icon: LucideIcons.hand,
+                  onTap: () => PTTGestureGuide.show(context),
+                ),
+                const Divider(),
                 _buildInfoTile(
                   context,
                   title: 'Version',
@@ -224,8 +258,10 @@ class _SettingsViewState extends State<SettingsView>
                   icon: LucideIcons.shield,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Privacy Policy - Coming Soon')),
+                      SnackBar(
+                        content: const Text('Privacy Policy - Coming Soon'),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                      ),
                     );
                   },
                 ),
@@ -236,8 +272,10 @@ class _SettingsViewState extends State<SettingsView>
                   icon: LucideIcons.fileText,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Terms of Service - Coming Soon')),
+                      SnackBar(
+                        content: const Text('Terms of Service - Coming Soon'),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                      ),
                     );
                   },
                 ),
@@ -365,8 +403,10 @@ class _SettingsViewState extends State<SettingsView>
                   label: const Text('Edit Profile'),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Edit Profile - Coming Soon')),
+                      SnackBar(
+                        content: const Text('Edit Profile - Coming Soon'),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                      ),
                     );
                   },
                 ),
@@ -375,8 +415,10 @@ class _SettingsViewState extends State<SettingsView>
                   label: const Text('Security'),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Security Settings - Coming Soon')),
+                      SnackBar(
+                        content: const Text('Security Settings - Coming Soon'),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                      ),
                     );
                   },
                 ),
@@ -650,9 +692,9 @@ class _SettingsViewState extends State<SettingsView>
                 if (context.mounted) {
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Endpoints updated successfully'),
-                      backgroundColor: Colors.green,
+                    SnackBar(
+                      content: const Text('Endpoints updated successfully'),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                     ),
                   );
                 }
@@ -698,14 +740,14 @@ class _SettingsViewState extends State<SettingsView>
             SnackBar(
               content: Text(
                   '✅ Connection successful to ${settingsProvider.apiEndpoint}'),
-              backgroundColor: Colors.green,
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('❌ Connection failed: ${response.statusCode}'),
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -716,7 +758,7 @@ class _SettingsViewState extends State<SettingsView>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ Connection failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -753,14 +795,14 @@ class _SettingsViewState extends State<SettingsView>
             SnackBar(
               content: Text(
                   '✅ WebSocket connection successful to ${settingsProvider.websocketEndpoint}'),
-              backgroundColor: Colors.green,
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('❌ WebSocket connection failed'),
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -771,7 +813,7 @@ class _SettingsViewState extends State<SettingsView>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('❌ WebSocket test failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }

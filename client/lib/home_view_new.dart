@@ -11,7 +11,7 @@ import 'widgets/create_event_dialog.dart';
 import 'widgets/event_details_dialog.dart';
 import 'widgets/create_channel_dialog.dart';
 import 'widgets/ptt_button.dart';
-import 'widgets/enhanced_refresh_indicator.dart';
+import 'widgets/refresh_indicator.dart';
 import 'services/state_synchronization_service.dart';
 import 'pages/settings_view.dart';
 
@@ -83,7 +83,7 @@ class _HomeViewState extends State<HomeView>
 
                 // Content
                 Expanded(
-                  child: EnhancedRefreshIndicator(
+                  child: CustomRefreshIndicator(
                     onRefresh: _loadData,
                     child: TabBarView(
                       controller: _tabController,
@@ -390,8 +390,9 @@ class _HomeViewState extends State<HomeView>
                     size: 56,
                     onPermissionDenied: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Microphone permission required'),
+                        SnackBar(
+                          content: const Text('Microphone permission required'),
+                          backgroundColor: Theme.of(context).colorScheme.error,
                         ),
                       );
                     },
@@ -711,11 +712,6 @@ class _HomeViewState extends State<HomeView>
     final commsState = Provider.of<CommsState>(context, listen: false);
     commsState.joinChannel(channelUuid);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Joined channel for communication'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    // No snackbar notification needed for channel joining
   }
 }

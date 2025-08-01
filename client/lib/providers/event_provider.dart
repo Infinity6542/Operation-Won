@@ -59,6 +59,8 @@ class EventProvider extends ChangeNotifier {
       for (final event in _events) {
         debugPrint(
             '[EventProvider] Event: ${event.eventName} (UUID: ${event.eventUuid})');
+        debugPrint('  - Invite code: ${event.inviteCode}');
+        debugPrint('  - Is organiser: ${event.isOrganiser}');
       }
 
       _setLoading(false);
@@ -108,6 +110,25 @@ class EventProvider extends ChangeNotifier {
       _setError(e.toString());
       _setLoading(false);
       return false;
+    }
+  }
+
+  Future<String?> joinEvent(String inviteCode) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      debugPrint('[EventProvider] Joining event with invite code: $inviteCode');
+      final eventName = await _apiService.joinEvent(inviteCode);
+      debugPrint('[EventProvider] Event joined successfully: $eventName, refreshing list...');
+      await loadEvents(); // Refresh the list
+      _setLoading(false);
+      return eventName;
+    } catch (e) {
+      debugPrint('[EventProvider] Error joining event: $e');
+      _setError(e.toString());
+      _setLoading(false);
+      return null;
     }
   }
 

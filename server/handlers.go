@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
@@ -27,6 +28,16 @@ const userIDKey contextKey = "userID"
 
 // Test mode flag to disable rate limiting during tests
 var testMode = false
+
+// generateInviteCode generates a random 6-character alphanumeric invite code
+func generateInviteCode() string {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, 6)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
+}
 
 // EnableTestMode disables rate limiting for testing
 func EnableTestMode() {
@@ -192,10 +203,11 @@ type CrtEvent struct {
 }
 
 type EventResponse struct {
-	EventUUID        string `json:"event_uuid"`
-	EventName        string `json:"event_name"`
-	EventDescription string `json:"event_description"`
-	IsOrganiser      bool   `json:"is_organiser"`
+	EventUUID        string  `json:"event_uuid"`
+	EventName        string  `json:"event_name"`
+	EventDescription string  `json:"event_description"`
+	IsOrganiser      bool    `json:"is_organiser"`
+	InviteCode       *string `json:"invite_code,omitempty"`
 }
 
 func NewServer(hub *Hub, db *sql.DB, redis *redis.Client) *Server {
@@ -805,6 +817,7 @@ func (s *Server) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var eventUUID = uuid.New().String()
+	var inviteCode = generateInviteCode()
 	var lastInsertID int64
 
 	tx, e := s.db.Begin()
@@ -813,9 +826,9 @@ func (s *Server) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create the event
-	res, e := tx.Exec("INSERT INTO events (event_uuid, event_name, event_description, organiser_user_id) VALUES (?, ?, ?, ?)",
-		eventUUID, payload.EventName, payload.EventDescription, uid)
+	// Create the event with invite code
+	res, e := tx.Exec("INSERT INTO events (event_uuid, event_name, event_description, invite_code, organiser_user_id) VALUES (?, ?, ?, ?, ?)",
+		eventUUID, payload.EventName, payload.EventDescription, inviteCode, uid)
 	if e != nil {
 		tx.Rollback()
 		http.Error(w, "Failed to create event.", http.StatusInternalServerError)
@@ -850,7 +863,8 @@ func (s *Server) GetEvents(w http.ResponseWriter, r *http.Request) {
 	uid, _ := r.Context().Value(userIDKey).(int)
 
 	query := `SELECT e.event_uuid, e.event_name, e.event_description, 
-			  CASE WHEN e.organiser_user_id = ? THEN true ELSE false END as is_organiser
+			  CASE WHEN e.organiser_user_id = ? THEN true ELSE false END as is_organiser,
+			  e.invite_code
 			  FROM events e 
 			  INNER JOIN event_members em ON e.id = em.event_id 
 			  WHERE em.user_id = ?`
@@ -866,9 +880,24 @@ func (s *Server) GetEvents(w http.ResponseWriter, r *http.Request) {
 	var events []EventResponse
 	for rows.Next() {
 		var ev EventResponse
-		if e := rows.Scan(&ev.EventUUID, &ev.EventName, &ev.EventDescription, &ev.IsOrganiser); e != nil {
+		var inviteCode sql.NullString
+		if e := rows.Scan(&ev.EventUUID, &ev.EventName, &ev.EventDescription, &ev.IsOrganiser, &inviteCode); e != nil {
 			log.Printf("[EVT] [DTB] Failed to scan event row: %v", e)
 			continue
+		}
+		if inviteCode.Valid && inviteCode.String != "" {
+			ev.InviteCode = &inviteCode.String
+		} else {
+			// Generate invite code for events that don't have one
+			newInviteCode := generateInviteCode()
+			// Update the database
+			_, updateErr := s.db.Exec("UPDATE events SET invite_code = ? WHERE event_uuid = ?", newInviteCode, ev.EventUUID)
+			if updateErr != nil {
+				log.Printf("[EVT] [UPD] Failed to add invite code to event %s: %v", ev.EventUUID, updateErr)
+			} else {
+				ev.InviteCode = &newInviteCode
+				log.Printf("[EVT] [UPD] Added invite code %s to event %s", newInviteCode, ev.EventUUID)
+			}
 		}
 		events = append(events, ev)
 	}
@@ -879,6 +908,83 @@ func (s *Server) GetEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(events)
+}
+
+// JoinEvent allows users to join an event using an invite code
+func (s *Server) JoinEvent(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	uid, ok := r.Context().Value(userIDKey).(int)
+	if !ok {
+		http.Error(w, "Failed to find user.", http.StatusInternalServerError)
+		return
+	}
+
+	var payload struct {
+		InviteCode string `json:"invite_code"`
+	}
+	if e := json.NewDecoder(r.Body).Decode(&payload); e != nil {
+		http.Error(w, "Invalid request.", http.StatusBadRequest)
+		return
+	}
+
+	if payload.InviteCode == "" {
+		http.Error(w, "Invite code is required.", http.StatusBadRequest)
+		return
+	}
+
+	tx, e := s.db.Begin()
+	if e != nil {
+		http.Error(w, "Database error.", http.StatusInternalServerError)
+		return
+	}
+
+	// Find the event by invite code
+	var eventID int
+	var eventName string
+	e = tx.QueryRow("SELECT id, event_name FROM events WHERE invite_code = ?", payload.InviteCode).Scan(&eventID, &eventName)
+	if e != nil {
+		tx.Rollback()
+		if e == sql.ErrNoRows {
+			http.Error(w, "Invalid invite code.", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error.", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if user is already a member
+	var exists bool
+	e = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM event_members WHERE event_id = ? AND user_id = ?)", eventID, uid).Scan(&exists)
+	if e != nil {
+		tx.Rollback()
+		http.Error(w, "Database error.", http.StatusInternalServerError)
+		return
+	}
+
+	if exists {
+		tx.Rollback()
+		http.Error(w, "You are already a member of this event.", http.StatusConflict)
+		return
+	}
+
+	// Add user as member
+	_, e = tx.Exec("INSERT INTO event_members (event_id, user_id, role) VALUES (?, ?, 'member')", eventID, uid)
+	if e != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to join event.", http.StatusInternalServerError)
+		return
+	}
+
+	if e := tx.Commit(); e != nil {
+		http.Error(w, "Failed to join event.", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[EVT] [JOIN] User %d joined event %s using invite code %s", uid, eventName, payload.InviteCode)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Successfully joined event", "event_name": eventName})
 }
 
 // Delete channel handler

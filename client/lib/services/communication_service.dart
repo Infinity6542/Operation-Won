@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../providers/settings_provider.dart';
 import 'websocket_service.dart';
 import 'audio_service.dart';
+import 'permission_service.dart';
 
 class CommunicationService extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
@@ -46,6 +47,9 @@ class CommunicationService extends ChangeNotifier {
     _webSocketService.addListener(() {
       notifyListeners();
     });
+
+    // Set PTT active callback to prevent reconnection during PTT
+    _webSocketService.setPTTActiveCallback(() => _isPTTActive);
 
     // Listen to audio service changes
     _audioService.addListener(() {
@@ -160,7 +164,10 @@ class CommunicationService extends ChangeNotifier {
     await _audioService.stopPlaying();
     _currentChannelId = null;
 
-    debugPrint('[Comm] Left channel');
+    // Disconnect WebSocket when leaving channel to prevent reconnection attempts
+    await _webSocketService.disconnect();
+
+    debugPrint('[Comm] Left channel and disconnected WebSocket');
     notifyListeners();
   }
 
@@ -284,6 +291,13 @@ class CommunicationService extends ChangeNotifier {
 
   // Check microphone permission
   Future<bool> checkMicrophonePermission() async {
+    // First check using the new permission service
+    final hasPermission = await PermissionService.hasMicrophonePermission();
+    if (hasPermission) {
+      return true;
+    }
+    
+    // Fallback to audio service if needed
     return await _audioService.requestMicrophonePermission();
   }
 

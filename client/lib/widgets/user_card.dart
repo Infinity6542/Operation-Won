@@ -3,9 +3,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
-/// Optimized user card that only rebuilds when user data changes
-class OptimizedUserCard extends StatelessWidget {
-  const OptimizedUserCard({super.key});
+class UserCard extends StatelessWidget {
+  const UserCard({super.key});
 
   @override
   Widget build(BuildContext context) {

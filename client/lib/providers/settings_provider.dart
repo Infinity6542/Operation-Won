@@ -29,6 +29,7 @@ class SettingsProvider extends ChangeNotifier {
   // Debounce timer to prevent excessive SharedPreferences writes
   Timer? _saveTimer;
   static const Duration _saveDelay = Duration(milliseconds: 500);
+  bool _isDisposed = false;
 
   // Getters
   String get apiEndpoint => _apiEndpoint;
@@ -50,32 +51,12 @@ class SettingsProvider extends ChangeNotifier {
   // Predefined API endpoints for easy switching
   static const List<Map<String, String>> predefinedEndpoints = [
     {
-      'name': 'Local Development',
-      'api': 'http://localhost:8000',
-      'websocket': 'ws://localhost:8000/msg',
-    },
-    {
-      'name': 'Android Emulator',
-      'api': 'http://10.0.2.2:8000',
-      'websocket': 'ws://10.0.2.2:8000/msg',
-    },
-    {
-      'name': 'Local Network (Current)',
-      'api': 'http://192.168.3.45:8000',
-      'websocket': 'ws://192.168.3.45:8000/msg',
-    },
-    {
-      'name': 'Local Network (WiFi)',
-      'api': 'http://192.168.1.100:8000',
-      'websocket': 'ws://192.168.1.100:8000/msg',
-    },
-    {
-      'name': 'Production Server',
+      'name': 'Production',
       'api': 'https://api.operationwon.com',
       'websocket': 'wss://api.operationwon.com/msg',
     },
     {
-      'name': 'Staging Server',
+      'name': 'Staging',
       'api': 'https://staging-api.operationwon.com',
       'websocket': 'wss://staging-api.operationwon.com/msg',
     },
@@ -103,11 +84,15 @@ class SettingsProvider extends ChangeNotifier {
           'SettingsProvider: Loaded WebSocket endpoint: $_websocketEndpoint');
 
       _isLoaded = true;
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     } catch (e) {
       debugPrint('Error loading settings: $e');
       _isLoaded = true;
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 
@@ -116,7 +101,9 @@ class SettingsProvider extends ChangeNotifier {
     if (_apiEndpoint != endpoint) {
       _apiEndpoint = endpoint;
       _debouncedSave(_apiEndpointKey, endpoint);
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 
@@ -125,7 +112,9 @@ class SettingsProvider extends ChangeNotifier {
     if (_websocketEndpoint != endpoint) {
       _websocketEndpoint = endpoint;
       _debouncedSave(_websocketEndpointKey, endpoint);
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 
@@ -149,7 +138,9 @@ class SettingsProvider extends ChangeNotifier {
     }
 
     if (hasChanges) {
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 
@@ -158,7 +149,9 @@ class SettingsProvider extends ChangeNotifier {
     if (_themeMode != mode) {
       _themeMode = mode;
       _debouncedSave(_themeModeKey, mode);
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 
@@ -167,7 +160,9 @@ class SettingsProvider extends ChangeNotifier {
     if (_pttMode != mode) {
       _pttMode = mode;
       _debouncedSave(_pttModeKey, mode);
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 
@@ -176,7 +171,9 @@ class SettingsProvider extends ChangeNotifier {
     if (_magicMicEnabled != enabled) {
       _magicMicEnabled = enabled;
       _debouncedSave(_magicMicKey, enabled);
-      notifyListeners();
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     }
   }
 
@@ -191,7 +188,9 @@ class SettingsProvider extends ChangeNotifier {
     await _prefs?.clear();
     debugPrint(
         'SettingsProvider: Reset to defaults - API: $_apiEndpoint, WS: $_websocketEndpoint');
-    notifyListeners();
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   // Clear cached endpoints to force use of defaults
@@ -202,7 +201,9 @@ class SettingsProvider extends ChangeNotifier {
     _websocketEndpoint = _defaultWebsocketEndpoint;
     debugPrint(
         'SettingsProvider: Cleared endpoint cache - API: $_apiEndpoint, WS: $_websocketEndpoint');
-    notifyListeners();
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   // Get current predefined endpoint (if any)
@@ -238,7 +239,16 @@ class SettingsProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (_isDisposed) return; // Prevent duplicate disposal
+    
     _saveTimer?.cancel();
-    super.dispose();
+    _isDisposed = true;
+    
+    try {
+      super.dispose();
+    } catch (e) {
+      // Ignore disposal errors during hot reload
+      debugPrint('[SettingsProvider] Ignoring disposal error during hot reload: $e');
+    }
   }
 }

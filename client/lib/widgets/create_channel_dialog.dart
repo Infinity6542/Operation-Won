@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../providers/channel_provider.dart';
 import '../providers/event_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/event_model.dart';
 import '../services/state_synchronization_service.dart';
 
@@ -27,6 +28,21 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
 
   Future<void> _createChannel() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Check authentication state before proceeding
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProvider.isLoggedIn) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Authentication required. Please log in again.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        Navigator.of(context).pop(); // Close the dialog
+      }
+      return;
+    }
 
     setState(() {
       _isLoading = true;

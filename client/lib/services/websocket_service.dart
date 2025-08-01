@@ -7,12 +7,21 @@ import 'secure_storage_service.dart';
 
 class WebSocketService extends ChangeNotifier {
   WebSocketChannel? _channel;
-  String? _currentUrl;
-  bool _isConnected = false;
-  String? _currentChannelId;
   StreamSubscription? _subscription;
+  bool _isConnected = false;
+  String? _currentUrl;
+  String? _currentChannelId;
+  Timer? _heartbeatTimer;
+  Timer? _connectionHealthTimer;
+  DateTime? _lastMessageReceived;
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 5;
+  bool _intentionalDisconnect = false; // Track intentional disconnections
+  
+  // Callback to check if PTT is active (to prevent reconnection during PTT)
+  bool Function()? _isPTTActiveCallback;
 
-  // Audio data stream controller
+  // Audio stream controller for received audio data
   final StreamController<Uint8List> _audioStreamController =
       StreamController<Uint8List>.broadcast();
 
@@ -22,6 +31,11 @@ class WebSocketService extends ChangeNotifier {
 
   // Audio stream getter
   Stream<Uint8List> get audioStream => _audioStreamController.stream;
+
+  // Set callback to check PTT active status (prevents reconnection during PTT)
+  void setPTTActiveCallback(bool Function()? callback) {
+    _isPTTActiveCallback = callback;
+  }
 
   // Connect to WebSocket with JWT authentication
   Future<bool> connect(String url, {String? channelId}) async {
@@ -54,9 +68,18 @@ class WebSocketService extends ChangeNotifier {
       );
 
       _isConnected = true;
+      _reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+      _intentionalDisconnect = false; // Reset intentional disconnect flag
       if (channelId != null) {
         _currentChannelId = channelId;
       }
+      
+      // Start heartbeat to keep connection alive
+      _startHeartbeat();
+      
+      // Start connection health monitoring
+      _startConnectionHealthCheck();
+      
       notifyListeners();
 
       debugPrint('[WebSocket] Connected to $url with authentication');
@@ -71,6 +94,11 @@ class WebSocketService extends ChangeNotifier {
 
   // Disconnect from WebSocket
   Future<void> disconnect() async {
+    _intentionalDisconnect = true; // Mark as intentional disconnect
+    _stopHeartbeat();
+    _stopConnectionHealthCheck();
+    _reconnectAttempts = 0; // Reset reconnect attempts on manual disconnect
+    
     if (_channel != null) {
       await _subscription?.cancel();
       await _channel!.sink.close(status.goingAway);
@@ -82,7 +110,7 @@ class WebSocketService extends ChangeNotifier {
     _currentChannelId = null;
     notifyListeners();
 
-    debugPrint('[WebSocket] Disconnected');
+    debugPrint('[WebSocket] Disconnected intentionally');
   }
 
   // Reconnect with fresh authentication (useful after token refresh)
@@ -117,6 +145,15 @@ class WebSocketService extends ChangeNotifier {
     return true;
   }
 
+  // Leave current channel but keep WebSocket connection
+  void leaveChannelOnly() {
+    if (_currentChannelId != null) {
+      debugPrint('[WebSocket] Left channel: $_currentChannelId');
+      _currentChannelId = null;
+      notifyListeners();
+    }
+  }
+
   // Send text signal (like PTT start/stop)
   void sendSignal(String type, [Map<String, dynamic>? payload]) {
     if (!_isConnected || _channel == null) return;
@@ -148,6 +185,8 @@ class WebSocketService extends ChangeNotifier {
 
   // Handle incoming messages
   void _handleMessage(dynamic message) {
+    _lastMessageReceived = DateTime.now();
+    
     if (message is String) {
       // Text message - likely a signal
       try {
@@ -195,6 +234,11 @@ class WebSocketService extends ChangeNotifier {
         errorString.contains('invalid token')) {
       debugPrint('[WebSocket] Authentication failed - token may be expired');
       // The communication service should handle token refresh and reconnection
+    } else {
+      // For other errors, attempt reconnection
+      debugPrint('[WebSocket] Network error detected, will attempt reconnection');
+      _handleConnectionFailure();
+      return; // Don't set _isConnected = false here as _handleConnectionFailure will handle it
     }
 
     _isConnected = false;
@@ -204,9 +248,142 @@ class WebSocketService extends ChangeNotifier {
   // Handle disconnection
   void _handleDisconnect() {
     debugPrint('[WebSocket] Connection closed');
+    _stopHeartbeat();
+    _stopConnectionHealthCheck();
+    
+    if (_isConnected && !_intentionalDisconnect) {
+      // This was an unexpected disconnection, attempt to reconnect
+      debugPrint('[WebSocket] Unexpected disconnection detected');
+      _handleConnectionFailure();
+    } else {
+      // This was an intentional disconnection or already disconnected
+      debugPrint('[WebSocket] Intentional disconnection or already disconnected');
+      _isConnected = false;
+      _currentChannelId = null;
+      _intentionalDisconnect = false; // Reset the flag
+      notifyListeners();
+    }
+  }
+
+  // Start heartbeat to keep connection alive
+  void _startHeartbeat() {
+    _stopHeartbeat(); // Clear any existing timer
+    
+    // Send a heartbeat every 20 seconds (well before server's 30-second timeout)
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 20), (timer) {
+      if (_isConnected && _channel != null) {
+        try {
+          // Send a simple ping-like message that won't interfere with the protocol
+          // Use a minimal signal that the server will ignore but keeps connection alive
+          final keepAlive = jsonEncode({
+            'type': 'ping',
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+          });
+          _channel!.sink.add(keepAlive);
+          debugPrint('[WebSocket] Keep-alive sent');
+        } catch (e) {
+          debugPrint('[WebSocket] Failed to send keep-alive: $e');
+          // If we can't send, the connection might be dead
+          _handleConnectionFailure();
+        }
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  // Stop heartbeat timer
+  void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+  }
+
+  // Start connection health monitoring
+  void _startConnectionHealthCheck() {
+    _stopConnectionHealthCheck();
+    _lastMessageReceived = DateTime.now();
+    
+    // Check connection health every 35 seconds (after server's 30-second timeout)
+    _connectionHealthTimer = Timer.periodic(const Duration(seconds: 35), (timer) {
+      if (_isConnected && _lastMessageReceived != null) {
+        final timeSinceLastMessage = DateTime.now().difference(_lastMessageReceived!);
+        
+        // If we haven't received any message in 40 seconds, consider connection dead
+        if (timeSinceLastMessage.inSeconds > 40) {
+          debugPrint('[WebSocket] No messages received for ${timeSinceLastMessage.inSeconds}s, connection may be dead');
+          _handleConnectionFailure();
+        }
+      } else if (!_isConnected) {
+        timer.cancel();
+      }
+    });
+  }
+
+  // Stop connection health timer
+  void _stopConnectionHealthCheck() {
+    _connectionHealthTimer?.cancel();
+    _connectionHealthTimer = null;
+  }
+
+  // Handle connection failure and attempt reconnection
+  void _handleConnectionFailure() {
+    debugPrint('[WebSocket] Connection failure detected, attempting reconnection...');
     _isConnected = false;
-    _currentChannelId = null;
     notifyListeners();
+    
+    // Check if PTT is active - if so, defer reconnection
+    if (_isPTTActiveCallback?.call() == true) {
+      debugPrint('[WebSocket] PTT is active, deferring reconnection attempt');
+      // Schedule a retry in 2 seconds to check again
+      Timer(const Duration(seconds: 2), () {
+        if (!_isConnected) {
+          _handleConnectionFailure();
+        }
+      });
+      return;
+    }
+    
+    // Check if we should attempt reconnection
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      debugPrint('[WebSocket] Max reconnection attempts reached, giving up');
+      return;
+    }
+    
+    _reconnectAttempts++;
+    
+    // Exponential backoff: 2, 4, 8, 16, 32 seconds
+    final delaySeconds = (2 * (_reconnectAttempts - 1)).clamp(2, 32);
+    
+    debugPrint('[WebSocket] Reconnection attempt $_reconnectAttempts/$_maxReconnectAttempts in ${delaySeconds}s');
+    
+    Timer(Duration(seconds: delaySeconds), () async {
+      if (!_isConnected && _currentUrl != null) {
+        // Double-check PTT status before attempting reconnection
+        if (_isPTTActiveCallback?.call() == true) {
+          debugPrint('[WebSocket] PTT still active, deferring reconnection');
+          // Schedule another check
+          Timer(const Duration(seconds: 2), () {
+            if (!_isConnected) {
+              _handleConnectionFailure();
+            }
+          });
+          return;
+        }
+        
+        final uri = Uri.parse(_currentUrl!);
+        final baseUrl = '${uri.scheme}://${uri.host}:${uri.port}${uri.path}';
+        final success = await connect(baseUrl, channelId: _currentChannelId);
+        if (success) {
+          debugPrint('[WebSocket] Automatic reconnection successful');
+        } else {
+          debugPrint('[WebSocket] Automatic reconnection failed');
+          // Will trigger another attempt if under the limit
+          if (_reconnectAttempts < _maxReconnectAttempts) {
+            _handleConnectionFailure();
+          }
+        }
+      }
+    });
   }
 
   @override

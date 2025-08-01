@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS events (
     event_name VARCHAR(100) NOT NULL,
     event_description TEXT,
     event_link VARCHAR(255),
+    invite_code VARCHAR(10) UNIQUE NOT NULL,
     max_participants INT DEFAULT NULL,
     is_public BOOLEAN DEFAULT FALSE,
     organiser_user_id INT NOT NULL,
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (organiser_user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_event_uuid (event_uuid),
+    INDEX idx_invite_code (invite_code),
     INDEX idx_organiser_user_id (organiser_user_id),
     INDEX idx_start_time (start_time),
     INDEX idx_is_public (is_public)

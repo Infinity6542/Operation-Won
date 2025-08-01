@@ -118,6 +118,8 @@ void main() {
           eventName: 'Test Event',
           eventDescription: 'Test Description',
           isOrganiser: true,
+          createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
+          updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
         );
 
         await tester.pumpWidget(
@@ -146,6 +148,8 @@ void main() {
           eventName: 'Organiser Event',
           eventDescription: 'Event with organiser status',
           isOrganiser: true,
+          createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
+          updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
         );
 
         await tester.pumpWidget(
@@ -175,6 +179,8 @@ void main() {
           eventName: 'Participant Event',
           eventDescription: 'Event with participant status',
           isOrganiser: false,
+          createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
+          updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
         );
 
         await tester.pumpWidget(
@@ -204,6 +210,8 @@ void main() {
           eventName: 'Accessible Event',
           eventDescription: 'Accessible description',
           isOrganiser: false,
+          createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
+          updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
         );
 
         await tester.pumpWidget(
@@ -233,6 +241,8 @@ void main() {
           eventName: '',
           eventDescription: '',
           isOrganiser: false,
+          createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
+          updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
         );
 
         await tester.pumpWidget(
@@ -303,12 +313,16 @@ void main() {
             eventName: 'Event 1',
             eventDescription: 'First event',
             isOrganiser: true,
+          createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
+          updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
           ),
           EventResponse(
             eventUuid: 'event-2',
             eventName: 'Event 2',
             eventDescription: 'Second event',
             isOrganiser: false,
+          createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
+          updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
           ),
         ];
 
