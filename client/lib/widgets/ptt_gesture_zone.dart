@@ -391,7 +391,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
     return Consumer2<CommsState, ChannelProvider>(
       builder: (context, commsState, channelProvider, child) {
         final canUsePTT = commsState.currentChannelId != null;
-        
+
         // Check if current channel is standalone (no event)
         ChannelResponse? currentChannel;
         try {
@@ -402,18 +402,22 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
           currentChannel = null;
         }
         final isStandaloneChannel = currentChannel?.eventUuid == null;
-        
+
         // Update the member variable
         _isStandaloneChannel = isStandaloneChannel;
-        
+
         final screenHeight = MediaQuery.of(context).size.height;
+        final screenWidth = MediaQuery.of(context).size.width;
         final bottomPadding = MediaQuery.of(context).padding.bottom;
-        
-        // Ensure PTT zone covers a significant portion - enhanced for better coverage on rounded screens
-        final containerHeight = math.max(
-          (screenHeight * widget.heightFraction) + bottomPadding, 
-          screenHeight * 0.4 + bottomPadding
-        );
+
+        // Enhanced coverage calculation for phones with rounded corners and edge-to-edge displays
+        // Research shows that 60-70% coverage works best for modern phones with rounded edges
+        final baseHeight =
+            screenHeight * math.max(widget.heightFraction, 0.6); // Minimum 60%
+        final containerHeight = baseHeight + bottomPadding;
+
+        debugPrint(
+            '[PTT] Screen: ${screenWidth}x$screenHeight, Container: ${containerHeight.toInt()} (${(containerHeight / screenHeight * 100).toInt()}%)');
 
         return Stack(
           children: [
@@ -422,7 +426,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: containerHeight - 50, // Show indicator near the top of PTT zone
+                bottom: containerHeight -
+                    50, // Show indicator near the top of PTT zone
                 child: AnimatedBuilder(
                   animation: _colorTransitionAnimation,
                   builder: (context, child) {
@@ -433,9 +438,10 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                         borderRadius: BorderRadius.circular(1.5),
                         boxShadow: [
                           BoxShadow(
-                            color: (commsState.isPTTActive 
-                              ? Colors.red 
-                              : Theme.of(context).colorScheme.primary).withValues(alpha: 0.3),
+                            color: (commsState.isPTTActive
+                                    ? Colors.red
+                                    : Theme.of(context).colorScheme.primary)
+                                .withValues(alpha: 0.3),
                             blurRadius: 4,
                             spreadRadius: 1,
                           ),
@@ -443,12 +449,14 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                         gradient: LinearGradient(
                           colors: [
                             Colors.transparent,
-                            (commsState.isPTTActive 
-                              ? Colors.red 
-                              : Theme.of(context).colorScheme.primary).withValues(alpha: 0.8),
-                            (commsState.isPTTActive 
-                              ? Colors.red 
-                              : Theme.of(context).colorScheme.primary).withValues(alpha: 0.8),
+                            (commsState.isPTTActive
+                                    ? Colors.red
+                                    : Theme.of(context).colorScheme.primary)
+                                .withValues(alpha: 0.8),
+                            (commsState.isPTTActive
+                                    ? Colors.red
+                                    : Theme.of(context).colorScheme.primary)
+                                .withValues(alpha: 0.8),
                             Colors.transparent,
                           ],
                           stops: const [0.0, 0.3, 0.7, 1.0],
@@ -459,9 +467,10 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                           width: 60,
                           height: 1,
                           decoration: BoxDecoration(
-                            color: (commsState.isPTTActive 
-                              ? Colors.red 
-                              : Theme.of(context).colorScheme.primary).withValues(alpha: 0.9),
+                            color: (commsState.isPTTActive
+                                    ? Colors.red
+                                    : Theme.of(context).colorScheme.primary)
+                                .withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(0.5),
                           ),
                         ),
@@ -491,8 +500,10 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                         ? (details) => _handlePanEnd(details, commsState)
                         : null,
                     child: AnimatedBuilder(
-                      animation: Listenable.merge(
-                          [_stateTransitionAnimation, _colorTransitionAnimation]),
+                      animation: Listenable.merge([
+                        _stateTransitionAnimation,
+                        _colorTransitionAnimation
+                      ]),
                       builder: (context, child) {
                         return Container(
                           width: double.infinity,
@@ -518,30 +529,42 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                                 Color activeColor;
 
                                 if (!canUsePTT) {
-                                  baseColor = activeColor = Colors.white.withValues(alpha: 0.12);
-                                } else if (_currentGesture == PTTGestureType.swipeDown) {
-                                  baseColor = activeColor = Colors.yellow.withValues(alpha: 0.25);
+                                  baseColor = activeColor =
+                                      Colors.white.withValues(alpha: 0.12);
+                                } else if (_currentGesture ==
+                                    PTTGestureType.swipeDown) {
+                                  baseColor = activeColor =
+                                      Colors.yellow.withValues(alpha: 0.25);
                                 } else {
                                   // Default states - grey when not talking, blue when talking
-                                  baseColor = Colors.grey.withValues(alpha: 0.2);
-                                  activeColor = Colors.blue.withValues(alpha: 0.35);
+                                  baseColor =
+                                      Colors.grey.withValues(alpha: 0.2);
+                                  activeColor =
+                                      Colors.blue.withValues(alpha: 0.35);
                                 }
 
                                 // Interpolate based on color transition animation
                                 // When _isPressed is true: animation goes from 0->1 (grey to blue)
                                 // When _isPressed is false: animation goes from 1->0 (blue to grey)
                                 Color dotColor = Color.lerp(
-                                  baseColor, // Grey (when not pressed)
-                                  activeColor, // Blue (when pressed)
-                                  _colorTransitionAnimation.value,
-                                ) ?? baseColor;
+                                      baseColor, // Grey (when not pressed)
+                                      activeColor, // Blue (when pressed)
+                                      _colorTransitionAnimation.value,
+                                    ) ??
+                                    baseColor;
 
                                 return CustomPaint(
                                   painter: _DotPatternPainter(
                                     color: dotColor,
                                     animationValue: _isPressed
-                                        ? 0.3 + 0.3 * _stateTransitionAnimation.value // Fade out when PTT active
-                                        : 0.6 + 0.4 * _stateTransitionAnimation.value, // More visible base with smooth animation
+                                        ? 0.3 +
+                                            0.3 *
+                                                _stateTransitionAnimation
+                                                    .value // Fade out when PTT active
+                                        : 0.6 +
+                                            0.4 *
+                                                _stateTransitionAnimation
+                                                    .value, // More visible base with smooth animation
                                   ),
                                 );
                               },
@@ -567,7 +590,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                     Positioned.fill(
                       child: Center(
                         child: IgnorePointer(
-                          ignoring: true, // Explicitly ignore all pointer events
+                          ignoring:
+                              true, // Explicitly ignore all pointer events
                           child: _buildGestureHints(isStandaloneChannel),
                         ),
                       ),
@@ -591,7 +615,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4), // Lower opacity as requested
+        color:
+            Colors.black.withValues(alpha: 0.4), // Lower opacity as requested
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.15), // Lower opacity border
@@ -655,7 +680,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
       // Grey when inactive/not in channel
       baseGlowColor = activeGlowColor = Colors.grey;
       baseOpacity = 0.2;
-    } else if (_showEmergencyCountdown || _currentGesture == PTTGestureType.swipeUp) {
+    } else if (_showEmergencyCountdown ||
+        _currentGesture == PTTGestureType.swipeUp) {
       // Red for emergency
       baseGlowColor = activeGlowColor = Colors.red;
       baseOpacity = 0.4;
@@ -674,13 +700,15 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
     // When _isPressed is true: animation goes from 0->1 (grey to blue)
     // When _isPressed is false: animation goes from 1->0 (blue back to grey)
     final glowColor = Color.lerp(
-      baseGlowColor, // Grey (when not pressed)
-      activeGlowColor, // Blue (when pressed)
-      _colorTransitionAnimation.value,
-    ) ?? baseGlowColor;
+          baseGlowColor, // Grey (when not pressed)
+          activeGlowColor, // Blue (when pressed)
+          _colorTransitionAnimation.value,
+        ) ??
+        baseGlowColor;
 
     // Apply state transition animation to create smooth opacity changes
-    final animatedOpacity = baseOpacity * (0.5 + 0.5 * _stateTransitionAnimation.value);
+    final animatedOpacity =
+        baseOpacity * (0.5 + 0.5 * _stateTransitionAnimation.value);
 
     return LinearGradient(
       begin: Alignment.topCenter,
@@ -709,9 +737,9 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.5),
+                    color: Colors.white.withValues(alpha: 0.5),
                     width: 2,
                   ),
                 ),
@@ -732,7 +760,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
               Center(
                 child: Icon(
                   LucideIcons.mic,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   size: 28,
                 ),
               ),
@@ -747,7 +775,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
     return GestureDetector(
       onTap: _cancelEmergencyCountdown,
       child: Container(
-        color: Colors.black.withOpacity(0.95), // Full-screen dark overlay
+        color: Colors.black.withValues(alpha: 0.95), // Full-screen dark overlay
         child: SafeArea(
           child: AnimatedBuilder(
             animation: Listenable.merge(
@@ -766,7 +794,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                   // Status bar style header (static - no pulsing)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 16),
                     child: Row(
                       children: [
                         Text(
@@ -778,7 +807,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                           ),
                         ),
                         const Spacer(),
-                        Text(
+                        const Text(
                           'Cancel',
                           style: TextStyle(
                             color: Colors.white,
@@ -789,7 +818,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                       ],
                     ),
                   ),
-                  
+
                   // Main content centered
                   Expanded(
                     child: Center(
@@ -804,10 +833,11 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                               height: 120,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.red.withOpacity(0.2),
+                                color: Colors.red.withValues(alpha: 0.2),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.red.withOpacity(0.4 * pulseValue),
+                                    color: Colors.red
+                                        .withValues(alpha: 0.4 * pulseValue),
                                     blurRadius: 40 * pulseValue,
                                     spreadRadius: 20 * pulseValue,
                                   ),
@@ -820,9 +850,9 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                               ),
                             ),
                           ),
-                          
+
                           const SizedBox(height: 48),
-                          
+
                           // Large countdown number (pulsing)
                           Transform.scale(
                             scale: pulseValue,
@@ -835,26 +865,28 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                                   color: Colors.red.shade400,
                                   width: 4,
                                 ),
-                                color: Colors.red.withOpacity(0.1),
+                                color: Colors.red.withValues(alpha: 0.1),
                               ),
                               child: Center(
                                 child: Text(
                                   '$_countdownSeconds',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 72,
                                     fontWeight: FontWeight.w300,
-                                    fontFeatures: const [FontFeature.tabularFigures()],
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures()
+                                    ],
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                          
+
                           const SizedBox(height: 48),
-                          
+
                           // Title and description (static - no pulsing)
-                          Text(
+                          const Text(
                             'Emergency SOS',
                             style: TextStyle(
                               color: Colors.white,
@@ -863,16 +895,16 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                               letterSpacing: -0.5,
                             ),
                           ),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 48),
                             child: Text(
                               'An emergency channel will be created and your contacts will be notified.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 17,
                                 fontWeight: FontWeight.w400,
                                 height: 1.4,
@@ -883,7 +915,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                       ),
                     ),
                   ),
-                  
+
                   // Bottom section with cancel instruction (static - no pulsing)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 48),
@@ -894,17 +926,17 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                           width: 60,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         Text(
                           'Tap anywhere to cancel',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.6),
+                            color: Colors.white.withValues(alpha: 0.6),
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
@@ -952,7 +984,7 @@ class _DotPatternPainter extends CustomPainter {
         final finalOpacity = gradientOpacity * animationValue;
 
         final paint = Paint()
-          ..color = color.withOpacity(color.opacity * finalOpacity)
+          ..color = color.withValues(alpha: color.a * finalOpacity)
           ..style = PaintingStyle.fill;
 
         canvas.drawCircle(

@@ -562,7 +562,7 @@ class _HomeViewState extends State<HomeView>
             child: Opacity(
               opacity: delayedValue,
               child: IgnorePointer(
-                ignoring: delayedValue <= 0.1, // Ignore pointer events when mostly invisible
+                ignoring: !_isSpeedDialOpen || delayedValue <= 0.1, // Ignore when closed OR when mostly invisible
                 child: _buildSpeedDialOption(
                   icon: icon,
                   label: label,
