@@ -32,7 +32,7 @@ void main() {
         authProvider = AuthProvider();
 
         // Wait for initialization to complete
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         expect(authProvider.user, isNull);
         expect(authProvider.isLoggedIn, false);
@@ -43,7 +43,7 @@ void main() {
         authProvider = AuthProvider(settingsProvider: settingsProvider);
 
         // Wait for initialization to complete
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
 
         expect(authProvider.user, isNull);
         expect(authProvider.isLoggedIn, false);
@@ -56,7 +56,7 @@ void main() {
         final tempAuth = AuthProvider(settingsProvider: tempSettings);
 
         // Wait for initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         expect(() => tempAuth.dispose(), returnsNormally);
         expect(() => tempSettings.dispose(), returnsNormally);
@@ -66,7 +66,7 @@ void main() {
     group('Error Management Tests', () {
       setUp(() async {
         authProvider = AuthProvider(settingsProvider: settingsProvider);
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
       });
 
       test('should clear error state', () {
@@ -94,7 +94,7 @@ void main() {
     group('State Management Tests', () {
       setUp(() async {
         authProvider = AuthProvider(settingsProvider: settingsProvider);
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
       });
 
       test('should maintain consistent state types', () {
@@ -144,7 +144,7 @@ void main() {
     group('Login Functionality Tests', () {
       setUp(() async {
         authProvider = AuthProvider(settingsProvider: settingsProvider);
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
       });
 
       test('should handle login with valid credentials', () async {
@@ -182,7 +182,7 @@ void main() {
     group('Registration Functionality Tests', () {
       setUp(() async {
         authProvider = AuthProvider(settingsProvider: settingsProvider);
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
       });
 
       test('should handle registration with valid data', () async {
@@ -220,7 +220,7 @@ void main() {
     group('Logout Functionality Tests', () {
       setUp(() async {
         authProvider = AuthProvider(settingsProvider: settingsProvider);
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
       });
 
       test('should handle logout when not logged in', () async {
@@ -252,7 +252,7 @@ void main() {
     group('Token Management Tests', () {
       setUp(() async {
         authProvider = AuthProvider(settingsProvider: settingsProvider);
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
       });
 
       test('should decode token when available', () {
@@ -269,7 +269,7 @@ void main() {
     group('Settings Integration Tests', () {
       test('should respond to settings changes', () async {
         authProvider = AuthProvider(settingsProvider: settingsProvider);
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
 
         // Change API endpoint
         settingsProvider.setApiEndpoint('https://new-api.example.com');
@@ -280,7 +280,7 @@ void main() {
 
       test('should work without settings provider', () async {
         authProvider = AuthProvider();
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 50));
 
         expect(authProvider.isLoading, false);
         expect(authProvider.error, isNull);

@@ -79,8 +79,8 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
                               );
                             },
                             child: _currentIndex == 0
-                                ? LoginForm(key: const ValueKey('login'))
-                                : RegisterForm(key: const ValueKey('register')),
+                                ? const LoginForm(key: ValueKey('login'))
+                                : const RegisterForm(key: ValueKey('register')),
                           ),
                         ],
                       ),
@@ -170,7 +170,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         Text(
           '© 2025 Operation Won. All rights reserved.',
           style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -396,11 +396,11 @@ class _LoginFormState extends State<LoginForm> {
             onPressed: () async {
               final apiUrl = controller.text.trim();
               if (apiUrl.isNotEmpty) {
-                final wsUrl = apiUrl.replaceFirst('http', 'ws') + '/msg';
+                final wsUrl = '${apiUrl.replaceFirst('http', 'ws')}/msg';
                 await settingsProvider.setApiEndpoint(apiUrl);
                 await settingsProvider.setWebsocketEndpoint(wsUrl);
               }
-              if (mounted) Navigator.of(context).pop();
+              if (context.mounted) Navigator.of(context).pop();
             },
             child: const Text('Save'),
           ),

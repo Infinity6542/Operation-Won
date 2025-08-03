@@ -35,7 +35,8 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Authentication required. Please log in again.'),
+            content:
+                const Text('Authentication required. Please log in again.'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -63,38 +64,55 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
         });
 
         if (success) {
+          // Store context-dependent values before async operations
+          final navigator = Navigator.of(context);
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
+          final theme = Theme.of(context);
+          final channelName = _nameController.text.trim();
+
           // Notify state synchronization service about channel creation
           await StateSynchronizationService.handleChannelCreated(
-              context, _nameController.text.trim());
+              context, channelName);
 
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
+          // Use stored values to avoid BuildContext across async gaps
+          navigator.pop();
+          scaffoldMessenger.showSnackBar(
             SnackBar(
-              content: Text(
-                  'Channel "${_nameController.text.trim()}" created successfully!'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              content: Text('Channel "$channelName" created successfully!'),
+              backgroundColor: theme.colorScheme.primary,
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          // Store context-dependent values before using them
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
+          final theme = Theme.of(context);
+          
+          scaffoldMessenger.showSnackBar(
             SnackBar(
               content:
                   Text(channelProvider.error ?? 'Failed to create channel'),
-              backgroundColor: Theme.of(context).colorScheme.error,
+              backgroundColor: theme.colorScheme.error,
             ),
           );
         }
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        // Store context-dependent values before using them
+        final scaffoldMessenger = ScaffoldMessenger.of(context);
+        final theme = Theme.of(context);
+        
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: theme.colorScheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -125,7 +143,7 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
                 Container(
                   padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius:
                         const BorderRadius.vertical(top: Radius.circular(20)),
                   ),
@@ -134,7 +152,8 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.15),
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -221,8 +240,8 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
                               color: theme.colorScheme.surfaceContainer,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color:
-                                    theme.colorScheme.outline.withOpacity(0.2),
+                                color: theme.colorScheme.outline
+                                    .withValues(alpha: 0.2),
                               ),
                             ),
                             child: DropdownButtonHideUnderline(
@@ -328,7 +347,7 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
                   decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(
-                        color: theme.colorScheme.outline.withOpacity(0.2),
+                        color: theme.colorScheme.outline.withValues(alpha: 0.2),
                       ),
                     ),
                   ),

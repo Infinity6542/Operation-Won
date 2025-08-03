@@ -288,16 +288,16 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                     color: Colors.red.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         LucideIcons.triangle,
                         color: Colors.white,
                         size: 12,
                       ),
-                      const SizedBox(width: 4),
-                      const Text(
+                      SizedBox(width: 4),
+                      Text(
                         'EMERGENCY MODE',
                         style: TextStyle(
                           color: Colors.white,

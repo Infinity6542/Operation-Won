@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/websocket"
@@ -46,6 +47,14 @@ func main() {
 		Password: "", // No password set
 		DB:       0,  // Use default DB
 		Protocol: 2,  // Connection protocol
+		
+		// Connection pool optimization
+		PoolSize:        10,                // Maximum number of socket connections
+		PoolTimeout:     30 * time.Second,  // Amount of time client waits for connection
+		ConnMaxIdleTime: 5 * time.Minute,   // Amount of time after which client closes idle connections
+		MaxRetries:      3,                 // Maximum number of retries before giving up
+		MinRetryBackoff: 8 * time.Millisecond,  // Minimum backoff between each retry
+		MaxRetryBackoff: 512 * time.Millisecond, // Maximum backoff between each retry
 	})
 
 	ctx := context.Background()
@@ -159,7 +168,7 @@ func main() {
 			http.NotFound(w, r)
 		}
 	})
-	
+
 	// Add global OPTIONS handler as fallback
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "OPTIONS" {

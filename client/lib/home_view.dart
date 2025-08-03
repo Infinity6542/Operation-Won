@@ -105,7 +105,8 @@ class _HomeViewState extends State<HomeView>
               // Backdrop for speed dial with proper fade in/out animation
               Positioned.fill(
                 child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 200), // Faster backdrop animation
+                  duration: const Duration(
+                      milliseconds: 200), // Faster backdrop animation
                   curve: Curves.easeInOut,
                   opacity: _isSpeedDialOpen ? 1.0 : 0.0,
                   child: IgnorePointer(
@@ -125,8 +126,9 @@ class _HomeViewState extends State<HomeView>
                   ),
                 ),
               ),
-              // PTT Gesture Zone covering bottom third of screen
+              // PTT Gesture Zone with enhanced coverage for rounded screens
               PTTGestureZone(
+                heightFraction: 0.45, // Increased coverage for better accessibility on rounded screens
                 onPermissionDenied: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -136,11 +138,11 @@ class _HomeViewState extends State<HomeView>
                   );
                 },
               ),
-              
+
               // Floating Action Button fixed at bottom-right corner
               Positioned(
                 bottom: 16, // 16px from bottom edge
-                right: 16,  // 16px from right edge
+                right: 16, // 16px from right edge
                 child: _buildFloatingActionButton(theme, authProvider),
               ),
             ],
@@ -422,7 +424,8 @@ class _HomeViewState extends State<HomeView>
     );
   }
 
-  Widget _buildFloatingActionButton(ThemeData theme, AuthProvider authProvider) {
+  Widget _buildFloatingActionButton(
+      ThemeData theme, AuthProvider authProvider) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -485,13 +488,13 @@ class _HomeViewState extends State<HomeView>
               delay: _isSpeedDialOpen ? 30 : 30,
               duration: 280,
             ),
-            const SizedBox(
-                height: 20), // More space before main FAB
+            const SizedBox(height: 20), // More space before main FAB
           ],
         ),
         // Main FAB
         TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 200), // Faster main FAB animation
+          duration:
+              const Duration(milliseconds: 200), // Faster main FAB animation
           curve: Curves.easeInOut,
           tween: Tween(begin: 1.0, end: _isSpeedDialOpen ? 1.1 : 1.0),
           builder: (context, scale, child) {
@@ -509,7 +512,8 @@ class _HomeViewState extends State<HomeView>
                 foregroundColor: Colors.white,
                 elevation: _isSpeedDialOpen ? 8 : 6,
                 child: AnimatedRotation(
-                  duration: const Duration(milliseconds: 200), // Faster rotation
+                  duration:
+                      const Duration(milliseconds: 200), // Faster rotation
                   curve: Curves.easeInOut,
                   turns: _isSpeedDialOpen ? 0.125 : 0, // 45 degree rotation
                   child: const Icon(LucideIcons.plus),
@@ -557,11 +561,14 @@ class _HomeViewState extends State<HomeView>
             scale: 0.8 + (0.2 * delayedValue),
             child: Opacity(
               opacity: delayedValue,
-              child: _buildSpeedDialOption(
-                icon: icon,
-                label: label,
-                onTap: onTap,
-                theme: theme,
+              child: IgnorePointer(
+                ignoring: delayedValue <= 0.1, // Ignore pointer events when mostly invisible
+                child: _buildSpeedDialOption(
+                  icon: icon,
+                  label: label,
+                  onTap: onTap,
+                  theme: theme,
+                ),
               ),
             ),
           ),

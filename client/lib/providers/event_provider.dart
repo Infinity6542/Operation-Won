@@ -120,7 +120,8 @@ class EventProvider extends ChangeNotifier {
     try {
       debugPrint('[EventProvider] Joining event with invite code: $inviteCode');
       final eventName = await _apiService.joinEvent(inviteCode);
-      debugPrint('[EventProvider] Event joined successfully: $eventName, refreshing list...');
+      debugPrint(
+          '[EventProvider] Event joined successfully: $eventName, refreshing list...');
       await loadEvents(); // Refresh the list
       _setLoading(false);
       return eventName;

@@ -120,8 +120,6 @@ void main() {
           isOrganiser: true,
           createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
           updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
-          createdAt: DateTime.parse('2024-01-01T10:00:00Z'),
-          updatedAt: DateTime.parse('2024-01-01T10:00:00Z'),
         );
 
         await tester.pumpWidget(
@@ -315,8 +313,8 @@ void main() {
             eventName: 'Event 1',
             eventDescription: 'First event',
             isOrganiser: true,
-          createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
-          updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
+            createdAt: DateTime.parse("2024-01-01T10:00:00Z"),
+            updatedAt: DateTime.parse("2024-01-01T10:00:00Z"),
           ),
           EventResponse(
             eventUuid: 'event-2',

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -7,11 +8,13 @@ import '../models/event_model.dart';
 import 'secure_storage_service.dart';
 
 class ApiService {
-  static const String defaultBaseURL = 'http://192.168.3.45:8000';
+  static const String defaultBaseURL = 'http://localhost:8000';
   final Dio _dio;
   String? _token;
   String _baseUrl = defaultBaseURL;
-  
+  bool _isRefreshing = false; // Flag to prevent concurrent token refreshes
+  final List<Completer<void>> _refreshCompleters = []; // Queue for pending requests during refresh
+
   // Callback for when authentication fails (token revoked/invalid)
   Function()? onAuthenticationFailed;
 
@@ -38,7 +41,8 @@ class ApiService {
               options.headers['Authorization'] = 'Bearer $_token';
             } else {
               // Reject requests to protected endpoints when no token is available
-              debugPrint('No token available for protected endpoint: ${options.path}');
+              debugPrint(
+                  'No token available for protected endpoint: ${options.path}');
               final response = Response(
                 requestOptions: options,
                 statusCode: 401,
@@ -62,11 +66,10 @@ class ApiService {
           if (error.response?.statusCode == 401 &&
               !_isPublicEndpoint(error.requestOptions.path) &&
               !error.requestOptions.path.contains('/refresh')) {
-            
             final responseData = error.response?.data?.toString() ?? '';
-            
+
             // Check if token has been revoked
-            if (responseData.contains('Token has been revoked') || 
+            if (responseData.contains('Token has been revoked') ||
                 responseData.contains('revoked')) {
               debugPrint('Token has been revoked, clearing auth data...');
               await _clearToken();
@@ -74,7 +77,7 @@ class ApiService {
               handler.next(error);
               return;
             }
-            
+
             debugPrint('Token expired, attempting refresh...');
             final refreshed = await refreshToken();
 
@@ -137,17 +140,43 @@ class ApiService {
       if (claims != null) {
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         final isExpired = claims.exp <= now;
-        debugPrint('[API] Token expires at: ${claims.exp}, Current time: $now, Expired: $isExpired');
-        
+        debugPrint(
+            '[API] Token expires at: ${claims.exp}, Current time: $now, Expired: $isExpired');
+
         // Don't clear expired tokens automatically - let the refresh mechanism handle it
         // This allows the refresh interceptor to attempt token refresh before clearing
         if (isExpired) {
-          debugPrint('[API] Token is expired but keeping for potential refresh');
+          debugPrint(
+              '[API] Token is expired but keeping for potential refresh');
         }
       } else {
         debugPrint('[API] Failed to decode token, clearing invalid token');
         await _clearToken();
       }
+    }
+  }
+
+  // Validate token with server (useful for checking if token is blacklisted)
+  Future<bool> validateTokenWithServer() async {
+    if (_token == null) return false;
+    
+    try {
+      // Try a simple authenticated request to verify token is still valid on server
+      await _dio.get('/api/protected/events');
+      return true;
+    } catch (e) {
+      final errorString = e.toString().toLowerCase();
+      if (errorString.contains('401') || 
+          errorString.contains('revoked') || 
+          errorString.contains('unauthorized')) {
+        debugPrint('[API] Server token validation failed: token revoked/invalid');
+        await _clearToken();
+        onAuthenticationFailed?.call();
+        return false;
+      }
+      // For network errors or other issues, assume token is still valid
+      debugPrint('[API] Server token validation inconclusive: $e');
+      return true;
     }
   }
 
@@ -159,6 +188,14 @@ class ApiService {
   Future<void> _clearToken() async {
     await SecureStorageService.clearAuthData();
     _token = null;
+    // Reset refresh state when clearing tokens
+    _isRefreshing = false;
+    _completeAllPendingRefreshes();
+  }
+
+  // Public method to clear tokens (for auth failure handling)
+  Future<void> clearAuthenticationData() async {
+    await _clearToken();
   }
 
   // Check if user is authenticated
@@ -224,15 +261,27 @@ class ApiService {
     }
   }
 
-  // Token refresh functionality
+  // Token refresh functionality with concurrency control
   Future<bool> refreshToken() async {
     try {
+      // If refresh is already in progress, wait for it to complete
+      if (_isRefreshing) {
+        final completer = Completer<void>();
+        _refreshCompleters.add(completer);
+        await completer.future;
+        return _token != null; // Return success based on whether we have a token after refresh
+      }
+
+      _isRefreshing = true;
+
       // Load the latest token from storage in case it was updated elsewhere
       await _loadToken();
-      
+
       // Use the current token (even if expired) for refresh
       if (_token == null) {
         debugPrint('No token available for refresh');
+        _isRefreshing = false;
+        _completeAllPendingRefreshes();
         return false;
       }
 
@@ -250,24 +299,41 @@ class ApiService {
       if (newToken != null) {
         await _saveToken(newToken);
         debugPrint('Token refreshed successfully');
+        _isRefreshing = false;
+        _completeAllPendingRefreshes();
         return true;
       }
       debugPrint('Token refresh response did not contain new token');
+      _isRefreshing = false;
+      _completeAllPendingRefreshes();
       return false;
     } catch (e) {
       debugPrint('Token refresh failed: $e');
-      
+
       // Check if the error indicates the token was revoked
-      if (e.toString().contains('Token has been revoked') || 
+      if (e.toString().contains('Token has been revoked') ||
           e.toString().contains('revoked') ||
           e.toString().contains('401')) {
-        debugPrint('Token appears to be revoked during refresh, clearing local auth data...');
+        debugPrint(
+            'Token appears to be revoked during refresh, clearing local auth data...');
         await _clearToken();
         onAuthenticationFailed?.call();
       }
-      
+
+      _isRefreshing = false;
+      _completeAllPendingRefreshes();
       return false;
     }
+  }
+
+  // Complete all pending refresh requests
+  void _completeAllPendingRefreshes() {
+    for (final completer in _refreshCompleters) {
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
+    }
+    _refreshCompleters.clear();
   }
 
   // Event endpoints
@@ -342,12 +408,12 @@ class ApiService {
       );
 
       debugPrint('[API] Join event response: ${response.data}');
-      
+
       // Extract event name from response if available
       if (response.data is Map && response.data['event_name'] != null) {
         return response.data['event_name'].toString();
       }
-      
+
       return 'Event'; // Fallback name
     } on DioException catch (e) {
       debugPrint('[API] DioException joining event: ${e.message}');
@@ -489,7 +555,8 @@ class ApiService {
       // Check if token is expired
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       final isValid = claims.exp > now;
-      debugPrint('[API] isLoggedIn: $isValid (expires: ${claims.exp}, now: $now)');
+      debugPrint(
+          '[API] isLoggedIn: $isValid (expires: ${claims.exp}, now: $now)');
       return isValid;
     } catch (e) {
       debugPrint('[API] isLoggedIn: false (decode error: $e)');

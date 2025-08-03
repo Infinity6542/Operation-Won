@@ -84,7 +84,7 @@ class _SettingsViewState extends State<SettingsView>
                     _buildDropdownSetting(
                       context,
                       title: 'PTT Mode',
-                      subtitle: 'Push-to-talk behavior',
+                      subtitle: 'Push-to-talk behaviour',
                       tooltip:
                           'Hold: Press and hold to transmit\nTap: Click to toggle transmit',
                       value: settingsProvider.pttMode,
@@ -123,7 +123,8 @@ class _SettingsViewState extends State<SettingsView>
                   title: 'Microphone Permission',
                   subtitle: 'Required for Push-to-Talk',
                   icon: LucideIcons.mic,
-                  onTap: () => PermissionService.showPermissionStatusDialog(context),
+                  onTap: () =>
+                      PermissionService.showPermissionStatusDialog(context),
                 ),
                 const Divider(),
                 _buildActionTile(
@@ -132,7 +133,8 @@ class _SettingsViewState extends State<SettingsView>
                   subtitle: 'Grant required permissions',
                   icon: LucideIcons.shield,
                   onTap: () async {
-                    await PermissionService.requestMicrophonePermissionAtStartup(context);
+                    await PermissionService
+                        .requestMicrophonePermissionAtStartup(context);
                   },
                 ),
               ]),
@@ -653,7 +655,7 @@ class _SettingsViewState extends State<SettingsView>
               controller: apiController,
               decoration: const InputDecoration(
                 labelText: 'API Endpoint',
-                hintText: 'http://192.168.3.45:8000',
+                hintText: 'http://localhost:8000',
                 prefixIcon: Icon(LucideIcons.server),
                 border: OutlineInputBorder(),
               ),
@@ -801,7 +803,7 @@ class _SettingsViewState extends State<SettingsView>
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('❌ WebSocket connection failed'),
+              content: const Text('❌ WebSocket connection failed'),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );

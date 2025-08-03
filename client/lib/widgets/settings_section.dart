@@ -76,7 +76,7 @@ class _PTTModeDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       title: const Text('PTT Mode'),
-      subtitle: const Text('Push-to-talk behavior'),
+      subtitle: const Text('Push-to-talk behaviour'),
       trailing: DropdownButton<String>(
         value: currentMode,
         items: const [

@@ -14,14 +14,14 @@ void main() {
       settingsProvider = SettingsProvider();
       commService = CommunicationService(settingsProvider);
       // Allow time for initialization to complete
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
     });
 
     tearDown(() async {
       try {
         commService.dispose();
         // Allow time for disposal to complete
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
       } catch (e) {
         // Ignore disposal errors in tests
       }

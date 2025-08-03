@@ -52,6 +52,9 @@ class StateSynchronizationService extends ChangeNotifier {
       // Add a small delay to ensure authentication state is fully propagated
       await Future.delayed(const Duration(milliseconds: 100));
 
+      // Check if context is still valid after async operation
+      if (!context.mounted) return;
+
       // Verify authentication before proceeding
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (!authProvider.isLoggedIn) {

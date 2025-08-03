@@ -10,14 +10,14 @@ import '../widgets/create_channel_dialog.dart';
 import '../widgets/event_details_dialog.dart';
 import '../utils/performance_utils.dart';
 
-class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+class OptimizedHomeView extends StatefulWidget {
+  const OptimizedHomeView({super.key});
 
   @override
-  State<HomeView> createState() => _HomeViewState();
+  State<OptimizedHomeView> createState() => _OptimizedHomeViewState();
 }
 
-class _HomeViewState extends State<HomeView>
+class _OptimizedHomeViewState extends State<OptimizedHomeView>
     with AutomaticKeepAliveClientMixin, PerformanceOptimizationMixin {
   @override
   bool get wantKeepAlive => true;
@@ -48,7 +48,7 @@ class _HomeViewState extends State<HomeView>
     super.build(context);
 
     return Selector3<AuthProvider, EventProvider, ChannelProvider,
-        _HomeViewData>(
+        _HomeViewState>(
       selector: (context, authProvider, eventProvider, channelProvider) {
         // Load data when user becomes authenticated for the first time
         if (authProvider.user != null && !_hasTriggeredInitialLoad) {
@@ -58,7 +58,7 @@ class _HomeViewState extends State<HomeView>
           });
         }
 
-        return _HomeViewData(
+        return _HomeViewState(
           user: authProvider.user,
           events: eventProvider.events,
           isLoading: eventProvider.isLoading || channelProvider.isLoading,
@@ -76,13 +76,18 @@ class _HomeViewState extends State<HomeView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // User welcome section - optimized with const
                   const _WelcomeSection(),
                   const SizedBox(height: 24),
+
+                  // Events section - optimized with memoization
                   MemoizedWidget(
                     dependencies: [homeState.events.length],
                     builder: () => _buildEventsSection(homeState.events),
                   ),
                   const SizedBox(height: 24),
+
+                  // Standalone channels section - optimized with memoization
                   MemoizedWidget(
                     dependencies: [homeState.standaloneChannels.length],
                     builder: () => _buildStandaloneChannelsSection(
@@ -92,7 +97,7 @@ class _HomeViewState extends State<HomeView>
               ),
             ),
           ),
-          floatingActionButton: const _FloatingActionButtons(),
+          floatingActionButton: const _OptimizedFloatingActionButtons(),
         );
       },
     );
@@ -122,17 +127,15 @@ class _HomeViewState extends State<HomeView>
         if (events.isEmpty)
           const _EmptyEventsWidget()
         else
-          ListView(
+          OptimizedListView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            children: List.generate(
-              events.length,
-              (index) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: EventItem(
-                  event: events[index],
-                  onTap: () => _showEventDetails(events[index].eventUuid),
-                ),
+            itemCount: events.length,
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: EventItem(
+                event: events[index],
+                onTap: () => _showEventDetails(events[index].eventUuid),
               ),
             ),
           ),
@@ -164,15 +167,13 @@ class _HomeViewState extends State<HomeView>
         if (channels.isEmpty)
           const _EmptyChannelsWidget()
         else
-          ListView(
+          OptimizedListView(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            children: List.generate(
-              channels.length,
-              (index) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: ChannelItem(channel: channels[index]),
-              ),
+            itemCount: channels.length,
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ChannelItem(channel: channels[index]),
             ),
           ),
       ],
@@ -202,8 +203,8 @@ class _HomeViewState extends State<HomeView>
 }
 
 // Immutable state class for better performance
-class _HomeViewData {
-  const _HomeViewData({
+class _HomeViewState {
+  const _HomeViewState({
     required this.user,
     required this.events,
     required this.isLoading,
@@ -218,7 +219,7 @@ class _HomeViewData {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is _HomeViewData &&
+      other is _HomeViewState &&
           runtimeType == other.runtimeType &&
           user == other.user &&
           _listsEqual(events, other.events) &&
@@ -255,13 +256,14 @@ class _HomeViewData {
   }
 }
 
+// Optimized const welcome section
 class _WelcomeSection extends StatelessWidget {
   const _WelcomeSection();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Selector<AuthProvider, String?>(
+    return OptimizedConsumer<AuthProvider, String?>(
       selector: (context, authProvider) => authProvider.user?.username,
       builder: (context, username, child) {
         return Container(
@@ -276,8 +278,8 @@ class _WelcomeSection extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+            border:
+                Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.4)),
           ),
           child: Row(
             children: [
@@ -298,8 +300,7 @@ class _WelcomeSection extends StatelessWidget {
                     Text(
                       'Welcome back,',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color:
-                            theme.colorScheme.onSurface.withValues(alpha: 0.8),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
                       ),
                     ),
                     Text(
@@ -320,6 +321,7 @@ class _WelcomeSection extends StatelessWidget {
   }
 }
 
+// Optimized empty state widgets
 class _EmptyEventsWidget extends StatelessWidget {
   const _EmptyEventsWidget();
 
@@ -331,8 +333,7 @@ class _EmptyEventsWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+        border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       child: const Column(
         children: [
@@ -365,8 +366,7 @@ class _EmptyChannelsWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
+        border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.1)),
       ),
       child: const Column(
         children: [
@@ -389,14 +389,16 @@ class _EmptyChannelsWidget extends StatelessWidget {
 }
 
 // Optimized floating action buttons
-class _FloatingActionButtons extends StatefulWidget {
-  const _FloatingActionButtons();
+class _OptimizedFloatingActionButtons extends StatefulWidget {
+  const _OptimizedFloatingActionButtons();
 
   @override
-  State<_FloatingActionButtons> createState() => _FloatingActionButtonsState();
+  State<_OptimizedFloatingActionButtons> createState() =>
+      _OptimizedFloatingActionButtonsState();
 }
 
-class _FloatingActionButtonsState extends State<_FloatingActionButtons>
+class _OptimizedFloatingActionButtonsState
+    extends State<_OptimizedFloatingActionButtons>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _topButtonAnimation;

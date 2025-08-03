@@ -408,11 +408,68 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
         
         final screenHeight = MediaQuery.of(context).size.height;
         final bottomPadding = MediaQuery.of(context).padding.bottom;
-        final containerHeight =
-            (screenHeight / 3) + bottomPadding; // Bottom third + safe area
+        
+        // Ensure PTT zone covers a significant portion - enhanced for better coverage on rounded screens
+        final containerHeight = math.max(
+          (screenHeight * widget.heightFraction) + bottomPadding, 
+          screenHeight * 0.4 + bottomPadding
+        );
 
         return Stack(
           children: [
+            // Visual indicator when content might overlap with PTT zone
+            if (canUsePTT && containerHeight > screenHeight * 0.35)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: containerHeight - 50, // Show indicator near the top of PTT zone
+                child: AnimatedBuilder(
+                  animation: _colorTransitionAnimation,
+                  builder: (context, child) {
+                    return Container(
+                      height: 3,
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (commsState.isPTTActive 
+                              ? Colors.red 
+                              : Theme.of(context).colorScheme.primary).withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            (commsState.isPTTActive 
+                              ? Colors.red 
+                              : Theme.of(context).colorScheme.primary).withValues(alpha: 0.8),
+                            (commsState.isPTTActive 
+                              ? Colors.red 
+                              : Theme.of(context).colorScheme.primary).withValues(alpha: 0.8),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.3, 0.7, 1.0],
+                        ),
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 60,
+                          height: 1,
+                          decoration: BoxDecoration(
+                            color: (commsState.isPTTActive 
+                              ? Colors.red 
+                              : Theme.of(context).colorScheme.primary).withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(0.5),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             // Main PTT Zone
             Positioned(
               left: 0,

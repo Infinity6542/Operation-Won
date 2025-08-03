@@ -17,7 +17,7 @@ class _JoinEventDialogState extends State<JoinEventDialog>
   final _formKey = GlobalKey<FormState>();
   final _codeController = TextEditingController();
   bool _isJoining = false;
-  
+
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
@@ -53,22 +53,22 @@ class _JoinEventDialogState extends State<JoinEventDialog>
 
     try {
       HapticFeedback.mediumImpact();
-      
+
       // Simulate join process (replace with actual API call)
       await Future.delayed(const Duration(seconds: 1));
-      
+
       if (mounted) {
         HapticFeedback.lightImpact();
         Navigator.of(context).pop(true); // Return success
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully joined event!'),
+            content: const Text('Successfully joined event!'),
             backgroundColor: Theme.of(context).colorScheme.primary,
             behavior: SnackBarBehavior.floating,
           ),
         );
-        
+
         // Refresh events
         Provider.of<EventProvider>(context, listen: false).loadEvents();
       }
@@ -77,13 +77,13 @@ class _JoinEventDialogState extends State<JoinEventDialog>
         setState(() {
           _isJoining = false;
         });
-        
+
         HapticFeedback.heavyImpact();
         _shakeController.forward().then((_) => _shakeController.reset());
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to join event: Invalid code'),
+            content: const Text('Failed to join event: Invalid code'),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -95,7 +95,7 @@ class _JoinEventDialogState extends State<JoinEventDialog>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return AnimatedBuilder(
       animation: _shakeAnimation,
       builder: (context, child) {
@@ -110,7 +110,7 @@ class _JoinEventDialogState extends State<JoinEventDialog>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -130,7 +130,7 @@ class _JoinEventDialogState extends State<JoinEventDialog>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Enter the invitation code shared by the event organizer:',
+                    'Enter the invitation code shared by the event organiser:',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -143,7 +143,7 @@ class _JoinEventDialogState extends State<JoinEventDialog>
                     decoration: InputDecoration(
                       labelText: 'Invitation Code',
                       hintText: 'e.g., ABC123',
-                      prefixIcon: Icon(LucideIcons.key),
+                      prefixIcon: const Icon(LucideIcons.key),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -178,7 +178,7 @@ class _JoinEventDialogState extends State<JoinEventDialog>
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Ask the event organizer for the invitation code',
+                            'Ask the event organiser for the invitation code',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -192,7 +192,8 @@ class _JoinEventDialogState extends State<JoinEventDialog>
             ),
             actions: [
               TextButton(
-                onPressed: _isJoining ? null : () => Navigator.of(context).pop(),
+                onPressed:
+                    _isJoining ? null : () => Navigator.of(context).pop(),
                 child: const Text('Cancel'),
               ),
               FilledButton.icon(
@@ -208,7 +209,7 @@ class _JoinEventDialogState extends State<JoinEventDialog>
                           ),
                         ),
                       )
-                    : Icon(LucideIcons.userPlus),
+                    : const Icon(LucideIcons.userPlus),
                 label: Text(_isJoining ? 'Joining...' : 'Join Event'),
               ),
             ],

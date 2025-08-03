@@ -58,10 +58,17 @@ class EventResponse {
       inviteCode: json['invite_code'],
       maxParticipants: json['max_participants'],
       isPublic: json['is_public'] ?? false,
-      startTime: json['start_time'] != null ? DateTime.parse(json['start_time']) : null,
-      endTime: json['end_time'] != null ? DateTime.parse(json['end_time']) : null,
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : DateTime.now(),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : DateTime.now(),
+      startTime: json['start_time'] != null
+          ? DateTime.parse(json['start_time'])
+          : null,
+      endTime:
+          json['end_time'] != null ? DateTime.parse(json['end_time']) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : DateTime.now(),
       participantCount: json['participant_count'] ?? 0,
       channelCount: json['channel_count'] ?? 0,
     );
@@ -88,12 +95,15 @@ class EventResponse {
 
   // Helper getters for UI
   bool get hasScheduledTime => startTime != null;
-  bool get isLive => startTime != null && endTime != null && 
-                   DateTime.now().isAfter(startTime!) && 
-                   DateTime.now().isBefore(endTime!);
+  bool get isLive =>
+      startTime != null &&
+      endTime != null &&
+      DateTime.now().isAfter(startTime!) &&
+      DateTime.now().isBefore(endTime!);
   bool get hasEnded => endTime != null && DateTime.now().isAfter(endTime!);
-  bool get isUpcoming => startTime != null && DateTime.now().isBefore(startTime!);
-  
+  bool get isUpcoming =>
+      startTime != null && DateTime.now().isBefore(startTime!);
+
   String get timeStatus {
     if (hasEnded) return 'Ended';
     if (isLive) return 'Live';

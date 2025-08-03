@@ -14,7 +14,7 @@ class PTTGestureGuide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return AlertDialog(
       title: Row(
         children: [
@@ -38,47 +38,51 @@ class PTTGestureGuide extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Hold gesture
             _buildGestureItem(
               context,
               icon: LucideIcons.mic,
               iconColor: Colors.blue,
               title: 'Hold to Talk',
-              description: 'Press and hold anywhere in the larger activation zone to start Push-to-Talk',
+              description:
+                  'Press and hold anywhere in the larger activation zone to start Push-to-Talk',
               gesture: 'Long Press',
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Swipe down gesture
             _buildGestureItem(
               context,
               icon: LucideIcons.logOut,
               iconColor: Colors.orange,
               title: 'Swipe Down to Leave',
-              description: 'While holding, swipe down to get a confirmation dialog to leave the current channel',
+              description:
+                  'While holding, swipe down to get a confirmation dialog to leave the current channel',
               gesture: 'Hold + Swipe ↓',
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Swipe up gesture
             _buildGestureItem(
               context,
               icon: LucideIcons.circleAlert,
               iconColor: Colors.red,
               title: 'Swipe Up for Emergency',
-              description: 'While holding, swipe up to start a 3-second countdown to join emergency channel',
+              description:
+                  'While holding, swipe up to start a 3-second countdown to join emergency channel',
               gesture: 'Hold + Swipe ↑',
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -121,14 +125,14 @@ class PTTGestureGuide extends StatelessWidget {
     required String gesture,
   }) {
     final theme = Theme.of(context);
-    
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -157,7 +161,7 @@ class PTTGestureGuide extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(

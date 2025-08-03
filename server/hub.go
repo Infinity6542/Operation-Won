@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -81,11 +82,16 @@ func (h *Hub) Start() {
 			h.channels[client.ChannelID][client] = true
 			h.mu.Unlock()
 
-			// Add user to Redis channel set and update session
+			// Use Redis pipeline for multiple operations to improve performance
 			ctx := context.Background()
-			h.redis.SAdd(ctx, fmt.Sprintf("channel:%s:users", client.ChannelID), client.UserID)
-			h.redis.Set(ctx, fmt.Sprintf("user:%d:session", client.UserID), client.ID, 30*time.Minute)
-			h.redis.Set(ctx, fmt.Sprintf("user:%d:channel", client.UserID), client.ChannelID, 30*time.Minute)
+			pipe := h.redis.Pipeline()
+			pipe.SAdd(ctx, fmt.Sprintf("channel:%s:users", client.ChannelID), client.UserID)
+			pipe.Set(ctx, fmt.Sprintf("user:%d:session", client.UserID), client.ID, 30*time.Minute)
+			pipe.Set(ctx, fmt.Sprintf("user:%d:channel", client.UserID), client.ChannelID, 30*time.Minute)
+			_, err := pipe.Exec(ctx)
+			if err != nil {
+				log.Printf("[HUB] [ERR] Failed to execute Redis pipeline for client registration: %v", err)
+			}
 
 			log.Printf("[HUB] [CNT] Client registers to channel %s.", client.ChannelID)
 		case client := <-h.unregister:
@@ -120,15 +126,24 @@ func (h *Hub) unregisterClient(c *Client) {
 			delete(room, c)
 			close(c.send)
 
-			// Clean up Redis data
-			h.redis.SRem(ctx, fmt.Sprintf("channel:%s:users", c.ChannelID), c.UserID)
-			h.redis.Del(ctx, fmt.Sprintf("user:%d:session", c.UserID))
-			h.redis.Del(ctx, fmt.Sprintf("user:%d:channel", c.UserID))
+			// Use Redis pipeline for cleanup operations
+			pipe := h.redis.Pipeline()
+			pipe.SRem(ctx, fmt.Sprintf("channel:%s:users", c.ChannelID), c.UserID)
+			pipe.Del(ctx, fmt.Sprintf("user:%d:session", c.UserID))
+			pipe.Del(ctx, fmt.Sprintf("user:%d:channel", c.UserID))
+			
+			if len(room) == 0 {
+				// Clean up empty channel data from Redis
+				pipe.Del(ctx, fmt.Sprintf("channel:%s:users", c.ChannelID))
+			}
+			
+			_, err := pipe.Exec(ctx)
+			if err != nil {
+				log.Printf("[HUB] [ERR] Failed to execute Redis cleanup pipeline: %v", err)
+			}
 
 			if len(room) == 0 {
 				delete(h.channels, c.ChannelID)
-				// Clean up empty channel data from Redis
-				h.redis.Del(ctx, fmt.Sprintf("channel:%s:users", c.ChannelID))
 				log.Printf("[HUB] [CHN] Channel %s is empty and closed", c.ChannelID)
 			}
 		}
@@ -164,26 +179,34 @@ func (h *Hub) switchChannel(req *ChannelChangeRequest) {
 	if oldRoom, ok := h.channels[req.Client.ChannelID]; ok {
 		delete(oldRoom, req.Client)
 
-		// Update Redis - remove from old channel
-		h.redis.SRem(ctx, fmt.Sprintf("channel:%s:users", oldChannelID), req.Client.UserID)
+		// Use Redis pipeline for channel switch operations
+		pipe := h.redis.Pipeline()
+		pipe.SRem(ctx, fmt.Sprintf("channel:%s:users", oldChannelID), req.Client.UserID)
 
 		if len(oldRoom) == 0 {
-			delete(h.channels, req.Client.ChannelID)
-			// Clean up empty channel data from Redis
-			h.redis.Del(ctx, fmt.Sprintf("channel:%s:users", oldChannelID))
+			pipe.Del(ctx, fmt.Sprintf("channel:%s:users", oldChannelID))
+		}
+
+		// Add to new channel
+		req.Client.ChannelID = req.NewChannelID
+		if _, ok := h.channels[req.NewChannelID]; !ok {
+			h.channels[req.NewChannelID] = make(map[*Client]bool)
+		}
+		h.channels[req.NewChannelID][req.Client] = true
+
+		// Update Redis - add to new channel
+		pipe.SAdd(ctx, fmt.Sprintf("channel:%s:users", req.NewChannelID), req.Client.UserID)
+		pipe.Set(ctx, fmt.Sprintf("user:%d:channel", req.Client.UserID), req.NewChannelID, 30*time.Minute)
+		
+		_, err := pipe.Exec(ctx)
+		if err != nil {
+			log.Printf("[HUB] [ERR] Failed to execute Redis channel switch pipeline: %v", err)
+		}
+
+		if len(oldRoom) == 0 {
+			delete(h.channels, oldChannelID)
 		}
 	}
-
-	// Add to new channel
-	req.Client.ChannelID = req.NewChannelID
-	if _, ok := h.channels[req.NewChannelID]; !ok {
-		h.channels[req.NewChannelID] = make(map[*Client]bool)
-	}
-	h.channels[req.NewChannelID][req.Client] = true
-
-	// Update Redis - add to new channel
-	h.redis.SAdd(ctx, fmt.Sprintf("channel:%s:users", req.NewChannelID), req.Client.UserID)
-	h.redis.Set(ctx, fmt.Sprintf("user:%d:channel", req.Client.UserID), req.NewChannelID, 30*time.Minute)
 
 	log.Printf("[HUB] [CHN] [MVE] User %s moved from channel %s to %s", req.Client.ID, oldChannelID, req.NewChannelID)
 }
@@ -364,7 +387,7 @@ func (c *Client) handleSignal(s Signal) {
 		var payload struct {
 			NewChannelID string `json:"new_channel_id"`
 		}
-		
+
 		if err := json.Unmarshal(s.Payload, &payload); err != nil {
 			log.Printf("[HUB] [CHN] Failed to unmarshal channel_change payload: %v", err)
 			return
@@ -456,6 +479,37 @@ func (h *Hub) GetUserCurrentChannel(userID int) (string, error) {
 	return channel.Val(), channel.Err()
 }
 
+// GetUserStatus returns user session, channel, and speaker status efficiently using pipeline
+func (h *Hub) GetUserStatus(userID int) (sessionID, currentChannel, speakerChannel string, isSpeaker bool) {
+	ctx := context.Background()
+	
+	// Use pipeline to get all user status information in one round trip
+	pipe := h.redis.Pipeline()
+	sessionCmd := pipe.Get(ctx, fmt.Sprintf("user:%d:session", userID))
+	channelCmd := pipe.Get(ctx, fmt.Sprintf("user:%d:channel", userID))
+	
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		log.Printf("[HUB] [ERR] Failed to get user status: %v", err)
+		return "", "", "", false
+	}
+
+	sessionID = sessionCmd.Val()
+	currentChannel = channelCmd.Val()
+	
+	// If user is in a channel, check if they're the current speaker
+	if currentChannel != "" {
+		speakerLockKey := fmt.Sprintf("channel:%s:speaker", currentChannel)
+		speaker := h.redis.Get(ctx, speakerLockKey)
+		if speaker.Val() == fmt.Sprintf("%d", userID) {
+			isSpeaker = true
+			speakerChannel = currentChannel
+		}
+	}
+
+	return sessionID, currentChannel, speakerChannel, isSpeaker
+}
+
 // IsChannelSpeakerActive checks if someone is currently speaking in a channel
 func (h *Hub) IsChannelSpeakerActive(channelID string) (bool, string, error) {
 	ctx := context.Background()
@@ -524,7 +578,121 @@ func (h *Hub) GetUserCache(userID int) (map[string]string, error) {
 
 // CleanupExpiredSessions removes expired user sessions and locks
 func (h *Hub) CleanupExpiredSessions() {
-	// This could be run periodically to clean up expired data
-	// For now, we rely on Redis TTL for automatic cleanup
-	log.Println("[HUB] [CLEANUP] Redis TTL handles automatic cleanup of expired sessions")
+	ctx := context.Background()
+	
+	// Get all session keys
+	sessionKeys, err := h.redis.Keys(ctx, "user:*:session").Result()
+	if err != nil {
+		log.Printf("[HUB] [CLEANUP] [ERR] Failed to get session keys: %v", err)
+		return
+	}
+	
+	// Get all speaker lock keys
+	speakerKeys, err := h.redis.Keys(ctx, "channel:*:speaker").Result()
+	if err != nil {
+		log.Printf("[HUB] [CLEANUP] [ERR] Failed to get speaker keys: %v", err)
+		return
+	}
+
+	cleanupCount := 0
+	
+	// Use pipeline for efficient cleanup operations
+	pipe := h.redis.Pipeline()
+	
+	// Check for expired sessions and their associated data
+	for _, key := range sessionKeys {
+		ttl := h.redis.TTL(ctx, key).Val()
+		if ttl < 0 { // Key exists but has no TTL set, or is expired
+			// Extract user ID from key pattern "user:123:session"
+			parts := strings.Split(key, ":")
+			if len(parts) == 3 {
+				userID := parts[1]
+				// Clean up all user-related keys
+				pipe.Del(ctx, key)
+				pipe.Del(ctx, fmt.Sprintf("user:%s:channel", userID))
+				pipe.Del(ctx, fmt.Sprintf("user:%s:info", userID))
+				cleanupCount++
+			}
+		}
+	}
+	
+	// Check for orphaned speaker locks (no corresponding active session)
+	for _, speakerKey := range speakerKeys {
+		speakerUserID := h.redis.Get(ctx, speakerKey).Val()
+		if speakerUserID != "" {
+			sessionKey := fmt.Sprintf("user:%s:session", speakerUserID)
+			exists := h.redis.Exists(ctx, sessionKey).Val()
+			if exists == 0 {
+				// No active session for this speaker, remove the lock
+				pipe.Del(ctx, speakerKey)
+				cleanupCount++
+				log.Printf("[HUB] [CLEANUP] Removed orphaned speaker lock: %s", speakerKey)
+			}
+		}
+	}
+	
+	if cleanupCount > 0 {
+		_, err := pipe.Exec(ctx)
+		if err != nil {
+			log.Printf("[HUB] [CLEANUP] [ERR] Failed to execute cleanup pipeline: %v", err)
+		} else {
+			log.Printf("[HUB] [CLEANUP] Cleaned up %d expired/orphaned Redis keys", cleanupCount)
+		}
+	}
+}
+
+// CheckRedisHealth verifies Redis connection and performance
+func (h *Hub) CheckRedisHealth() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	// Test basic connectivity
+	pong := h.redis.Ping(ctx)
+	if pong.Err() != nil {
+		return fmt.Errorf("redis ping failed: %v", pong.Err())
+	}
+	
+	// Test write/read operations
+	testKey := "health_check"
+	testValue := fmt.Sprintf("test_%d", time.Now().Unix())
+	
+	err := h.redis.Set(ctx, testKey, testValue, time.Minute).Err()
+	if err != nil {
+		return fmt.Errorf("redis write test failed: %v", err)
+	}
+	
+	val, err := h.redis.Get(ctx, testKey).Result()
+	if err != nil {
+		return fmt.Errorf("redis read test failed: %v", err)
+	}
+	
+	if val != testValue {
+		return fmt.Errorf("redis data integrity test failed")
+	}
+	
+	// Clean up test key
+	h.redis.Del(ctx, testKey)
+	
+	return nil
+}
+
+// RedisWithRetry executes a Redis operation with retry logic
+func (h *Hub) RedisWithRetry(operation func() error, maxRetries int) error {
+	var lastErr error
+	for i := 0; i <= maxRetries; i++ {
+		err := operation()
+		if err == nil {
+			return nil
+		}
+		
+		lastErr = err
+		if i < maxRetries {
+			// Exponential backoff: 10ms, 20ms, 40ms, 80ms, etc.
+			backoff := time.Duration(10*(1<<i)) * time.Millisecond
+			time.Sleep(backoff)
+			log.Printf("[HUB] [REDIS] [RETRY] Attempt %d/%d failed, retrying in %v: %v", 
+				i+1, maxRetries+1, backoff, err)
+		}
+	}
+	return fmt.Errorf("redis operation failed after %d retries: %v", maxRetries+1, lastErr)
 }

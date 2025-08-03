@@ -109,19 +109,17 @@ class MyApp extends StatelessWidget {
                 secondary: const Color(0xFF4CAF50), // Green secondary
                 surface: Colors.black, // AMOLED black
                 onSurface: Colors.white,
-                background: Colors.black, // AMOLED black
-                onBackground: Colors.white,
                 surfaceContainer: const Color(0xFF1A1A1A),
                 surfaceContainerHighest: const Color(0xFF2A2A2A),
               ),
               scaffoldBackgroundColor: Colors.black, // AMOLED black
-              cardTheme: CardThemeData(
+              cardTheme: const CardThemeData(
                 elevation: 0,
-                color: const Color(0xFF1A1A1A), // Slightly off-black
+                color: Color(0xFF1A1A1A), // Slightly off-black
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
                   side: BorderSide(
-                    color: const Color(0xFF333333),
+                    color: Color(0xFF333333),
                     width: 1,
                   ),
                 ),
@@ -152,8 +150,8 @@ class MyApp extends StatelessWidget {
               useMaterial3: true,
             ),
             themeMode: ThemeMode.dark, // Enforce dark mode
-            home: AuthStateListener(
-              child: const AuthenticationFlow(),
+            home: const AuthStateListener(
+              child: AuthenticationFlow(),
             ),
             routes: {
               'Channel': (context) => const Channel(),
@@ -229,7 +227,7 @@ class AuthenticationFlow extends StatelessWidget {
 
         // Show loading screen while initializing
         if (authProvider.isLoading) {
-          return Scaffold(
+          return const Scaffold(
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

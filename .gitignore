@@ -3,6 +3,9 @@
 # VS Code workspace files
 *.code-workspace
 
+# Documentation files
+architecture-flowchart.md
+
 # =============================================================================
 # GO-SPECIFIC FILES
 # =============================================================================

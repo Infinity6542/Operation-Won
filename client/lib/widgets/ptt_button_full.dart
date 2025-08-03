@@ -234,7 +234,7 @@ class _EnhancedPTTButtonState extends State<EnhancedPTTButton>
   void _showLeaveChannelDialog(CommsState commsState) {
     // Prevent showing multiple dialogs
     if (_isLeavingChannel) {
-      debugPrint('[EnhancedPTTButton] Leave dialog already shown, ignoring duplicate request');
+      debugPrint('[PTTButtonFull] Leave dialog already shown, ignoring duplicate request');
       return;
     }
 

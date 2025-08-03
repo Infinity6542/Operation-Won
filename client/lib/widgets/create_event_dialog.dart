@@ -47,6 +47,8 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
           await StateSynchronizationService.handleEventCreated(
               context, _nameController.text.trim());
 
+          if (!mounted) return;
+
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -56,6 +58,8 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
             ),
           );
         } else {
+          if (!mounted) return;
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(eventProvider.error ?? 'Failed to create event'),
@@ -107,7 +111,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
             Container(
               padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(20)),
               ),
@@ -116,7 +120,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.15),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -225,7 +229,7 @@ class _CreateEventDialogState extends State<CreateEventDialog> {
               decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(
-                    color: theme.colorScheme.outline.withOpacity(0.2),
+                    color: theme.colorScheme.outline.withValues(alpha: 0.2),
                   ),
                 ),
               ),

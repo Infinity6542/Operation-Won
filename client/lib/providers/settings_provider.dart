@@ -10,8 +10,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _magicMicKey = 'magic_mic_enabled';
 
   // Default values
-  static const String _defaultApiEndpoint = 'http://192.168.3.45:8000';
-  static const String _defaultWebsocketEndpoint = 'ws://192.168.3.45:8000/msg';
+  static const String _defaultApiEndpoint = 'http://localhost:8000';
+  static const String _defaultWebsocketEndpoint = 'ws://localhost:8000/msg';
   static const String _defaultThemeMode = 'dark';
   static const String _defaultPttMode = 'hold';
   static const bool _defaultMagicMicEnabled = true;
@@ -240,15 +240,16 @@ class SettingsProvider extends ChangeNotifier {
   @override
   void dispose() {
     if (_isDisposed) return; // Prevent duplicate disposal
-    
+
     _saveTimer?.cancel();
     _isDisposed = true;
-    
+
     try {
       super.dispose();
     } catch (e) {
       // Ignore disposal errors during hot reload
-      debugPrint('[SettingsProvider] Ignoring disposal error during hot reload: $e');
+      debugPrint(
+          '[SettingsProvider] Ignoring disposal error during hot reload: $e');
     }
   }
 }

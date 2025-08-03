@@ -17,7 +17,7 @@ class WebSocketService extends ChangeNotifier {
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 5;
   bool _intentionalDisconnect = false; // Track intentional disconnections
-  
+
   // Callback to check if PTT is active (to prevent reconnection during PTT)
   bool Function()? _isPTTActiveCallback;
 
@@ -46,6 +46,8 @@ class WebSocketService extends ChangeNotifier {
       final token = await SecureStorageService.getToken();
       if (token == null || token.isEmpty) {
         debugPrint('[WebSocket] No valid token available for authentication');
+        _isConnected = false;
+        notifyListeners();
         return false;
       }
 
@@ -68,18 +70,19 @@ class WebSocketService extends ChangeNotifier {
       );
 
       _isConnected = true;
-      _reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+      _reconnectAttempts =
+          0; // Reset reconnect attempts on successful connection
       _intentionalDisconnect = false; // Reset intentional disconnect flag
       if (channelId != null) {
         _currentChannelId = channelId;
       }
-      
+
       // Start heartbeat to keep connection alive
       _startHeartbeat();
-      
+
       // Start connection health monitoring
       _startConnectionHealthCheck();
-      
+
       notifyListeners();
 
       debugPrint('[WebSocket] Connected to $url with authentication');
@@ -98,7 +101,7 @@ class WebSocketService extends ChangeNotifier {
     _stopHeartbeat();
     _stopConnectionHealthCheck();
     _reconnectAttempts = 0; // Reset reconnect attempts on manual disconnect
-    
+
     if (_channel != null) {
       await _subscription?.cancel();
       await _channel!.sink.close(status.goingAway);
@@ -119,6 +122,9 @@ class WebSocketService extends ChangeNotifier {
       debugPrint('[WebSocket] Cannot reconnect: no previous URL');
       return false;
     }
+
+    // Reset reconnection attempts since this is a manual reconnect with fresh auth
+    _reconnectAttempts = 0;
 
     // Extract base URL without query parameters
     final uri = Uri.parse(_currentUrl!);
@@ -186,7 +192,7 @@ class WebSocketService extends ChangeNotifier {
   // Handle incoming messages
   void _handleMessage(dynamic message) {
     _lastMessageReceived = DateTime.now();
-    
+
     if (message is String) {
       // Text message - likely a signal
       try {
@@ -231,18 +237,20 @@ class WebSocketService extends ChangeNotifier {
     final errorString = error.toString().toLowerCase();
     if (errorString.contains('401') ||
         errorString.contains('unauthorized') ||
-        errorString.contains('invalid token')) {
-      debugPrint('[WebSocket] Authentication failed - token may be expired');
-      // The communication service should handle token refresh and reconnection
-    } else {
-      // For other errors, attempt reconnection
-      debugPrint('[WebSocket] Network error detected, will attempt reconnection');
-      _handleConnectionFailure();
-      return; // Don't set _isConnected = false here as _handleConnectionFailure will handle it
+        errorString.contains('invalid token') ||
+        errorString.contains('revoked') ||
+        errorString.contains('authentication')) {
+      debugPrint('[WebSocket] Authentication failed - token may be revoked/invalid');
+      debugPrint('[WebSocket] Stopping reconnection attempts due to auth failure');
+      _reconnectAttempts = _maxReconnectAttempts; // Prevent further reconnection attempts
+      _isConnected = false;
+      notifyListeners();
+      return;
     }
 
-    _isConnected = false;
-    notifyListeners();
+    // For other errors, attempt reconnection
+    debugPrint('[WebSocket] Network error detected, will attempt reconnection');
+    _handleConnectionFailure(); // This will handle setting _isConnected = false
   }
 
   // Handle disconnection
@@ -250,14 +258,15 @@ class WebSocketService extends ChangeNotifier {
     debugPrint('[WebSocket] Connection closed');
     _stopHeartbeat();
     _stopConnectionHealthCheck();
-    
+
     if (_isConnected && !_intentionalDisconnect) {
       // This was an unexpected disconnection, attempt to reconnect
       debugPrint('[WebSocket] Unexpected disconnection detected');
       _handleConnectionFailure();
     } else {
       // This was an intentional disconnection or already disconnected
-      debugPrint('[WebSocket] Intentional disconnection or already disconnected');
+      debugPrint(
+          '[WebSocket] Intentional disconnection or already disconnected');
       _isConnected = false;
       _currentChannelId = null;
       _intentionalDisconnect = false; // Reset the flag
@@ -268,7 +277,7 @@ class WebSocketService extends ChangeNotifier {
   // Start heartbeat to keep connection alive
   void _startHeartbeat() {
     _stopHeartbeat(); // Clear any existing timer
-    
+
     // Send a heartbeat every 20 seconds (well before server's 30-second timeout)
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 20), (timer) {
       if (_isConnected && _channel != null) {
@@ -302,15 +311,18 @@ class WebSocketService extends ChangeNotifier {
   void _startConnectionHealthCheck() {
     _stopConnectionHealthCheck();
     _lastMessageReceived = DateTime.now();
-    
+
     // Check connection health every 35 seconds (after server's 30-second timeout)
-    _connectionHealthTimer = Timer.periodic(const Duration(seconds: 35), (timer) {
+    _connectionHealthTimer =
+        Timer.periodic(const Duration(seconds: 35), (timer) {
       if (_isConnected && _lastMessageReceived != null) {
-        final timeSinceLastMessage = DateTime.now().difference(_lastMessageReceived!);
-        
+        final timeSinceLastMessage =
+            DateTime.now().difference(_lastMessageReceived!);
+
         // If we haven't received any message in 40 seconds, consider connection dead
         if (timeSinceLastMessage.inSeconds > 40) {
-          debugPrint('[WebSocket] No messages received for ${timeSinceLastMessage.inSeconds}s, connection may be dead');
+          debugPrint(
+              '[WebSocket] No messages received for ${timeSinceLastMessage.inSeconds}s, connection may be dead');
           _handleConnectionFailure();
         }
       } else if (!_isConnected) {
@@ -327,10 +339,11 @@ class WebSocketService extends ChangeNotifier {
 
   // Handle connection failure and attempt reconnection
   void _handleConnectionFailure() {
-    debugPrint('[WebSocket] Connection failure detected, attempting reconnection...');
+    debugPrint(
+        '[WebSocket] Connection failure detected, attempting reconnection...');
     _isConnected = false;
     notifyListeners();
-    
+
     // Check if PTT is active - if so, defer reconnection
     if (_isPTTActiveCallback?.call() == true) {
       debugPrint('[WebSocket] PTT is active, deferring reconnection attempt');
@@ -342,20 +355,21 @@ class WebSocketService extends ChangeNotifier {
       });
       return;
     }
-    
+
     // Check if we should attempt reconnection
     if (_reconnectAttempts >= _maxReconnectAttempts) {
       debugPrint('[WebSocket] Max reconnection attempts reached, giving up');
       return;
     }
-    
+
     _reconnectAttempts++;
-    
+
     // Exponential backoff: 2, 4, 8, 16, 32 seconds
     final delaySeconds = (2 * (_reconnectAttempts - 1)).clamp(2, 32);
-    
-    debugPrint('[WebSocket] Reconnection attempt $_reconnectAttempts/$_maxReconnectAttempts in ${delaySeconds}s');
-    
+
+    debugPrint(
+        '[WebSocket] Reconnection attempt $_reconnectAttempts/$_maxReconnectAttempts in ${delaySeconds}s');
+
     Timer(Duration(seconds: delaySeconds), () async {
       if (!_isConnected && _currentUrl != null) {
         // Double-check PTT status before attempting reconnection
@@ -369,7 +383,15 @@ class WebSocketService extends ChangeNotifier {
           });
           return;
         }
-        
+
+        // Check if we have a valid token before attempting reconnection
+        final token = await SecureStorageService.getToken();
+        if (token == null || token.isEmpty) {
+          debugPrint('[WebSocket] No valid token available for authentication');
+          debugPrint('[WebSocket] Automatic reconnection failed');
+          return;
+        }
+
         final uri = Uri.parse(_currentUrl!);
         final baseUrl = '${uri.scheme}://${uri.host}:${uri.port}${uri.path}';
         final success = await connect(baseUrl, channelId: _currentChannelId);

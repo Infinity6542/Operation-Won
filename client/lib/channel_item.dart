@@ -34,7 +34,7 @@ class ChannelItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -66,25 +66,25 @@ class ChannelItem extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 24),
-              
+
               // Title
               Text(
                 'Delete Channel',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.error,
-                ),
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
               ),
               const SizedBox(height: 16),
-              
+
               // Content
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    height: 1.5,
-                  ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        height: 1.5,
+                      ),
                   children: [
                     const TextSpan(text: 'Are you sure you want to delete '),
                     TextSpan(
@@ -94,12 +94,14 @@ class ChannelItem extends StatelessWidget {
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                    const TextSpan(text: '?\n\nThis action cannot be undone and will permanently delete all messages in this channel.'),
+                    const TextSpan(
+                        text:
+                            '?\n\nThis action cannot be undone and will permanently delete all messages in this channel.'),
                   ],
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Action buttons
               Row(
                 children: [
@@ -138,15 +140,15 @@ class ChannelItem extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             LucideIcons.trash2,
                             size: 18,
                           ),
-                          const SizedBox(width: 8),
-                          const Text(
+                          SizedBox(width: 8),
+                          Text(
                             'Delete',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
@@ -210,7 +212,7 @@ class ChannelItem extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: theme.colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -224,7 +226,7 @@ class ChannelItem extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.15),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -302,7 +304,7 @@ class ChannelItem extends StatelessWidget {
         color: theme.colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Row(

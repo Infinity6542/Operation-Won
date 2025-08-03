@@ -1119,7 +1119,7 @@ func (s *Server) DeleteEvent(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Cleanup routine for expired tokens and rate limits
+// Cleanup routine for expired tokens, rate limits, and Redis data
 func (s *Server) startCleanupRoutine() {
 	ticker := time.NewTicker(time.Hour)
 	go func() {
@@ -1130,7 +1130,15 @@ func (s *Server) startCleanupRoutine() {
 			// Clean expired rate limit entries
 			authRateLimiter.Cleanup()
 
-			log.Printf("[CLEANUP] Expired tokens and rate limits cleaned up")
+			// Clean expired Redis sessions and orphaned data
+			s.hub.CleanupExpiredSessions()
+
+			// Check Redis health
+			if err := s.hub.CheckRedisHealth(); err != nil {
+				log.Printf("[CLEANUP] [ERR] Redis health check failed: %v", err)
+			}
+
+			log.Printf("[CLEANUP] Expired tokens, rate limits, and Redis data cleaned up")
 		}
 	}()
 }

@@ -43,20 +43,35 @@ class NotificationService {
   }
 
   // Convenience methods
-  static void showSuccess(BuildContext context, String message, {IconData? icon}) {
-    show(context, message: message, type: NotificationType.success, icon: icon ?? LucideIcons.check);
+  static void showSuccess(BuildContext context, String message,
+      {IconData? icon}) {
+    show(context,
+        message: message,
+        type: NotificationType.success,
+        icon: icon ?? LucideIcons.check);
   }
 
-  static void showError(BuildContext context, String message, {IconData? icon}) {
-    show(context, message: message, type: NotificationType.error, icon: icon ?? LucideIcons.x);
+  static void showError(BuildContext context, String message,
+      {IconData? icon}) {
+    show(context,
+        message: message,
+        type: NotificationType.error,
+        icon: icon ?? LucideIcons.x);
   }
 
-  static void showWarning(BuildContext context, String message, {IconData? icon}) {
-    show(context, message: message, type: NotificationType.warning, icon: icon ?? LucideIcons.zap);
+  static void showWarning(BuildContext context, String message,
+      {IconData? icon}) {
+    show(context,
+        message: message,
+        type: NotificationType.warning,
+        icon: icon ?? LucideIcons.zap);
   }
 
   static void showInfo(BuildContext context, String message, {IconData? icon}) {
-    show(context, message: message, type: NotificationType.info, icon: icon ?? LucideIcons.info);
+    show(context,
+        message: message,
+        type: NotificationType.info,
+        icon: icon ?? LucideIcons.info);
   }
 }
 
@@ -185,12 +200,12 @@ class _ModernNotificationState extends State<_ModernNotification>
                 color: _getBackgroundColor(),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _getAccentColor().withOpacity(0.3),
+                  color: _getAccentColor().withValues(alpha: 0.3),
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -207,7 +222,7 @@ class _ModernNotificationState extends State<_ModernNotification>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: _getAccentColor().withOpacity(0.2),
+                              color: _getAccentColor().withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -235,12 +250,12 @@ class _ModernNotificationState extends State<_ModernNotification>
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Icon(
                               LucideIcons.x,
-                              color: Colors.white.withOpacity(0.7),
+                              color: Colors.white.withValues(alpha: 0.7),
                               size: 16,
                             ),
                           ),
@@ -248,7 +263,7 @@ class _ModernNotificationState extends State<_ModernNotification>
                       ],
                     ),
                   ),
-                  
+
                   // Progress indicator
                   Positioned(
                     bottom: 0,
@@ -261,7 +276,7 @@ class _ModernNotificationState extends State<_ModernNotification>
                           value: 1.0 - _progressController.value,
                           backgroundColor: Colors.transparent,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            _getAccentColor().withOpacity(0.5),
+                            _getAccentColor().withValues(alpha: 0.5),
                           ),
                           minHeight: 3,
                         );

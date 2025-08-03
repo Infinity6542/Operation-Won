@@ -15,6 +15,7 @@ class CommunicationService extends ChangeNotifier {
 
   bool _isPTTActive = false;
   bool _isPTTToggleMode = false; // true for tap mode, false for hold mode
+  bool _isPersistentRecording = false; // Track if mic is persistently active in channel
   String? _currentChannelId;
   bool _isEmergencyMode = false;
   String? _previousChannelId; // Store previous channel for emergency exit
@@ -25,6 +26,7 @@ class CommunicationService extends ChangeNotifier {
   bool get isRecording => _audioService.isRecording;
   bool get isPTTToggleMode => _isPTTToggleMode;
   bool get isEmergencyMode => _isEmergencyMode;
+  bool get isPersistentRecording => _isPersistentRecording;
   String? get currentChannelId => _currentChannelId;
 
   CommunicationService(this._settingsProvider) {
@@ -150,6 +152,15 @@ class CommunicationService extends ChangeNotifier {
 
     // Start audio playing mode to receive audio
     await _audioService.startPlaying();
+    
+    // Start persistent microphone recording when joining channel
+    final recordingStarted = await _audioService.startRecording();
+    if (recordingStarted) {
+      _isPersistentRecording = true;
+      debugPrint('[Comm] Persistent microphone recording started for channel: $channelId');
+    } else {
+      debugPrint('[Comm] Failed to start persistent microphone recording');
+    }
 
     debugPrint('[Comm] Joined channel: $channelId');
     notifyListeners();
@@ -157,17 +168,35 @@ class CommunicationService extends ChangeNotifier {
 
   // Leave current channel
   Future<void> leaveChannel() async {
+    // Guard against multiple leave calls
+    if (_currentChannelId == null) {
+      debugPrint('[Comm] Already left channel, ignoring duplicate leave call');
+      return;
+    }
+
+    debugPrint('[Comm] Leaving channel: $_currentChannelId');
+
     if (_isPTTActive) {
       await stopPTT();
     }
 
+    // Stop persistent recording when leaving channel
+    if (_isPersistentRecording) {
+      await _audioService.stopRecording();
+      _isPersistentRecording = false;
+      debugPrint('[Comm] Stopped persistent microphone recording');
+    }
+
     await _audioService.stopPlaying();
+    
+    // Clear channel ID first to prevent duplicate calls
+    final channelId = _currentChannelId;
     _currentChannelId = null;
 
     // Disconnect WebSocket when leaving channel to prevent reconnection attempts
     await _webSocketService.disconnect();
 
-    debugPrint('[Comm] Left channel and disconnected WebSocket');
+    debugPrint('[Comm] Left channel $channelId and disconnected WebSocket');
     notifyListeners();
   }
 
@@ -226,25 +255,29 @@ class CommunicationService extends ChangeNotifier {
     // Send PTT start signal
     _webSocketService.sendSignal('ptt start');
 
-    // Start audio recording
-    final recordingStarted = await _audioService.startRecording();
-    if (!recordingStarted) {
-      debugPrint('[Comm] Failed to start audio recording');
-      return false;
+    // If persistent recording is not active, start recording for PTT
+    if (!_isPersistentRecording) {
+      final recordingStarted = await _audioService.startRecording();
+      if (!recordingStarted) {
+        debugPrint('[Comm] Failed to start audio recording for PTT');
+        return false;
+      }
     }
 
     _isPTTActive = true;
     notifyListeners();
 
-    debugPrint('[Comm] PTT started');
+    debugPrint('[Comm] PTT started (persistent recording: $_isPersistentRecording)');
     return true;
   } // Stop Push-to-Talk (PTT)
 
   Future<void> stopPTT() async {
     if (!_isPTTActive) return;
 
-    // Stop audio recording
-    await _audioService.stopRecording();
+    // If persistent recording is not active, stop recording
+    if (!_isPersistentRecording) {
+      await _audioService.stopRecording();
+    }
 
     // Send PTT stop signal
     _webSocketService.sendSignal('ptt stop');
@@ -252,7 +285,7 @@ class CommunicationService extends ChangeNotifier {
     _isPTTActive = false;
     notifyListeners();
 
-    debugPrint('[Comm] PTT stopped');
+    debugPrint('[Comm] PTT stopped (persistent recording: $_isPersistentRecording)');
   }
 
   // Handle outgoing audio data (from microphone)
@@ -296,7 +329,7 @@ class CommunicationService extends ChangeNotifier {
     if (hasPermission) {
       return true;
     }
-    
+
     // Fallback to audio service if needed
     return await _audioService.requestMicrophonePermission();
   }

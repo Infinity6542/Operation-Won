@@ -24,7 +24,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
   EventResponse? event;
   List channels = [];
   bool isLoading = true;
-  
+
   late AnimationController _slideController;
   late AnimationController _fadeController;
   late Animation<Offset> _slideAnimation;
@@ -33,18 +33,18 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize animations
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 350),
       vsync: this,
     );
-    
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.5),
       end: Offset.zero,
@@ -52,7 +52,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
       parent: _slideController,
       curve: Curves.easeOutCubic,
     ));
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -60,9 +60,9 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
       parent: _fadeController,
       curve: Curves.easeIn,
     ));
-    
+
     _loadEventDetails();
-    
+
     // Start animations after a slight delay
     Future.delayed(const Duration(milliseconds: 50), () {
       _slideController.forward();
@@ -105,9 +105,10 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
     });
   }
 
-  void _joinChannel(BuildContext context, String channelUuid, String channelName) {
+  void _joinChannel(
+      BuildContext context, String channelUuid, String channelName) {
     HapticFeedback.mediumImpact();
-    
+
     try {
       final commsState = Provider.of<CommsState>(context, listen: false);
       commsState.joinChannel(channelUuid);
@@ -126,7 +127,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
     if (event?.inviteCode != null) {
       await Clipboard.setData(ClipboardData(text: event!.inviteCode!));
       HapticFeedback.lightImpact();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -198,7 +199,8 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Icon(
@@ -223,7 +225,8 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                               Text(
                                 event!.eventName,
                                 style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
+                                  color: theme.colorScheme.onPrimaryContainer
+                                      .withValues(alpha: 0.8),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -238,7 +241,8 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                           color: theme.colorScheme.onPrimaryContainer,
                         ),
                         style: IconButton.styleFrom(
-                          backgroundColor: theme.colorScheme.onPrimaryContainer.withOpacity(0.1),
+                          backgroundColor: theme.colorScheme.onPrimaryContainer
+                              .withValues(alpha: 0.1),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -328,7 +332,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                
+
                 if (event!.eventDescription.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -338,12 +342,13 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                     ),
                   ),
                 ],
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Role badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: event!.isOrganiser
                         ? theme.colorScheme.primaryContainer
@@ -360,7 +365,9 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        event!.isOrganiser ? LucideIcons.crown : LucideIcons.user,
+                        event!.isOrganiser
+                            ? LucideIcons.crown
+                            : LucideIcons.user,
                         size: 16,
                         color: event!.isOrganiser
                             ? theme.colorScheme.onPrimaryContainer
@@ -395,9 +402,9 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    event!.isOrganiser 
-                      ? 'Share this code with others to invite them to your event:'
-                      : 'Use this code to invite others to join this event:',
+                    event!.isOrganiser
+                        ? 'Share this code with others to invite them to your event:'
+                        : 'Use this code to invite others to join this event:',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -410,7 +417,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                       color: theme.colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: theme.colorScheme.outline.withOpacity(0.5),
+                        color: theme.colorScheme.outline.withValues(alpha: 0.5),
                       ),
                     ),
                     child: Row(
@@ -444,8 +451,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
               ),
             ),
 
-          if (event!.inviteCode != null)
-            const SizedBox(height: 20),
+          if (event!.inviteCode != null) const SizedBox(height: 20),
 
           // Channels Card
           _buildInfoCard(
@@ -459,7 +465,8 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                       Icon(
                         LucideIcons.messageSquareOff,
                         size: 48,
-                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -473,7 +480,8 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
                         'Channels will appear here once they\'re created for this event.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          color: theme.colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -503,7 +511,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
         color: theme.colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: ListTile(
@@ -511,7 +519,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.1),
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -537,7 +545,8 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
           size: 16,
           color: theme.colorScheme.onSurfaceVariant,
         ),
-        onTap: () => _joinChannel(context, channel.channelUuid, channel.channelName),
+        onTap: () =>
+            _joinChannel(context, channel.channelUuid, channel.channelName),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),

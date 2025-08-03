@@ -199,11 +199,33 @@ INSERT IGNORE INTO users (user_uuid, username, email, hashed_password) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', 'admin', 'admin@operationwon.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeS/FJyVbLq8T1/.S');
 
 -- Create sample data for testing
-INSERT IGNORE INTO events (event_uuid, event_name, event_description, organiser_user_id, event_link, is_public) VALUES 
-('event-550e8400-e29b-41d4-a716-446655440001', 'Welcome Event', 'A welcome event for new users to learn about Operation Won', 1, 'https://operationwon.com/events/welcome', TRUE);
+INSERT IGNORE INTO events (event_uuid, event_name, event_description, organiser_user_id, event_link, is_public, invite_code) VALUES 
+('event-550e8400-e29b-41d4-a716-446655440001', 'Welcome Event', 'A welcome event for new users to learn about Operation Won', 1, 'https://operationwon.com/events/welcome', TRUE, 'ABC123');
+
+-- Add the admin user as a member (organiser) of the welcome event
+INSERT IGNORE INTO event_members (event_id, user_id, role) VALUES 
+((SELECT id FROM events WHERE event_uuid = 'event-550e8400-e29b-41d4-a716-446655440001'), 1, 'organiser');
+
+-- Add invite codes to any events that might be missing them
+-- Update any events that have empty or null invite codes
+UPDATE events 
+SET invite_code = CONCAT(
+    CHAR(65 + FLOOR(RAND() * 26)),  -- Random A-Z
+    CHAR(65 + FLOOR(RAND() * 26)),  -- Random A-Z
+    CHAR(65 + FLOOR(RAND() * 26)),  -- Random A-Z
+    CHAR(48 + FLOOR(RAND() * 10)),  -- Random 0-9
+    CHAR(48 + FLOOR(RAND() * 10)),  -- Random 0-9
+    CHAR(48 + FLOOR(RAND() * 10))   -- Random 0-9
+)
+WHERE invite_code IS NULL OR invite_code = '';
 
 INSERT IGNORE INTO channels (channel_uuid, channel_name, channel_description, created_by, channel_link, is_public) VALUES 
 ('channel-550e8400-e29b-41d4-a716-446655440001', 'General Discussion', 'Main discussion channel for general topics', 1, 'https://operationwon.com/channels/general', TRUE),
 ('channel-550e8400-e29b-41d4-a716-446655440002', 'Tech Talk', 'Channel for technical discussions and support', 1, 'https://operationwon.com/channels/tech', TRUE);
+
+-- Add the admin user as a member (admin) of the default channels
+INSERT IGNORE INTO channel_members (channel_id, user_id, role) VALUES 
+((SELECT id FROM channels WHERE channel_uuid = 'channel-550e8400-e29b-41d4-a716-446655440001'), 1, 'admin'),
+((SELECT id FROM channels WHERE channel_uuid = 'channel-550e8400-e29b-41d4-a716-446655440002'), 1, 'admin');
 
 COMMIT;

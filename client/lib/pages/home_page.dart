@@ -34,9 +34,9 @@ class _HomePageState extends State<HomePage>
 
   Future<void> _requestPermissionsIfNeeded() async {
     if (_permissionRequested) return;
-    
+
     _permissionRequested = true;
-    
+
     try {
       final hasPermission = await PermissionService.hasMicrophonePermission();
       if (!hasPermission && mounted) {
@@ -50,10 +50,10 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
-    return Scaffold(
+    return const Scaffold(
       body: Stack(
         children: [
-          const SafeArea(
+          SafeArea(
             child: Row(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.spaceAround,

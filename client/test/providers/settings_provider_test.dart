@@ -20,7 +20,7 @@ void main() {
         settingsProvider = SettingsProvider();
 
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         expect(settingsProvider.themeMode, 'dark');
         expect(settingsProvider.pttMode, 'hold');
@@ -33,7 +33,7 @@ void main() {
         settingsProvider = SettingsProvider();
 
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         expect(SettingsProvider.predefinedEndpoints, isNotEmpty);
         expect(SettingsProvider.predefinedEndpoints.first,
@@ -48,7 +48,7 @@ void main() {
         settingsProvider = SettingsProvider();
 
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         expect(settingsProvider.apiEndpoint, startsWith('http'));
         expect(settingsProvider.websocketEndpoint,
@@ -60,7 +60,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should update theme mode', () async {
@@ -98,7 +98,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should update PTT mode', () async {
@@ -130,7 +130,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should toggle magic mic setting', () async {
@@ -164,7 +164,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should update API endpoint', () async {
@@ -204,7 +204,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should update WebSocket endpoint', () async {
@@ -245,7 +245,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should set predefined endpoint configuration', () async {
@@ -267,7 +267,7 @@ void main() {
 
       test('should detect custom endpoint usage', () async {
         // Wait for initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         // Initially might be using predefined
         expect(settingsProvider.isUsingCustomEndpoint, isA<bool>());
@@ -275,7 +275,7 @@ void main() {
 
       test('should get current predefined endpoint', () async {
         // Wait for initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         final currentEndpoint = settingsProvider.getCurrentPredefinedEndpoint();
         expect(currentEndpoint, anyOf(isNull, isA<Map<String, String>>()));
@@ -296,7 +296,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should maintain settings across operations', () async {
@@ -338,7 +338,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should notify listeners on setting changes', () async {
@@ -378,7 +378,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should dispose cleanly', () {
@@ -402,7 +402,7 @@ void main() {
       test('should initialize consistently', () async {
         for (int i = 0; i < 3; i++) {
           final provider = SettingsProvider();
-          await Future.delayed(Duration(milliseconds: 100));
+          await Future.delayed(const Duration(milliseconds: 100));
 
           expect(provider.themeMode, isA<String>());
           expect(provider.pttMode, isA<String>());
@@ -419,7 +419,7 @@ void main() {
       setUp(() async {
         settingsProvider = SettingsProvider();
         // Wait for async initialization
-        await Future.delayed(Duration(milliseconds: 200));
+        await Future.delayed(const Duration(milliseconds: 200));
       });
 
       test('should handle empty string inputs gracefully', () async {

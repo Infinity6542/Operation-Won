@@ -50,9 +50,14 @@ class AuthProvider extends ChangeNotifier {
 
   void _handleAuthenticationFailure() {
     debugPrint('[AuthProvider] Authentication failed - token revoked/invalid');
+    // Clear user state immediately
     _user = null;
     _clearError();
     _setLoading(false); // Ensure loading state is cleared
+    
+    // Force clear any cached tokens to prevent retry loops
+    _apiService.clearAuthenticationData();
+    
     // Force notify listeners to update UI state immediately
     if (!_isDisposed) {
       notifyListeners();
@@ -64,15 +69,16 @@ class AuthProvider extends ChangeNotifier {
   @override
   void dispose() {
     if (_isDisposed) return; // Prevent duplicate disposal
-    
+
     _settingsProvider?.removeListener(_onSettingsChanged);
     _isDisposed = true;
-    
+
     try {
       super.dispose();
     } catch (e) {
       // Ignore disposal errors during hot reload
-      debugPrint('[AuthProvider] Ignoring disposal error during hot reload: $e');
+      debugPrint(
+          '[AuthProvider] Ignoring disposal error during hot reload: $e');
     }
   }
 
@@ -131,6 +137,11 @@ class AuthProvider extends ChangeNotifier {
       _user = null;
       _clearError();
       debugPrint('[AuthProvider] User logged out successfully');
+      
+      // Ensure auth state is immediately updated to prevent any pending operations
+      if (!_isDisposed) {
+        notifyListeners();
+      }
     } finally {
       _setLoading(false);
     }
