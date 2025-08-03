@@ -13,7 +13,8 @@ class ApiService {
   String? _token;
   String _baseUrl = defaultBaseURL;
   bool _isRefreshing = false; // Flag to prevent concurrent token refreshes
-  final List<Completer<void>> _refreshCompleters = []; // Queue for pending requests during refresh
+  final List<Completer<void>> _refreshCompleters =
+      []; // Queue for pending requests during refresh
 
   // Callback for when authentication fails (token revoked/invalid)
   Function()? onAuthenticationFailed;
@@ -159,17 +160,18 @@ class ApiService {
   // Validate token with server (useful for checking if token is blacklisted)
   Future<bool> validateTokenWithServer() async {
     if (_token == null) return false;
-    
+
     try {
       // Try a simple authenticated request to verify token is still valid on server
       await _dio.get('/api/protected/events');
       return true;
     } catch (e) {
       final errorString = e.toString().toLowerCase();
-      if (errorString.contains('401') || 
-          errorString.contains('revoked') || 
+      if (errorString.contains('401') ||
+          errorString.contains('revoked') ||
           errorString.contains('unauthorized')) {
-        debugPrint('[API] Server token validation failed: token revoked/invalid');
+        debugPrint(
+            '[API] Server token validation failed: token revoked/invalid');
         await _clearToken();
         onAuthenticationFailed?.call();
         return false;
@@ -269,7 +271,8 @@ class ApiService {
         final completer = Completer<void>();
         _refreshCompleters.add(completer);
         await completer.future;
-        return _token != null; // Return success based on whether we have a token after refresh
+        return _token !=
+            null; // Return success based on whether we have a token after refresh
       }
 
       _isRefreshing = true;

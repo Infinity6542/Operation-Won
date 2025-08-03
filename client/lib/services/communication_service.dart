@@ -15,7 +15,8 @@ class CommunicationService extends ChangeNotifier {
 
   bool _isPTTActive = false;
   bool _isPTTToggleMode = false; // true for tap mode, false for hold mode
-  bool _isPersistentRecording = false; // Track if mic is persistently active in channel
+  bool _isPersistentRecording =
+      false; // Track if mic is persistently active in channel
   String? _currentChannelId;
   bool _isEmergencyMode = false;
   String? _previousChannelId; // Store previous channel for emergency exit
@@ -152,12 +153,13 @@ class CommunicationService extends ChangeNotifier {
 
     // Start audio playing mode to receive audio
     await _audioService.startPlaying();
-    
+
     // Start persistent microphone recording when joining channel
     final recordingStarted = await _audioService.startRecording();
     if (recordingStarted) {
       _isPersistentRecording = true;
-      debugPrint('[Comm] Persistent microphone recording started for channel: $channelId');
+      debugPrint(
+          '[Comm] Persistent microphone recording started for channel: $channelId');
     } else {
       debugPrint('[Comm] Failed to start persistent microphone recording');
     }
@@ -188,7 +190,7 @@ class CommunicationService extends ChangeNotifier {
     }
 
     await _audioService.stopPlaying();
-    
+
     // Clear channel ID first to prevent duplicate calls
     final channelId = _currentChannelId;
     _currentChannelId = null;
@@ -267,7 +269,8 @@ class CommunicationService extends ChangeNotifier {
     _isPTTActive = true;
     notifyListeners();
 
-    debugPrint('[Comm] PTT started (persistent recording: $_isPersistentRecording)');
+    debugPrint(
+        '[Comm] PTT started (persistent recording: $_isPersistentRecording)');
     return true;
   } // Stop Push-to-Talk (PTT)
 
@@ -285,7 +288,8 @@ class CommunicationService extends ChangeNotifier {
     _isPTTActive = false;
     notifyListeners();
 
-    debugPrint('[Comm] PTT stopped (persistent recording: $_isPersistentRecording)');
+    debugPrint(
+        '[Comm] PTT stopped (persistent recording: $_isPersistentRecording)');
   }
 
   // Handle outgoing audio data (from microphone)

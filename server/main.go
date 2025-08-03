@@ -47,13 +47,13 @@ func main() {
 		Password: "", // No password set
 		DB:       0,  // Use default DB
 		Protocol: 2,  // Connection protocol
-		
+
 		// Connection pool optimization
-		PoolSize:        10,                // Maximum number of socket connections
-		PoolTimeout:     30 * time.Second,  // Amount of time client waits for connection
-		ConnMaxIdleTime: 5 * time.Minute,   // Amount of time after which client closes idle connections
-		MaxRetries:      3,                 // Maximum number of retries before giving up
-		MinRetryBackoff: 8 * time.Millisecond,  // Minimum backoff between each retry
+		PoolSize:        10,                     // Maximum number of socket connections
+		PoolTimeout:     30 * time.Second,       // Amount of time client waits for connection
+		ConnMaxIdleTime: 5 * time.Minute,        // Amount of time after which client closes idle connections
+		MaxRetries:      3,                      // Maximum number of retries before giving up
+		MinRetryBackoff: 8 * time.Millisecond,   // Minimum backoff between each retry
 		MaxRetryBackoff: 512 * time.Millisecond, // Maximum backoff between each retry
 	})
 

@@ -128,7 +128,8 @@ class _HomeViewState extends State<HomeView>
               ),
               // PTT Gesture Zone with enhanced coverage for rounded screens
               PTTGestureZone(
-                heightFraction: 0.45, // Increased coverage for better accessibility on rounded screens
+                heightFraction:
+                    0.45, // Increased coverage for better accessibility on rounded screens
                 onPermissionDenied: () {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -562,7 +563,9 @@ class _HomeViewState extends State<HomeView>
             child: Opacity(
               opacity: delayedValue,
               child: IgnorePointer(
-                ignoring: !_isSpeedDialOpen || delayedValue <= 0.1, // Ignore when closed OR when mostly invisible
+                ignoring: !_isSpeedDialOpen ||
+                    delayedValue <=
+                        0.1, // Ignore when closed OR when mostly invisible
                 child: _buildSpeedDialOption(
                   icon: icon,
                   label: label,

@@ -54,10 +54,10 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     _clearError();
     _setLoading(false); // Ensure loading state is cleared
-    
+
     // Force clear any cached tokens to prevent retry loops
     _apiService.clearAuthenticationData();
-    
+
     // Force notify listeners to update UI state immediately
     if (!_isDisposed) {
       notifyListeners();
@@ -137,7 +137,7 @@ class AuthProvider extends ChangeNotifier {
       _user = null;
       _clearError();
       debugPrint('[AuthProvider] User logged out successfully');
-      
+
       // Ensure auth state is immediately updated to prevent any pending operations
       if (!_isDisposed) {
         notifyListeners();

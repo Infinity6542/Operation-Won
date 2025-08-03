@@ -240,9 +240,12 @@ class WebSocketService extends ChangeNotifier {
         errorString.contains('invalid token') ||
         errorString.contains('revoked') ||
         errorString.contains('authentication')) {
-      debugPrint('[WebSocket] Authentication failed - token may be revoked/invalid');
-      debugPrint('[WebSocket] Stopping reconnection attempts due to auth failure');
-      _reconnectAttempts = _maxReconnectAttempts; // Prevent further reconnection attempts
+      debugPrint(
+          '[WebSocket] Authentication failed - token may be revoked/invalid');
+      debugPrint(
+          '[WebSocket] Stopping reconnection attempts due to auth failure');
+      _reconnectAttempts =
+          _maxReconnectAttempts; // Prevent further reconnection attempts
       _isConnected = false;
       notifyListeners();
       return;

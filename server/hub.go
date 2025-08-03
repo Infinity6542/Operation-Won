@@ -131,12 +131,12 @@ func (h *Hub) unregisterClient(c *Client) {
 			pipe.SRem(ctx, fmt.Sprintf("channel:%s:users", c.ChannelID), c.UserID)
 			pipe.Del(ctx, fmt.Sprintf("user:%d:session", c.UserID))
 			pipe.Del(ctx, fmt.Sprintf("user:%d:channel", c.UserID))
-			
+
 			if len(room) == 0 {
 				// Clean up empty channel data from Redis
 				pipe.Del(ctx, fmt.Sprintf("channel:%s:users", c.ChannelID))
 			}
-			
+
 			_, err := pipe.Exec(ctx)
 			if err != nil {
 				log.Printf("[HUB] [ERR] Failed to execute Redis cleanup pipeline: %v", err)
@@ -197,7 +197,7 @@ func (h *Hub) switchChannel(req *ChannelChangeRequest) {
 		// Update Redis - add to new channel
 		pipe.SAdd(ctx, fmt.Sprintf("channel:%s:users", req.NewChannelID), req.Client.UserID)
 		pipe.Set(ctx, fmt.Sprintf("user:%d:channel", req.Client.UserID), req.NewChannelID, 30*time.Minute)
-		
+
 		_, err := pipe.Exec(ctx)
 		if err != nil {
 			log.Printf("[HUB] [ERR] Failed to execute Redis channel switch pipeline: %v", err)
@@ -482,12 +482,12 @@ func (h *Hub) GetUserCurrentChannel(userID int) (string, error) {
 // GetUserStatus returns user session, channel, and speaker status efficiently using pipeline
 func (h *Hub) GetUserStatus(userID int) (sessionID, currentChannel, speakerChannel string, isSpeaker bool) {
 	ctx := context.Background()
-	
+
 	// Use pipeline to get all user status information in one round trip
 	pipe := h.redis.Pipeline()
 	sessionCmd := pipe.Get(ctx, fmt.Sprintf("user:%d:session", userID))
 	channelCmd := pipe.Get(ctx, fmt.Sprintf("user:%d:channel", userID))
-	
+
 	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Printf("[HUB] [ERR] Failed to get user status: %v", err)
@@ -496,7 +496,7 @@ func (h *Hub) GetUserStatus(userID int) (sessionID, currentChannel, speakerChann
 
 	sessionID = sessionCmd.Val()
 	currentChannel = channelCmd.Val()
-	
+
 	// If user is in a channel, check if they're the current speaker
 	if currentChannel != "" {
 		speakerLockKey := fmt.Sprintf("channel:%s:speaker", currentChannel)
@@ -579,14 +579,14 @@ func (h *Hub) GetUserCache(userID int) (map[string]string, error) {
 // CleanupExpiredSessions removes expired user sessions and locks
 func (h *Hub) CleanupExpiredSessions() {
 	ctx := context.Background()
-	
+
 	// Get all session keys
 	sessionKeys, err := h.redis.Keys(ctx, "user:*:session").Result()
 	if err != nil {
 		log.Printf("[HUB] [CLEANUP] [ERR] Failed to get session keys: %v", err)
 		return
 	}
-	
+
 	// Get all speaker lock keys
 	speakerKeys, err := h.redis.Keys(ctx, "channel:*:speaker").Result()
 	if err != nil {
@@ -595,10 +595,10 @@ func (h *Hub) CleanupExpiredSessions() {
 	}
 
 	cleanupCount := 0
-	
+
 	// Use pipeline for efficient cleanup operations
 	pipe := h.redis.Pipeline()
-	
+
 	// Check for expired sessions and their associated data
 	for _, key := range sessionKeys {
 		ttl := h.redis.TTL(ctx, key).Val()
@@ -615,7 +615,7 @@ func (h *Hub) CleanupExpiredSessions() {
 			}
 		}
 	}
-	
+
 	// Check for orphaned speaker locks (no corresponding active session)
 	for _, speakerKey := range speakerKeys {
 		speakerUserID := h.redis.Get(ctx, speakerKey).Val()
@@ -630,7 +630,7 @@ func (h *Hub) CleanupExpiredSessions() {
 			}
 		}
 	}
-	
+
 	if cleanupCount > 0 {
 		_, err := pipe.Exec(ctx)
 		if err != nil {
@@ -645,34 +645,34 @@ func (h *Hub) CleanupExpiredSessions() {
 func (h *Hub) CheckRedisHealth() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	// Test basic connectivity
 	pong := h.redis.Ping(ctx)
 	if pong.Err() != nil {
 		return fmt.Errorf("redis ping failed: %v", pong.Err())
 	}
-	
+
 	// Test write/read operations
 	testKey := "health_check"
 	testValue := fmt.Sprintf("test_%d", time.Now().Unix())
-	
+
 	err := h.redis.Set(ctx, testKey, testValue, time.Minute).Err()
 	if err != nil {
 		return fmt.Errorf("redis write test failed: %v", err)
 	}
-	
+
 	val, err := h.redis.Get(ctx, testKey).Result()
 	if err != nil {
 		return fmt.Errorf("redis read test failed: %v", err)
 	}
-	
+
 	if val != testValue {
 		return fmt.Errorf("redis data integrity test failed")
 	}
-	
+
 	// Clean up test key
 	h.redis.Del(ctx, testKey)
-	
+
 	return nil
 }
 
@@ -684,13 +684,13 @@ func (h *Hub) RedisWithRetry(operation func() error, maxRetries int) error {
 		if err == nil {
 			return nil
 		}
-		
+
 		lastErr = err
 		if i < maxRetries {
 			// Exponential backoff: 10ms, 20ms, 40ms, 80ms, etc.
 			backoff := time.Duration(10*(1<<i)) * time.Millisecond
 			time.Sleep(backoff)
-			log.Printf("[HUB] [REDIS] [RETRY] Attempt %d/%d failed, retrying in %v: %v", 
+			log.Printf("[HUB] [REDIS] [RETRY] Attempt %d/%d failed, retrying in %v: %v",
 				i+1, maxRetries+1, backoff, err)
 		}
 	}

@@ -44,7 +44,8 @@ class _EnhancedPTTButtonState extends State<EnhancedPTTButton>
   Offset? _startPosition;
   bool _showLeaveConfirmation = false;
   bool _showEmergencyCountdown = false;
-  bool _isLeavingChannel = false; // Guard flag to prevent multiple leave dialogs
+  bool _isLeavingChannel =
+      false; // Guard flag to prevent multiple leave dialogs
   int _countdownSeconds = 3;
 
   static const double _swipeThreshold = 50.0; // Minimum swipe distance
@@ -234,7 +235,8 @@ class _EnhancedPTTButtonState extends State<EnhancedPTTButton>
   void _showLeaveChannelDialog(CommsState commsState) {
     // Prevent showing multiple dialogs
     if (_isLeavingChannel) {
-      debugPrint('[EnhancedPTTButton] Leave dialog already shown, ignoring duplicate request');
+      debugPrint(
+          '[EnhancedPTTButton] Leave dialog already shown, ignoring duplicate request');
       return;
     }
 

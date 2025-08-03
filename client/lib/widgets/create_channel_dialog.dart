@@ -86,7 +86,7 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
           // Store context-dependent values before using them
           final scaffoldMessenger = ScaffoldMessenger.of(context);
           final theme = Theme.of(context);
-          
+
           scaffoldMessenger.showSnackBar(
             SnackBar(
               content:
@@ -101,11 +101,11 @@ class _CreateChannelDialogState extends State<CreateChannelDialog> {
         setState(() {
           _isLoading = false;
         });
-        
+
         // Store context-dependent values before using them
         final scaffoldMessenger = ScaffoldMessenger.of(context);
         final theme = Theme.of(context);
-        
+
         scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
