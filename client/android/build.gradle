@@ -9,6 +9,13 @@ allprojects {
         mavenCentral()
     }
 }
+
+// Suppress Java obsolete warnings from Flutter plugins
+subprojects {
+    project.tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:-options"
+    }
+}
     
 rootProject.buildDir = '../build'
 subprojects {

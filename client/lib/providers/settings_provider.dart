@@ -48,18 +48,17 @@ class SettingsProvider extends ChangeNotifier {
   bool get magicMicEnabled => _magicMicEnabled;
   bool get isLoaded => _isLoaded;
 
-  // Predefined API endpoints for easy switching
   static const List<Map<String, String>> predefinedEndpoints = [
     {
-      'name': 'Production',
-      'api': 'https://api.operationwon.com',
-      'websocket': 'wss://api.operationwon.com/msg',
+      'name': 'Stable',
+      'api': 'https://192.9.165.5:8000',
+      'websocket': 'wss://192.9.165.5:8000/msg',
     },
-    {
-      'name': 'Staging',
-      'api': 'https://staging-api.operationwon.com',
-      'websocket': 'wss://staging-api.operationwon.com/msg',
-    },
+    // {
+    //   'name': 'Staging',
+    //   'api': 'https://staging-api.operationwon.com',
+    //   'websocket': 'wss://staging-api.operationwon.com/msg',
+    // },
   ];
 
   SettingsProvider() {

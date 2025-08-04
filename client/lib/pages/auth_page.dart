@@ -339,7 +339,7 @@ class _LoginFormState extends State<LoginForm> {
       builder: (context, settingsProvider, child) {
         return DropdownButtonFormField<String>(
           value: settingsProvider.getCurrentPredefinedEndpoint()?['name'] ??
-              'Custom',
+              'Self-hosted',
           decoration: const InputDecoration(
             labelText: 'Server',
             prefixIcon: Icon(Icons.dns_outlined),
