@@ -62,7 +62,21 @@ chmod 755 ./audio
 
 # Build and start services
 echo "🏗️  Building and starting services..."
+
+# Cleanup existing network to prevent IP conflicts
+echo "🧹 Cleaning up existing Docker resources..."
 $COMPOSE_CMD down
+if [ "$CONTAINER_ENGINE" = "docker" ]; then
+    docker network ls | grep opwon_network | awk '{print $1}' | xargs -r docker network rm
+    # Remove orphaned containers if any
+    docker ps -a | grep "opwon_" | awk '{print $1}' | xargs -r docker rm -f
+elif [ "$CONTAINER_ENGINE" = "podman" ]; then
+    podman network ls | grep opwon_network | awk '{print $1}' | xargs -r podman network rm
+    # Remove orphaned containers if any
+    podman ps -a | grep "opwon_" | awk '{print $1}' | xargs -r podman rm -f
+fi
+
+# Build and start
 $COMPOSE_CMD build --no-cache
 $COMPOSE_CMD up -d
 
@@ -73,6 +87,38 @@ sleep 10
 # Check service health
 echo "🏥 Checking service health..."
 $COMPOSE_CMD ps
+
+# Verify MySQL connectivity from server container
+echo "🔍 Verifying MySQL connectivity..."
+if [ "$CONTAINER_ENGINE" = "docker" ]; then
+    if docker exec opwon_server mysql -h mysql -u opwon_user -popwon_password -e "SELECT 1;" &>/dev/null; then
+        echo "✅ MySQL connectivity verified!"
+    else
+        echo "⚠️ MySQL connectivity issue detected. Attempting to fix permissions..."
+        docker exec opwon_mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD:-opwon_root_password} -e "
+            DROP USER IF EXISTS 'opwon_user'@'%';
+            CREATE USER 'opwon_user'@'%' IDENTIFIED BY 'opwon_password';
+            GRANT ALL PRIVILEGES ON operation_won.* TO 'opwon_user'@'%';
+            FLUSH PRIVILEGES;"
+        echo "🔄 Restarting server container..."
+        docker restart opwon_server
+        sleep 5
+    fi
+elif [ "$CONTAINER_ENGINE" = "podman" ]; then
+    if podman exec opwon_server mysql -h mysql -u opwon_user -popwon_password -e "SELECT 1;" &>/dev/null; then
+        echo "✅ MySQL connectivity verified!"
+    else
+        echo "⚠️ MySQL connectivity issue detected. Attempting to fix permissions..."
+        podman exec opwon_mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD:-opwon_root_password} -e "
+            DROP USER IF EXISTS 'opwon_user'@'%';
+            CREATE USER 'opwon_user'@'%' IDENTIFIED BY 'opwon_password';
+            GRANT ALL PRIVILEGES ON operation_won.* TO 'opwon_user'@'%';
+            FLUSH PRIVILEGES;"
+        echo "🔄 Restarting server container..."
+        podman restart opwon_server
+        sleep 5
+    fi
+fi
 
 # Test server endpoint
 echo "🧪 Testing server endpoint..."
@@ -94,5 +140,16 @@ echo "  View logs: $COMPOSE_CMD logs -f"
 echo "  Stop services: $COMPOSE_CMD down"
 echo "  Restart services: $COMPOSE_CMD restart"
 echo "  Update services: $COMPOSE_CMD pull && $COMPOSE_CMD up -d"
+echo ""
+echo "🖥️ Container Network Information:"
+echo "  Network: 192.168.100.0/24"
+echo "  MySQL: 192.168.100.2"
+echo "  Redis: 192.168.100.3"
+echo "  Server: 192.168.100.4"
+echo ""
+echo "🛠️ Troubleshooting:"
+echo "  If you encounter IP conflicts, run: $COMPOSE_CMD down && $COMPOSE_CMD up -d"
+echo "  For persistent issues, you may need to remove the network:"
+echo "  $CONTAINER_ENGINE network rm \$($CONTAINER_ENGINE network ls | grep opwon_network | awk '{print \$1}')"
 echo ""
 echo "🎉 Deployment complete!"

@@ -18,7 +18,8 @@ services:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
-      - opwon_network
+      opwon_network:
+        ipv4_address: 192.168.100.2
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -34,7 +35,8 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - opwon_network
+      opwon_network:
+        ipv4_address: 192.168.100.3
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -74,7 +76,8 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - opwon_network
+      opwon_network:
+        ipv4_address: 192.168.100.4
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health", "||", "exit", "1"]
@@ -91,6 +94,10 @@ volumes:
 networks:
   opwon_network:
     driver: bridge
+    # Using a more unique subnet (192.168.100.0/24) to avoid conflicts
+    # This is different from common default subnets
     ipam:
+      driver: default
       config:
-        - subnet: 172.19.0.0/16
+        - subnet: 192.168.100.0/24
+          gateway: 192.168.100.1

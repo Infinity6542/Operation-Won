@@ -9,9 +9,27 @@ USE operation_won;
 -- We rely on Docker Compose to create the MySQL user with correct credentials
 
 -- Grant proper permissions to the database user (created by Docker Compose)
--- This ensures the user can connect from any container in the network
-CREATE USER IF NOT EXISTS 'opwon_user'@'%' IDENTIFIED BY 'opwon_password';
+-- First ensure no conflicting users exist
+DROP USER IF EXISTS 'opwon_user'@'%';
+DROP USER IF EXISTS 'opwon_user'@'172.19.0.%';
+DROP USER IF EXISTS 'opwon_user'@'192.168.100.%';
+DROP USER IF EXISTS 'opwon_user'@'192.168.100.4';
+DROP USER IF EXISTS 'opwon_user'@'server';
+DROP USER IF EXISTS 'opwon_user'@'localhost';
+
+-- Create user with wildcard host to allow connections from anywhere in the Docker network
+CREATE USER 'opwon_user'@'%' IDENTIFIED BY 'opwon_password';
 GRANT ALL PRIVILEGES ON operation_won.* TO 'opwon_user'@'%';
+
+-- Create specific user for the server container by IP address
+CREATE USER 'opwon_user'@'192.168.100.4' IDENTIFIED BY 'opwon_password';
+GRANT ALL PRIVILEGES ON operation_won.* TO 'opwon_user'@'192.168.100.4';
+
+-- Create specific user for the server container by service name
+CREATE USER 'opwon_user'@'server' IDENTIFIED BY 'opwon_password';
+GRANT ALL PRIVILEGES ON operation_won.* TO 'opwon_user'@'server';
+
+-- Apply changes
 FLUSH PRIVILEGES;
 
 -- Users table
