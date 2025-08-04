@@ -338,8 +338,7 @@ class _LoginFormState extends State<LoginForm> {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
         return DropdownButtonFormField<String>(
-          value: settingsProvider.getCurrentPredefinedEndpoint()?['name'] ??
-              'Self-hosted',
+          value: settingsProvider.getCurrentPredefinedEndpoint()?['name'] ?? '',
           decoration: const InputDecoration(
             labelText: 'Server',
             prefixIcon: Icon(Icons.dns_outlined),
@@ -354,7 +353,7 @@ class _LoginFormState extends State<LoginForm> {
             }),
             const DropdownMenuItem(
               value: 'Custom',
-              child: Text('Custom Server'),
+              child: Text('Self-hosted'),
             ),
           ],
           onChanged: (value) {
@@ -379,7 +378,7 @@ class _LoginFormState extends State<LoginForm> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Custom Server'),
+        title: const Text('Self-hosted'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
