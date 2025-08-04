@@ -52,7 +52,7 @@ class SettingsProvider extends ChangeNotifier {
     {
       'name': 'Stable',
       'api': 'http://192.9.165.5:8000',
-      'websocket': 'wss://192.9.165.5:8000/msg',
+      'websocket': 'ws://192.9.165.5:8000/msg',
     },
     // {
     //   'name': 'Staging',

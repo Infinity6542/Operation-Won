@@ -29,9 +29,9 @@ func main() {
 	log.Println("Starting Operation Won Server...")
 
 	// Load environment variables with defaults
-	redisHost := getEnv("REDIS_HOST", "localhost")
+	redisHost := getEnv("REDIS_HOST", "redis")
 	redisPort := getEnv("REDIS_PORT", "6379")
-	mysqlHost := getEnv("MYSQL_HOST", "localhost")
+	mysqlHost := getEnv("MYSQL_HOST", "mysql")
 	mysqlPort := getEnv("MYSQL_PORT", "3306")
 	mysqlUser := getEnv("MYSQL_USER", "opwon_user")
 	mysqlPassword := getEnv("MYSQL_PASSWORD", "opwon_password")
