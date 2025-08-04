@@ -894,11 +894,9 @@ class _HomeViewState extends State<HomeView>
           children: [
             Text('Operation Won - Communication App'),
             SizedBox(height: 8),
-            Text('Version: 1.0.0'),
+            Text('Version: 0.0.1a'),
             SizedBox(height: 16),
-            Text('For support, please contact:'),
-            SizedBox(height: 4),
-            Text('support@operationwon.com'),
+            Text('No support just yet :).'),
           ],
         ),
         actions: [

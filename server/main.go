@@ -33,8 +33,8 @@ func main() {
 	redisPort := getEnv("REDIS_PORT", "6379")
 	mysqlHost := getEnv("MYSQL_HOST", "localhost")
 	mysqlPort := getEnv("MYSQL_PORT", "3306")
-	mysqlUser := getEnv("MYSQL_USER", "appuser")
-	mysqlPassword := getEnv("MYSQL_PASSWORD", "apppassword")
+	mysqlUser := getEnv("MYSQL_USER", "opwon_user")
+	mysqlPassword := getEnv("MYSQL_PASSWORD", "opwon_password")
 	mysqlDatabase := getEnv("MYSQL_DATABASE", "operation_won")
 	serverPort := getEnv("SERVER_PORT", "8000")
 
