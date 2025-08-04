@@ -4,6 +4,10 @@
 CREATE DATABASE IF NOT EXISTS operation_won;
 USE operation_won;
 
+-- Note: MySQL user must be created manually or by the Docker Compose
+-- MySQL doesn't support environment variables in SQL directly
+-- We rely on Docker Compose to create the MySQL user with correct credentials
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -196,12 +200,12 @@ CREATE TABLE IF NOT EXISTS event_invites (
 -- Create a default admin user (password: admin123)
 -- Password hash for 'admin123' using bcrypt: $2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeS/FJyVbLq8T1/.S
 INSERT IGNORE INTO users (user_uuid, username, email, hashed_password) VALUES 
-('550e8400-e29b-41d4-a716-446655440000', 'admin', 'admin@operationwon.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeS/FJyVbLq8T1/.S');
+('550e8400-e29b-41d4-a716-446655440000', 'admin', 'admin@example.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeS/FJyVbLq8T1/.S');
 
 -- Create a demo user (password: password123)
 -- Password hash for 'password123' using bcrypt: $2a$10$WO/t3NdS7LrlxLW4oM4Z1erCKnpvDuSWH9vCxO76mdNIxQ9.unvjS
 INSERT IGNORE INTO users (user_uuid, username, email, hashed_password) VALUES 
-('550e8400-e29b-41d4-a716-446655440001', 'demo', 'demo@operationwon.com', '$2a$10$WO/t3NdS7LrlxLW4oM4Z1erCKnpvDuSWH9vCxO76mdNIxQ9.unvjS');
+('550e8400-e29b-41d4-a716-446655440001', 'demo', 'demo@example.com', '$2a$10$WO/t3NdS7LrlxLW4oM4Z1erCKnpvDuSWH9vCxO76mdNIxQ9.unvjS');
 
 -- Create sample data for testing
 INSERT IGNORE INTO events (event_uuid, event_name, event_description, organiser_user_id, event_link, is_public, invite_code) VALUES 
