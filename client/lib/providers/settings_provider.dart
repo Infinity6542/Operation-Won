@@ -51,7 +51,7 @@ class SettingsProvider extends ChangeNotifier {
   static const List<Map<String, String>> predefinedEndpoints = [
     {
       'name': 'Stable',
-      'api': 'https://192.9.165.5:8000',
+      'api': 'http://192.9.165.5:8000',
       'websocket': 'wss://192.9.165.5:8000/msg',
     },
     // {
