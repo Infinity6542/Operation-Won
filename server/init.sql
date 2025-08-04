@@ -8,6 +8,12 @@ USE operation_won;
 -- MySQL doesn't support environment variables in SQL directly
 -- We rely on Docker Compose to create the MySQL user with correct credentials
 
+-- Grant proper permissions to the database user (created by Docker Compose)
+-- This ensures the user can connect from any container in the network
+CREATE USER IF NOT EXISTS 'opwon_user'@'%' IDENTIFIED BY 'opwon_password';
+GRANT ALL PRIVILEGES ON operation_won.* TO 'opwon_user'@'%';
+FLUSH PRIVILEGES;
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
