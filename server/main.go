@@ -37,9 +37,7 @@ func main() {
 	serverPort := getEnv("SERVER_PORT", "8000")
 
 	// Redis configuration
-	var redisHost string
-	fmt.Print("Enter the Redis IP address: ")
-	fmt.Scanln(&redisHost)
+	redisHost := "192.168.100.3"
 
 	redisAddr := fmt.Sprintf("%s:%s", redisHost, redisPort)
 	log.Printf("[LOG] [SRV] Connecting to Redis at %s", redisAddr)
@@ -79,9 +77,8 @@ func main() {
 	client.Del(ctx, "foo").Result()
 
 	// MySQL configuration
-	var mysqlHost string
-	fmt.Print("Enter the mySQL IP address: ")
-	fmt.Scanln(&mysqlHost)
+	mysqlHost := "192.168.100.2"
+
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
 	log.Printf("[LOG] [SRV] Connecting to MySQL at %s:%s", mysqlHost, mysqlPort)
 
