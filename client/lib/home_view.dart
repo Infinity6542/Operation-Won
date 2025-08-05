@@ -66,86 +66,124 @@ class _HomeViewState extends State<HomeView>
     super.build(context);
     final theme = Theme.of(context);
 
-    return Consumer3<AuthProvider, EventProvider, ChannelProvider>(
-      builder: (context, authProvider, eventProvider, channelProvider, child) {
-        final user = authProvider.user;
+    return Consumer4<AuthProvider, EventProvider, ChannelProvider, CommsState>(
+      builder: (context, auth, events, channels, commsState, child) {
+        final user = auth.user;
+        final isInChannel = commsState.currentChannelId != null;
+
+        const pttHeightFraction = 0.8; // 4/5 of the screen
+        const contentHeightFraction = 0.2; // 1/5 of the screen
+        const animationDuration = Duration(milliseconds: 400);
+
+        final screenHeight = MediaQuery.of(context).size.height;
+
+        // Determine animated positions and sizes
+        final double contentHeight = isInChannel
+            ? screenHeight * contentHeightFraction
+            : screenHeight * (1 - contentHeightFraction);
+
+        final double pttHeight = isInChannel
+            ? screenHeight * pttHeightFraction
+            : screenHeight * contentHeightFraction;
+
+        final double contentTop = 0;
+        final double pttTop = contentHeight;
 
         return Scaffold(
           backgroundColor: Colors.black,
           body: Stack(
             children: [
-              SafeArea(
-                child: Column(
-                  children: [
-                    // Custom App Bar
-                    _buildAppBar(theme, user?.username),
-
-                    // Communication Status Bar
-                    _buildCommsStatusBar(theme),
-
-                    // Tab Bar
-                    _buildTabBar(theme),
-
-                    // Content
-                    Expanded(
-                      child: CustomRefreshIndicator(
-                        onRefresh: _loadData,
-                        child: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildEventsTab(context, eventProvider),
-                            _buildChannelsTab(context, channelProvider),
-                          ],
-                        ),
+              // Animated Content Area (Events/Channels)
+              AnimatedPositioned(
+                duration: animationDuration,
+                curve: Curves.easeInOut,
+                top: contentTop,
+                left: 0,
+                right: 0,
+                height: contentHeight,
+                child: IgnorePointer(
+                  ignoring: isInChannel, // Disable interaction when collapsed
+                  child: AnimatedOpacity(
+                    duration: animationDuration,
+                    opacity: isInChannel ? 0.5 : 1.0,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.of(context).padding.top,
+                        left: MediaQuery.of(context).padding.left,
+                        right: MediaQuery.of(context).padding.right,
+                      ),
+                      child: Column(
+                        children: [
+                          _buildAppBar(theme, user?.username),
+                          _buildCommsStatusBar(theme),
+                          _buildTabBar(theme),
+                          Expanded(
+                            child: CustomRefreshIndicator(
+                              onRefresh: _loadData,
+                              child: TabBarView(
+                                controller: _tabController,
+                                children: [
+                                  _buildEventsTab(context, events),
+                                  _buildChannelsTab(context, channels),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-              // Scrim overlay when speed dial is open
-              // Backdrop for speed dial with proper fade in/out animation
+
+              // Animated PTT Gesture Zone
+              AnimatedPositioned(
+                duration: animationDuration,
+                curve: Curves.easeInOut,
+                top: pttTop,
+                left: 0,
+                right: 0,
+                height: pttHeight,
+                child: PTTGestureZone(
+                  onPermissionDenied: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('Microphone permission required'),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // Scrim overlay for Speed Dial
               Positioned.fill(
                 child: AnimatedOpacity(
-                  duration: const Duration(
-                      milliseconds: 200), // Faster backdrop animation
+                  duration: const Duration(milliseconds: 200),
                   curve: Curves.easeInOut,
                   opacity: _isSpeedDialOpen ? 1.0 : 0.0,
                   child: IgnorePointer(
                     ignoring: !_isSpeedDialOpen,
                     child: GestureDetector(
                       onTap: () {
-                        // Light haptic feedback when dismissing speed dial
                         HapticFeedback.lightImpact();
                         setState(() {
                           _isSpeedDialOpen = false;
                         });
                       },
                       child: Container(
-                        color: Colors.black.withValues(alpha: 0.5),
+                        color: Colors.black.withAlpha(128),
                       ),
                     ),
                   ),
                 ),
-              ),
-              // PTT Gesture Zone with enhanced coverage for rounded screens
-              PTTGestureZone(
-                heightFraction:
-                    0.45, // Increased coverage for better accessibility on rounded screens
-                onPermissionDenied: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Microphone permission required'),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    ),
-                  );
-                },
               ),
 
               // Floating Action Button fixed at bottom-right corner
               Positioned(
                 bottom: 16, // 16px from bottom edge
                 right: 16, // 16px from right edge
-                child: _buildFloatingActionButton(theme, authProvider),
+                child: _buildFloatingActionButton(theme, auth),
               ),
             ],
           ),

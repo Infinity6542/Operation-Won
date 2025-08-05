@@ -220,7 +220,7 @@ func (h *Hub) switchChannel(req *ChannelChangeRequest) {
 
 // WebSocket handling constants
 const (
-	maxMessageSize  = 8192 // Increased for larger audio chunks
+	maxMessageSize  = 8192             // Increased for larger audio chunks
 	pongWait        = 60 * time.Second // Increased timeout
 	pingInterval    = pongWait * 9 / 10
 	waitOnReceiving = 20 * time.Second // Increased timeout
@@ -260,19 +260,19 @@ func (c *Client) readPump() {
 			log.Printf("[WBS] [BIN] Received binary message: %d bytes, isRecording: %v, messageID: %s", len(messageData), c.isRecording, c.currentMessageeID)
 			if c.isRecording {
 				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageeID)
-				
+
 				// Check if directory exists and create if necessary
 				if err := os.MkdirAll("./audio", os.ModePerm); err != nil {
 					log.Printf("[REC] [DIR] Failed to create audio directory: %v", err)
 					continue
 				}
-				
+
 				f, e := os.OpenFile(file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 				if e != nil {
 					log.Printf("[REC] [OPN] Failed to open file %s: %v", file, e)
 					continue
 				}
-				
+
 				bytesWritten, e := f.Write(messageData)
 				if e != nil {
 					log.Printf("[REC] [WRT] Failed to write to file %s: %v", file, e)
@@ -280,7 +280,7 @@ func (c *Client) readPump() {
 					continue
 				}
 				f.Close()
-				
+
 				// Verify file exists after writing
 				if stat, err := os.Stat(file); err != nil {
 					log.Printf("[REC] [ERR] File %s does not exist after writing: %v", file, err)
@@ -378,7 +378,7 @@ func (c *Client) handleSignal(s Signal) {
 						log.Printf("[PTT] [STOP] Audio file %s missing on PTT stop: %v", audioFile, err)
 					} else {
 						log.Printf("[PTT] [STOP] Audio file %s exists on PTT stop (size: %d bytes)", audioFile, stat.Size())
-						
+
 						// List all files in audio directory for debugging
 						if files, err := os.ReadDir("./audio"); err != nil {
 							log.Printf("[PTT] [STOP] Failed to read audio directory: %v", err)
@@ -481,7 +481,18 @@ func (c *Client) writePump() {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			w, e := c.conn.NextWriter(websocket.BinaryMessage)
+
+			// Determine message type - if it's valid JSON, send as text, otherwise as binary
+			var messageType int
+			if json.Valid(msg) {
+				messageType = websocket.TextMessage
+				log.Printf("[WBS] [WRT] Sending text message: %d bytes", len(msg))
+			} else {
+				messageType = websocket.BinaryMessage
+				log.Printf("[WBS] [WRT] Sending binary message: %d bytes", len(msg))
+			}
+
+			w, e := c.conn.NextWriter(messageType)
 			if e != nil {
 				log.Printf("[WBS] [WRT] Something went wrong while preparing the writer: %s", e)
 				return
@@ -489,7 +500,22 @@ func (c *Client) writePump() {
 			w.Write(msg)
 			n := len(c.send)
 			for i := 0; i < n; i++ {
-				w.Write(<-c.send)
+				additionalMsg := <-c.send
+				// For additional messages in queue, also check type
+				if json.Valid(additionalMsg) && messageType == websocket.TextMessage {
+					w.Write(additionalMsg)
+				} else if !json.Valid(additionalMsg) && messageType == websocket.BinaryMessage {
+					w.Write(additionalMsg)
+				} else {
+					// If message types don't match, we need to send separately
+					// Put it back and handle in next iteration
+					select {
+					case c.send <- additionalMsg:
+					default:
+						// Channel full, skip this message
+					}
+					break
+				}
 			}
 			if e := w.Close(); e != nil {
 				log.Printf("[WBS] [CLS] Something went wrong while closing the WebSocket connection: %s", e)

@@ -131,7 +131,7 @@ func main() {
 	if e := os.MkdirAll("./audio", os.ModePerm); e != nil {
 		log.Fatalf("[DIR] [CRT] Failed to create audio directory: %s", e)
 	}
-	
+
 	// Log current working directory for debugging
 	if cwd, err := os.Getwd(); err != nil {
 		log.Printf("[DIR] [CWD] Failed to get working directory: %v", err)
