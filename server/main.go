@@ -131,6 +131,14 @@ func main() {
 	if e := os.MkdirAll("./audio", os.ModePerm); e != nil {
 		log.Fatalf("[DIR] [CRT] Failed to create audio directory: %s", e)
 	}
+	
+	// Log current working directory for debugging
+	if cwd, err := os.Getwd(); err != nil {
+		log.Printf("[DIR] [CWD] Failed to get working directory: %v", err)
+	} else {
+		log.Printf("[DIR] [CWD] Current working directory: %s", cwd)
+		log.Printf("[DIR] [AUD] Audio directory path: %s/audio", cwd)
+	}
 
 	// Start the hub and run it
 	hub := NewHub(client)
