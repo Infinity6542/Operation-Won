@@ -343,7 +343,7 @@ class ApiService {
     try {
       debugPrint('[ApiService] Testing server connectivity...');
       final response = await _dio.get(
-        '/ping',
+        '/health',
         options: Options(
           sendTimeout: const Duration(seconds: 5),
           receiveTimeout: const Duration(seconds: 5),

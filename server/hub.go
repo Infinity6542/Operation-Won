@@ -213,10 +213,10 @@ func (h *Hub) switchChannel(req *ChannelChangeRequest) {
 
 // WebSocket handling constants
 const (
-	maxMessageSize  = 4096 // This should be editable sometime later (requires reload?)
-	pongWait        = 30 * time.Second
+	maxMessageSize  = 8192 // Increased for larger audio chunks
+	pongWait        = 60 * time.Second // Increased timeout
 	pingInterval    = pongWait * 9 / 10
-	waitOnReceiving = 10 * time.Second
+	waitOnReceiving = 20 * time.Second // Increased timeout
 )
 
 func (c *Client) readPump() {
@@ -250,11 +250,12 @@ func (c *Client) readPump() {
 			}
 			c.handleSignal(s)
 		case websocket.BinaryMessage:
+			log.Printf("[WBS] [BIN] Received binary message: %d bytes, isRecording: %v, messageID: %s", len(messageData), c.isRecording, c.currentMessageeID)
 			if c.isRecording {
 				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageeID)
 				f, e := os.OpenFile(file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 				if e != nil {
-					log.Printf("[REC] [OPN] Failed to open file %s: $%v", file, e)
+					log.Printf("[REC] [OPN] Failed to open file %s: %v", file, e)
 					continue
 				}
 				if _, e := f.Write(messageData); e != nil {
@@ -262,9 +263,12 @@ func (c *Client) readPump() {
 					continue
 				}
 				f.Close()
+				log.Printf("[REC] [SUC] Successfully wrote %d bytes to %s", len(messageData), file)
 
 				msg := &Message{ChannelID: c.ChannelID, Data: messageData, Sender: c}
 				c.hub.broadcast <- msg
+			} else {
+				log.Printf("[WBS] [BIN] Ignoring binary message - not recording")
 			}
 		}
 	}
@@ -284,7 +288,7 @@ func (c *Client) handleSignal(s Signal) {
 			c.isRecording = true
 			c.currentMessageeID = fmt.Sprintf("%d-%d", c.UserID, time.Now().Unix())
 
-			log.Printf("[HUB] [PTT] User %d acquired speaker lock for channel %s", c.UserID, c.ChannelID)
+			log.Printf("[HUB] [PTT] User %d acquired speaker lock for channel %s, messageID: %s", c.UserID, c.ChannelID, c.currentMessageeID)
 
 			// Notify other clients in the channel that someone is speaking
 			speakerNotification := map[string]interface{}{

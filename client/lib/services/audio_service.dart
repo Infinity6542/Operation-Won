@@ -24,7 +24,8 @@ class AudioService extends ChangeNotifier {
 
   AudioService() {
     _setupMethodCallHandler();
-    _generateE2EEKey(); // Generate key on startup
+    // Skip E2EE key generation for now since native implementation is not available
+    // _generateE2EEKey(); 
   }
 
   void _setupMethodCallHandler() {
@@ -173,7 +174,10 @@ class AudioService extends ChangeNotifier {
         debugPrint('[Audio] E2EE key generated');
       }
     } catch (e) {
-      debugPrint('[Audio] Failed to generate E2EE key: $e');
+      // Skip error logging for missing plugin implementation
+      if (!e.toString().contains('MissingPluginException')) {
+        debugPrint('[Audio] Failed to generate E2EE key: $e');
+      }
     }
   }
 
@@ -202,6 +206,54 @@ class AudioService extends ChangeNotifier {
   Future<Uint8List?> generateNewE2EEKey() async {
     await _generateE2EEKey();
     return _e2eeKey;
+  }
+
+  // Encrypt audio data
+  Future<Uint8List?> encryptAudioData(Uint8List audioData) async {
+    if (!hasE2EEKey) {
+      // No key available, return unencrypted
+      return audioData;
+    }
+
+    try {
+      final encryptedData =
+          await _channel.invokeMethod('encryptAudioData', audioData);
+      if (encryptedData != null) {
+        return Uint8List.fromList(encryptedData);
+      }
+    } catch (e) {
+      // Check if it's a missing plugin implementation
+      if (e.toString().contains('MissingPluginException')) {
+        // Native encryption not implemented, return unencrypted audio silently
+        return audioData;
+      }
+      debugPrint('[Audio] Failed to encrypt audio data: $e');
+    }
+    return audioData; // Fallback to unencrypted
+  }
+
+  // Decrypt audio data
+  Future<Uint8List?> decryptAudioData(Uint8List encryptedData) async {
+    if (!hasE2EEKey) {
+      // No key available, return data as-is
+      return encryptedData;
+    }
+
+    try {
+      final decryptedData =
+          await _channel.invokeMethod('decryptAudioData', encryptedData);
+      if (decryptedData != null) {
+        return Uint8List.fromList(decryptedData);
+      }
+    } catch (e) {
+      // Check if it's a missing plugin implementation
+      if (e.toString().contains('MissingPluginException')) {
+        // Native decryption not implemented, return data as-is silently
+        return encryptedData;
+      }
+      debugPrint('[Audio] Failed to decrypt audio data: $e');
+    }
+    return encryptedData; // Fallback to returning as-is
   }
 
   @override
@@ -233,5 +285,19 @@ class WebAudioService extends AudioService {
   Future<void> playAudioChunk(Uint8List audioData) async {
     // Web implementation would use Web Audio API
     debugPrint('[Audio] Web audio playback not yet implemented');
+  }
+
+  @override
+  Future<Uint8List?> encryptAudioData(Uint8List audioData) async {
+    // Web implementation would use crypto-js or Web Crypto API
+    debugPrint('[Audio] Web audio encryption not yet implemented');
+    return audioData; // Return unencrypted for now
+  }
+
+  @override
+  Future<Uint8List?> decryptAudioData(Uint8List encryptedData) async {
+    // Web implementation would use crypto-js or Web Crypto API
+    debugPrint('[Audio] Web audio decryption not yet implemented');
+    return encryptedData; // Return as-is for now
   }
 }

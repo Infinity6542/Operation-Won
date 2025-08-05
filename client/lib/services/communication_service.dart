@@ -313,14 +313,31 @@ class CommunicationService extends ChangeNotifier {
   // Handle outgoing audio data (from microphone)
   void _onAudioDataReceived(Uint8List audioData) {
     if (_isPTTActive && _webSocketService.isConnected) {
-      _webSocketService.sendAudioData(audioData);
+      // Encrypt audio data before sending (async operation)
+      _audioService.encryptAudioData(audioData).then((encryptedData) {
+        if (encryptedData != null) {
+          _webSocketService.sendAudioData(encryptedData);
+        }
+      }).catchError((error) {
+        debugPrint('[Comm] Failed to encrypt outgoing audio: $error');
+        // Send unencrypted as fallback
+        _webSocketService.sendAudioData(audioData);
+      });
     }
   }
 
   // Handle incoming audio data (from other users)
   void _onIncomingAudioReceived(Uint8List audioData) {
-    // Play the received audio chunk
-    _audioService.playAudioChunk(audioData);
+    // Decrypt audio data before playing (async operation)
+    _audioService.decryptAudioData(audioData).then((decryptedData) {
+      if (decryptedData != null) {
+        _audioService.playAudioChunk(decryptedData);
+      }
+    }).catchError((error) {
+      debugPrint('[Comm] Failed to decrypt incoming audio: $error');
+      // Play unencrypted as fallback
+      _audioService.playAudioChunk(audioData);
+    });
   }
 
   // Test connection
