@@ -91,23 +91,41 @@ func main() {
 	}
 	client.Del(ctx, "foo").Result()
 
-	// MySQL configuration
+	// MySQL configuration with retry logic
 	log.Printf("[LOG] [SRV] Connecting to MySQL at %s:%s", mysqlHost, mysqlPort)
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
 
 	var e2 error
-	db, e2 = sql.Open("mysql", dsn)
-	if e2 != nil {
-		log.Printf("[ERR] [SRV] Failed to open MySQL connection: %v", e2)
-		panic(e2.Error())
-	}
+	maxRetries := 5
+	retryDelay := 3 * time.Second
+	
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		log.Printf("[LOG] [SRV] MySQL connection attempt %d/%d", attempt, maxRetries)
+		
+		db, e2 = sql.Open("mysql", dsn)
+		if e2 != nil {
+			log.Printf("[ERR] [SRV] Failed to open MySQL connection (attempt %d): %v", attempt, e2)
+			if attempt == maxRetries {
+				panic(e2.Error())
+			}
+			time.Sleep(retryDelay)
+			continue
+		}
 
-	// Verify the connection is valid
-	if e := db.Ping(); e != nil {
-		log.Printf("[ERR] [SRV] Failed to ping MySQL: %v", e)
-		panic(e.Error())
-	} else {
-		log.Println("[LOG] [SRV] Connected to MySQL")
+		// Verify the connection is valid
+		if e := db.Ping(); e != nil {
+			log.Printf("[ERR] [SRV] Failed to ping MySQL (attempt %d): %v", attempt, e)
+			db.Close()
+			if attempt == maxRetries {
+				panic(e.Error())
+			}
+			time.Sleep(retryDelay)
+			continue
+		}
+		
+		// Success!
+		log.Println("[LOG] [SRV] Connected to MySQL successfully")
+		break
 	}
 
 	if e := os.MkdirAll("./audio", os.ModePerm); e != nil {

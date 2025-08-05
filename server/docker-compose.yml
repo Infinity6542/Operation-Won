@@ -66,9 +66,6 @@ services:
       SERVER_PORT: ${SERVER_PORT:-8000}
       JWT_SECRET: ${JWT_SECRET:-verymuchasecr3t_change_in_production}
       
-      # Startup delay (in seconds) to wait for MySQL/Redis to be ready
-      STARTUP_DELAY_SECONDS: ${STARTUP_DELAY_SECONDS:-10}
-      
       # Environment
       GO_ENV: ${GO_ENV:-production}
     ports:

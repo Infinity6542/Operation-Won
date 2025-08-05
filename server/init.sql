@@ -4,33 +4,9 @@
 CREATE DATABASE IF NOT EXISTS operation_won;
 USE operation_won;
 
--- Note: MySQL user must be created manually or by the Docker Compose
--- MySQL doesn't support environment variables in SQL directly
--- We rely on Docker Compose to create the MySQL user with correct credentials
-
--- Grant proper permissions to the database user (created by Docker Compose)
--- First ensure no conflicting users exist
-DROP USER IF EXISTS 'opwon_user'@'%';
-DROP USER IF EXISTS 'opwon_user'@'172.19.0.%';
-DROP USER IF EXISTS 'opwon_user'@'192.168.100.%';
-DROP USER IF EXISTS 'opwon_user'@'192.168.100.4';
-DROP USER IF EXISTS 'opwon_user'@'server';
-DROP USER IF EXISTS 'opwon_user'@'localhost';
-
--- Create user with wildcard host to allow connections from anywhere in the Docker network
-CREATE USER 'opwon_user'@'%' IDENTIFIED BY 'opwon_password';
-GRANT ALL PRIVILEGES ON operation_won.* TO 'opwon_user'@'%';
-
--- Create specific user for the server container by IP address
-CREATE USER 'opwon_user'@'192.168.100.4' IDENTIFIED BY 'opwon_password';
-GRANT ALL PRIVILEGES ON operation_won.* TO 'opwon_user'@'192.168.100.4';
-
--- Create specific user for the server container by service name
-CREATE USER 'opwon_user'@'server' IDENTIFIED BY 'opwon_password';
-GRANT ALL PRIVILEGES ON operation_won.* TO 'opwon_user'@'server';
-
--- Apply changes
-FLUSH PRIVILEGES;
+-- Note: User creation and permissions are handled by the Docker entrypoint script
+-- using the environment variables passed from docker-compose.yml.
+-- This script should only contain schema definitions and data seeding.
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
