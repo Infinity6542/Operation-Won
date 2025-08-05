@@ -5,10 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -27,55 +25,12 @@ var (
 	db *sql.DB
 )
 
-// resolveHostIP resolves a hostname to its IP address
-func resolveHostIP(hostname string) (string, error) {
-	// First try to resolve using DNS
-	ips, err := net.LookupIP(hostname)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve hostname %s: %v", hostname, err)
-	}
-	
-	for _, ip := range ips {
-		if ipv4 := ip.To4(); ipv4 != nil {
-			return ipv4.String(), nil
-		}
-	}
-	
-	return "", fmt.Errorf("no IPv4 address found for hostname %s", hostname)
-}
-
-// getContainerIP gets the IP address of a container using docker/podman inspect
-func getContainerIP(containerName string) (string, error) {
-	// Try docker first
-	cmd := exec.Command("docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", containerName)
-	output, err := cmd.Output()
-	if err == nil && len(strings.TrimSpace(string(output))) > 0 {
-		ip := strings.TrimSpace(string(output))
-		if ip != "" && ip != "<no value>" {
-			return ip, nil
-		}
-	}
-	
-	// Try podman if docker failed
-	cmd = exec.Command("podman", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", containerName)
-	output, err = cmd.Output()
-	if err == nil && len(strings.TrimSpace(string(output))) > 0 {
-		ip := strings.TrimSpace(string(output))
-		if ip != "" && ip != "<no value>" {
-			return ip, nil
-		}
-	}
-	
-	return "", fmt.Errorf("Failed to get IP for container %s using docker/podman inspect", containerName)
-}
-
 func main() {
 	log.Println("Starting Operation Won Server...")
 
 	// Load environment variables with defaults
-	redisHost := getEnv("REDIS_HOST", "opwon_redis")
+	redisHost := getEnv("REDIS_HOST", "redis")
 	redisPort := getEnv("REDIS_PORT", "6379")
-	mysqlHost := getEnv("MYSQL_HOST", "opwon_mysql")
 	mysqlPort := getEnv("MYSQL_PORT", "3306")
 	mysqlUser := getEnv("MYSQL_USER", "opwon_user")
 	mysqlPassword := getEnv("MYSQL_PASSWORD", "opwon_password")
@@ -120,38 +75,12 @@ func main() {
 	}
 	client.Del(ctx, "foo").Result()
 
-	// MySQL configuration with dynamic IP resolution
-	log.Printf("[LOG] [SRV] Resolving MySQL host: %s", mysqlHost)
-	
-	// Try to get the actual IP address of the MySQL container
-	var mysqlIP string
-	var err error
-	
-	// First try to get IP from container inspection
-	mysqlIP, err = getContainerIP("opwon_mysql")
-	if err != nil {
-		log.Printf("[WARN] [SRV] Failed to get container IP, trying DNS resolution: %v", err)
-		// Fallback to DNS resolution
-		mysqlIP, err = resolveHostIP(mysqlHost)
-		if err != nil {
-			log.Printf("[WARN] [SRV] DNS resolution failed, using hostname directly: %v", err)
-			mysqlIP = mysqlHost // Use hostname as last resort
-		}
-	}
-	
-	log.Printf("[DEBUG] [SRV] MySQL target: %s (resolved to: %s)", mysqlHost, mysqlIP)
-	
-	// Use the resolved IP for connection
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mysqlUser, mysqlPassword, mysqlIP, mysqlPort, mysqlDatabase)
-	
-	// Debug logging (mask password for security)
-	maskedDSN := fmt.Sprintf("%s:***@tcp(%s:%s)/%s", mysqlUser, mysqlIP, mysqlPort, mysqlDatabase)
-	log.Printf("[DEBUG] [SRV] MySQL DSN: %s", maskedDSN)
-	log.Printf("[DEBUG] [SRV] MySQL User: %s", mysqlUser)
-	log.Printf("[DEBUG] [SRV] MySQL IP: %s", mysqlIP)
-	log.Printf("[DEBUG] [SRV] MySQL Port: %s", mysqlPort)
-	log.Printf("[DEBUG] [SRV] MySQL Database: %s", mysqlDatabase)
-	log.Printf("[LOG] [SRV] Connecting to MySQL at %s:%s", mysqlIP, mysqlPort)
+	// MySQL configuration
+	var mysqlHost string
+	fmt.Print("Enter the mySQL IP address: ")
+	fmt.Scanln(&mysqlHost)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
+	log.Printf("[LOG] [SRV] Connecting to MySQL at %s:%s", mysqlHost, mysqlPort)
 
 	var e2 error
 	db, e2 = sql.Open("mysql", dsn)
@@ -160,19 +89,12 @@ func main() {
 		panic(e2.Error())
 	}
 
-	// Configure connection pool
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(time.Hour)
-
 	// Verify the connection is valid
-	log.Printf("[DEBUG] [SRV] Attempting to ping MySQL database...")
 	if e := db.Ping(); e != nil {
 		log.Printf("[ERR] [SRV] Failed to ping MySQL: %v", e)
-		log.Printf("[ERR] [SRV] DSN used: %s", maskedDSN)
 		panic(e.Error())
 	} else {
-		log.Println("[LOG] [SRV] Connected to MySQL successfully")
+		log.Println("[LOG] [SRV] Connected to MySQL")
 	}
 
 	if e := os.MkdirAll("./audio", os.ModePerm); e != nil {
