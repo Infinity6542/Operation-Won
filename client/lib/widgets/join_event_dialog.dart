@@ -54,10 +54,12 @@ class _JoinEventDialogState extends State<JoinEventDialog>
     try {
       HapticFeedback.mediumImpact();
 
-      // Simulate join process (replace with actual API call)
-      await Future.delayed(const Duration(seconds: 1));
+      // Get the event provider to join the event
+      final eventProvider = Provider.of<EventProvider>(context, listen: false);
+      final success =
+          await eventProvider.joinEvent(_codeController.text.trim());
 
-      if (mounted) {
+      if (success && mounted) {
         HapticFeedback.lightImpact();
         Navigator.of(context).pop(true); // Return success
 
@@ -68,9 +70,8 @@ class _JoinEventDialogState extends State<JoinEventDialog>
             behavior: SnackBarBehavior.floating,
           ),
         );
-
-        // Refresh events
-        Provider.of<EventProvider>(context, listen: false).loadEvents();
+      } else if (mounted) {
+        throw Exception('Failed to join event');
       }
     } catch (e) {
       if (mounted) {
@@ -83,7 +84,7 @@ class _JoinEventDialogState extends State<JoinEventDialog>
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Failed to join event: Invalid code'),
+            content: Text('Failed to join event: ${e.toString()}'),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),

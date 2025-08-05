@@ -60,17 +60,11 @@ class _JoinChannelDialogState extends State<JoinChannelDialog>
         throw Exception('You must be logged in to join channels');
       }
 
-      // TODO: Implement actual channel joining API call
-      // For now, simulate the process
-      await Future.delayed(const Duration(seconds: 1));
+      // Call the real API to join the channel
+      final success =
+          await channelProvider.joinChannel(_codeController.text.trim());
 
-      // Check if the invite code format is valid (basic validation)
-      final inviteCode = _codeController.text.trim();
-      if (inviteCode.length < 6) {
-        throw Exception('Invalid invite code format');
-      }
-
-      if (mounted) {
+      if (success && mounted) {
         HapticFeedback.lightImpact();
         Navigator.of(context).pop(true); // Return success
 
@@ -81,9 +75,8 @@ class _JoinChannelDialogState extends State<JoinChannelDialog>
             behavior: SnackBarBehavior.floating,
           ),
         );
-
-        // Refresh channels to show the newly joined channel
-        await channelProvider.loadChannels();
+      } else if (mounted) {
+        throw Exception('Failed to join channel');
       }
     } catch (e) {
       if (mounted) {

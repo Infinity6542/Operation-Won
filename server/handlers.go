@@ -977,7 +977,7 @@ func (s *Server) JoinEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add user as member
-	_, e = tx.Exec("INSERT INTO event_members (event_id, user_id, role) VALUES (?, ?, 'member')", eventID, uid)
+	_, e = tx.Exec("INSERT INTO event_members (event_id, user_id, role) VALUES (?, ?, 'participant')", eventID, uid)
 	if e != nil {
 		tx.Rollback()
 		http.Error(w, "Failed to join event.", http.StatusInternalServerError)

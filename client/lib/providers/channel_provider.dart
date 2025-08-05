@@ -54,8 +54,7 @@ class ChannelProvider extends ChangeNotifier {
 
     try {
       debugPrint('[ChannelProvider] Creating channel: $channelName');
-      await _apiService
-          .createChannel(channelName, eventUuid: eventUuid);
+      await _apiService.createChannel(channelName, eventUuid: eventUuid);
       debugPrint(
           '[ChannelProvider] Channel created successfully, refreshing list...');
       await loadChannels(); // Refresh the list
@@ -65,6 +64,31 @@ class ChannelProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('[ChannelProvider] Error creating channel: $e');
+      _setError(e.toString());
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  Future<bool> joinChannel(String inviteCode) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
+    _setLoading(true);
+    _clearError();
+
+    try {
+      debugPrint(
+          '[ChannelProvider] Joining channel with invite code: $inviteCode');
+      final channelName = await _apiService.joinChannel(inviteCode);
+      debugPrint(
+          '[ChannelProvider] Joined channel: $channelName, refreshing list...');
+      await loadChannels(); // Refresh the list to show the newly joined channel
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      debugPrint('[ChannelProvider] Error joining channel: $e');
       _setError(e.toString());
       _setLoading(false);
       return false;
@@ -95,8 +119,7 @@ class ChannelProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateChannel(
-      String channelUuid, String newChannelName) async {
+  Future<bool> updateChannel(String channelUuid, String newChannelName) async {
     if (_apiService == null) {
       _setError('API service not available');
       return false;
@@ -107,8 +130,7 @@ class ChannelProvider extends ChangeNotifier {
     try {
       debugPrint(
           '[ChannelProvider] Updating channel $channelUuid to $newChannelName');
-      await _apiService
-          .updateChannel(channelUuid, newChannelName);
+      await _apiService.updateChannel(channelUuid, newChannelName);
       debugPrint(
           '[ChannelProvider] Channel updated successfully, refreshing list...');
       await loadChannels(); // Refresh the list

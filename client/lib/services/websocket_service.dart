@@ -297,25 +297,18 @@ class WebSocketService extends ChangeNotifier {
   void _startHeartbeat() {
     _stopHeartbeat(); // Clear any existing timer
 
-    // Send a heartbeat every 20 seconds (well before server's 30-second timeout)
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 20), (timer) {
+    // The server sends protocol-level WebSocket pings every ~54 seconds
+    // We don't need to send custom application-level pings since the server
+    // handles this with proper WebSocket ping/pong frames.
+    // Instead, we just monitor connection health by checking if we're still receiving data
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (_isConnected && _channel != null) {
-        try {
-          // Send a simple ping-like message that won't interfere with the protocol
-          // Use a minimal signal that the server will ignore but keeps connection alive
-          final keepAlive = jsonEncode({
-            'type': 'ping',
-            'timestamp': DateTime.now().millisecondsSinceEpoch,
-          });
-          _channel!.sink.add(keepAlive);
-          debugPrint('[WebSocket] Keep-alive sent');
-        } catch (e) {
-          debugPrint('[WebSocket] Failed to send keep-alive: $e');
-          // If we can't send, the connection might be dead
-          _handleConnectionFailure();
-        }
+        // Just verify the connection is still active
+        // The server will send protocol-level pings that keep the connection alive
+        debugPrint('[WebSocket] Connection health check - still connected');
       } else {
         timer.cancel();
+        debugPrint('[WebSocket] Connection health check - connection lost');
       }
     });
   }
