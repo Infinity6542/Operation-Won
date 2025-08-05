@@ -10,8 +10,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-opwon_root_password}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-operation_won}
-      MYSQL_USER: ${MYSQL_USER:-opwon_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-opwon_password}
+      # Remove MYSQL_USER and MYSQL_PASSWORD to avoid conflicts with init.sql
+      # The init.sql script will create the user with proper permissions
     ports:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
