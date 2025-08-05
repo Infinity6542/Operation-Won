@@ -290,10 +290,11 @@ func (s *Server) HandleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("[AUT] [LGN] Comparing password - Length: %d, Hash: %s", len(payload.Password), hash[:20]+"...")
 	auth := bcrypt.CompareHashAndPassword([]byte(hash), []byte(payload.Password))
 	if auth != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		fmt.Printf("[AUT] [LGN] Incorrect password for user %s\n", username)
+		fmt.Printf("[AUT] [LGN] Incorrect password for user %s - bcrypt error: %v\n", username, auth)
 		return
 	}
 
