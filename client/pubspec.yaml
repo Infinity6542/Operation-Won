@@ -33,6 +33,3 @@ flutter:
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter.ttf
-    - family: Lucide
-      fonts:
-        - asset: assets/fonts/lucide.ttf
