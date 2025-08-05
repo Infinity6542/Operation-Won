@@ -76,8 +76,18 @@ func main() {
 	}
 	client.Del(ctx, "foo").Result()
 
-	// MySQL configuration
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
+	// MySQL configuration with enhanced debugging and connection parameters
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s",
+		mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
+
+	// Debug logging (mask password for security)
+	maskedDSN := fmt.Sprintf("%s:***@tcp(%s:%s)/%s",
+		mysqlUser, mysqlHost, mysqlPort, mysqlDatabase)
+	log.Printf("[DEBUG] [SRV] MySQL DSN: %s", maskedDSN)
+	log.Printf("[DEBUG] [SRV] MySQL User: %s", mysqlUser)
+	log.Printf("[DEBUG] [SRV] MySQL Host: %s", mysqlHost)
+	log.Printf("[DEBUG] [SRV] MySQL Port: %s", mysqlPort)
+	log.Printf("[DEBUG] [SRV] MySQL Database: %s", mysqlDatabase)
 	log.Printf("[LOG] [SRV] Connecting to MySQL at %s:%s", mysqlHost, mysqlPort)
 
 	var e2 error
@@ -87,12 +97,19 @@ func main() {
 		panic(e2.Error())
 	}
 
+	// Configure connection pool
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(time.Hour)
+
 	// Verify the connection is valid
+	log.Printf("[DEBUG] [SRV] Attempting to ping MySQL database...")
 	if e := db.Ping(); e != nil {
 		log.Printf("[ERR] [SRV] Failed to ping MySQL: %v", e)
+		log.Printf("[ERR] [SRV] DSN used: %s", maskedDSN)
 		panic(e.Error())
 	} else {
-		log.Println("[LOG] [SRV] Connected to MySQL")
+		log.Println("[LOG] [SRV] Connected to MySQL successfully")
 	}
 
 	if e := os.MkdirAll("./audio", os.ModePerm); e != nil {
