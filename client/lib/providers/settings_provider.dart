@@ -11,7 +11,7 @@ class SettingsProvider extends ChangeNotifier {
 
   // Default values
   static const String _defaultApiEndpoint = 'http://localhost:8000';
-  static const String _defaultWebsocketEndpoint = 'http://localhost:8000/msg';
+  static const String _defaultWebsocketEndpoint = 'ws://localhost:8000/msg';
   static const String _defaultThemeMode = 'dark';
   static const String _defaultPttMode = 'hold';
   static const bool _defaultMagicMicEnabled = true;
@@ -52,7 +52,7 @@ class SettingsProvider extends ChangeNotifier {
     {
       'name': 'Stable',
       'api': 'http://192.9.165.5:8000',
-      'websocket': 'http://192.9.165.5:8000/msg',
+      'websocket': 'ws://192.9.165.5:8000/msg',
     },
     // {
     //   'name': 'Staging',
@@ -114,6 +114,18 @@ class SettingsProvider extends ChangeNotifier {
       if (!_isDisposed) {
         notifyListeners();
       }
+    }
+  }
+
+  // Helper function to generate WebSocket URL from API URL
+  static String generateWebSocketUrl(String apiUrl) {
+    if (apiUrl.startsWith('https://')) {
+      return '${apiUrl.replaceFirst('https://', 'wss://')}/msg';
+    } else if (apiUrl.startsWith('http://')) {
+      return '${apiUrl.replaceFirst('http://', 'ws://')}/msg';
+    } else {
+      // Assume http if no protocol specified
+      return 'ws://$apiUrl/msg';
     }
   }
 

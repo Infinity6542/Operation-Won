@@ -12,6 +12,7 @@ import 'widgets/create_event_dialog.dart';
 import 'widgets/event_details_dialog.dart';
 import 'widgets/create_channel_dialog.dart';
 import 'widgets/join_event_dialog.dart';
+import 'widgets/join_channel_dialog.dart';
 import 'widgets/ptt_gesture_zone.dart';
 import 'widgets/refresh_indicator.dart';
 import 'services/state_synchronization_service.dart';
@@ -409,15 +410,14 @@ class _HomeViewState extends State<HomeView>
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () {
-                // Medium haptic feedback for primary actions
-                HapticFeedback.mediumImpact();
-                onAction();
-              },
-              icon: const Icon(LucideIcons.plus),
-              label: Text(actionText),
+            const SizedBox(height: 16),
+            Text(
+              'Use the + button to $actionText',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -450,7 +450,32 @@ class _HomeViewState extends State<HomeView>
               duration: 230,
             ),
             const SizedBox(height: 8),
-            // Event button (appears second when opening)
+            // Join Channel button (appears second when opening)
+            _buildAnimatedSpeedDialItem(
+              icon: LucideIcons.radio,
+              label: 'Join Channel',
+              onTap: () {
+                setState(() {
+                  _isSpeedDialOpen = false;
+                });
+                // Check authentication before showing dialog
+                if (authProvider.isLoggedIn) {
+                  _showJoinChannelDialog();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Please log in to join channels.'),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              },
+              theme: theme,
+              delay: _isSpeedDialOpen ? 8 : 52,
+              duration: 240,
+            ),
+            const SizedBox(height: 8),
+            // Event button (appears third when opening)
             _buildAnimatedSpeedDialItem(
               icon: LucideIcons.calendar,
               label: 'Create Event',
@@ -465,7 +490,7 @@ class _HomeViewState extends State<HomeView>
               duration: 250,
             ),
             const SizedBox(height: 8),
-            // Channel button (appears third when opening)
+            // Channel button (appears fourth when opening)
             _buildAnimatedSpeedDialItem(
               icon: LucideIcons.messageSquare,
               label: 'Create Channel',
@@ -486,8 +511,8 @@ class _HomeViewState extends State<HomeView>
                 }
               },
               theme: theme,
-              delay: _isSpeedDialOpen ? 30 : 30,
-              duration: 280,
+              delay: _isSpeedDialOpen ? 23 : 37,
+              duration: 270,
             ),
             const SizedBox(height: 20), // More space before main FAB
           ],
@@ -920,6 +945,13 @@ class _HomeViewState extends State<HomeView>
     showDialog(
       context: context,
       builder: (context) => const JoinEventDialog(),
+    );
+  }
+
+  void _showJoinChannelDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const JoinChannelDialog(),
     );
   }
 

@@ -37,6 +37,17 @@ class WebSocketService extends ChangeNotifier {
     _isPTTActiveCallback = callback;
   }
 
+  // Convert HTTP URL to WebSocket URL if needed
+  String _convertToWebSocketUrl(String url) {
+    if (url.startsWith('https://')) {
+      return url.replaceFirst('https://', 'wss://');
+    } else if (url.startsWith('http://')) {
+      return url.replaceFirst('http://', 'ws://');
+    }
+    // Already a WebSocket URL or other scheme
+    return url;
+  }
+
   // Connect to WebSocket with JWT authentication
   Future<bool> connect(String url, {String? channelId}) async {
     try {
@@ -51,8 +62,13 @@ class WebSocketService extends ChangeNotifier {
         return false;
       }
 
+      // Convert HTTP URL to WebSocket URL if needed
+      final websocketUrl = _convertToWebSocketUrl(url);
+      debugPrint(
+          '[WebSocket] Original URL: $url, WebSocket URL: $websocketUrl');
+
       // Add token and channel as query parameters
-      final uri = Uri.parse(url);
+      final uri = Uri.parse(websocketUrl);
       final authenticatedUri = uri.replace(queryParameters: {
         ...uri.queryParameters,
         'token': token,
@@ -85,7 +101,7 @@ class WebSocketService extends ChangeNotifier {
 
       notifyListeners();
 
-      debugPrint('[WebSocket] Connected to $url with authentication');
+      debugPrint('[WebSocket] Connected to $websocketUrl with authentication');
       return true;
     } catch (e) {
       debugPrint('[WebSocket] Connection failed: $e');

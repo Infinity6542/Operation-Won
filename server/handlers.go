@@ -194,6 +194,7 @@ type ChannelResponse struct {
 	ChannelUUID string  `json:"channel_uuid"`
 	ChannelName string  `json:"channel_name"`
 	EventUUID   *string `json:"event_uuid"`
+	InviteCode  *string `json:"invite_code,omitempty"`
 	IsCreator   bool    `json:"is_creator"`
 }
 
@@ -671,8 +672,10 @@ func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var channelUUID = uuid.New().String()
+	var inviteCode = generateInviteCode()
 	var lastInsertID int64
 	log.Printf("[CHN] [CRT] Generated UUID: %s", channelUUID)
+	log.Printf("[CHN] [CRT] Generated invite code: %s", inviteCode)
 
 	tx, e := s.db.Begin()
 	if e != nil {
@@ -696,8 +699,8 @@ func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		res, e := tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id, created_by) VALUES (?, ?, ?, ?)",
-			channelUUID, payload.ChannelName, eventID, uid)
+		res, e := tx.Exec("INSERT INTO channels (channel_uuid, channel_name, invite_code, event_id, created_by) VALUES (?, ?, ?, ?, ?)",
+			channelUUID, payload.ChannelName, inviteCode, eventID, uid)
 		if e != nil {
 			tx.Rollback()
 			http.Error(w, "Failed to create channel.", http.StatusInternalServerError)
@@ -715,8 +718,8 @@ func (s *Server) CreateChannel(w http.ResponseWriter, r *http.Request) {
 
 	} else { // No event
 		log.Printf("[CHN] [CRT] Creating standalone channel")
-		res, e := tx.Exec("INSERT INTO channels (channel_uuid, channel_name, event_id, created_by) VALUES (?, ?, NULL, ?)",
-			channelUUID, payload.ChannelName, uid)
+		res, e := tx.Exec("INSERT INTO channels (channel_uuid, channel_name, invite_code, event_id, created_by) VALUES (?, ?, ?, NULL, ?)",
+			channelUUID, payload.ChannelName, inviteCode, uid)
 		if e != nil {
 			log.Printf("[CHN] [CRT] Failed to insert channel: %v", e)
 			tx.Rollback()
@@ -759,8 +762,8 @@ func (s *Server) GetChannels(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Modified query to include creator information
-	query := `SELECT DISTINCT c.channel_uuid, c.channel_name, e.event_uuid, 
+	// Modified query to include creator information and invite code
+	query := `SELECT DISTINCT c.channel_uuid, c.channel_name, c.invite_code, e.event_uuid, 
 			  (c.created_by = ?) as is_creator
 			  FROM channels c 
 			  LEFT JOIN events e ON c.event_id = e.id 
@@ -780,13 +783,17 @@ func (s *Server) GetChannels(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var ch ChannelResponse
 		var eventUUID sql.NullString
+		var inviteCode sql.NullString
 		var isCreator bool
-		if e := rows.Scan(&ch.ChannelUUID, &ch.ChannelName, &eventUUID, &isCreator); e != nil {
+		if e := rows.Scan(&ch.ChannelUUID, &ch.ChannelName, &inviteCode, &eventUUID, &isCreator); e != nil {
 			log.Printf("[CHN] [DTB] Failed to scan channel row: %v", e)
 			continue
 		}
 		if eventUUID.Valid {
 			ch.EventUUID = &eventUUID.String
+		}
+		if inviteCode.Valid && inviteCode.String != "" {
+			ch.InviteCode = &inviteCode.String
 		}
 		ch.IsCreator = isCreator
 		channels = append(channels, ch)
@@ -986,6 +993,83 @@ func (s *Server) JoinEvent(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Successfully joined event", "event_name": eventName})
+}
+
+// JoinChannel allows users to join a channel using an invite code
+func (s *Server) JoinChannel(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	uid, ok := r.Context().Value(userIDKey).(int)
+	if !ok {
+		http.Error(w, "Failed to find user.", http.StatusInternalServerError)
+		return
+	}
+
+	var payload struct {
+		InviteCode string `json:"invite_code"`
+	}
+	if e := json.NewDecoder(r.Body).Decode(&payload); e != nil {
+		http.Error(w, "Invalid request.", http.StatusBadRequest)
+		return
+	}
+
+	if payload.InviteCode == "" {
+		http.Error(w, "Invite code is required.", http.StatusBadRequest)
+		return
+	}
+
+	tx, e := s.db.Begin()
+	if e != nil {
+		http.Error(w, "Database error.", http.StatusInternalServerError)
+		return
+	}
+
+	// Find the channel by invite code
+	var channelID int
+	var channelName string
+	e = tx.QueryRow("SELECT id, channel_name FROM channels WHERE invite_code = ?", payload.InviteCode).Scan(&channelID, &channelName)
+	if e != nil {
+		tx.Rollback()
+		if e == sql.ErrNoRows {
+			http.Error(w, "Invalid invite code.", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Database error.", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if user is already a member
+	var exists bool
+	e = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM channel_members WHERE channel_id = ? AND user_id = ?)", channelID, uid).Scan(&exists)
+	if e != nil {
+		tx.Rollback()
+		http.Error(w, "Database error.", http.StatusInternalServerError)
+		return
+	}
+
+	if exists {
+		tx.Rollback()
+		http.Error(w, "You are already a member of this channel.", http.StatusConflict)
+		return
+	}
+
+	// Add user as member
+	_, e = tx.Exec("INSERT INTO channel_members (channel_id, user_id, role) VALUES (?, ?, 'member')", channelID, uid)
+	if e != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to join channel.", http.StatusInternalServerError)
+		return
+	}
+
+	if e := tx.Commit(); e != nil {
+		http.Error(w, "Failed to join channel.", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[CHN] [JOIN] User %d joined channel %s using invite code %s", uid, channelName, payload.InviteCode)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Successfully joined channel", "channel_name": channelName})
 }
 
 // Delete channel handler

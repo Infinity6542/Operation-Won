@@ -25,7 +25,7 @@ class PTTGestureZone extends StatefulWidget {
     super.key,
     this.enabled = true,
     this.onPermissionDenied,
-    this.heightFraction = 0.4,
+    this.heightFraction = 0.33, // Reduced from 0.4 to 0.33 (one-third)
   });
 
   @override
@@ -411,9 +411,9 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
         final bottomPadding = MediaQuery.of(context).padding.bottom;
 
         // Enhanced coverage calculation for phones with rounded corners and edge-to-edge displays
-        // Research shows that 60-70% coverage works best for modern phones with rounded edges
-        final baseHeight =
-            screenHeight * math.max(widget.heightFraction, 0.6); // Minimum 60%
+        // Adjusted to allow smaller coverage for better usability
+        final baseHeight = screenHeight *
+            math.max(widget.heightFraction, 0.33); // Minimum 33% (one-third)
         final containerHeight = baseHeight + bottomPadding;
 
         debugPrint(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/api_service.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -88,8 +89,6 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 24),
                   _buildFooter(context),
-                  const SizedBox(height: 24),
-                  const _ApiEndpointSelector(),
                 ],
               ),
             ),
@@ -227,7 +226,8 @@ class _LoginFormState extends State<LoginForm> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    return Form(
+    return AutofillGroup(
+        child: Form(
       key: _formKey,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -237,8 +237,17 @@ class _LoginFormState extends State<LoginForm> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _usernameController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
+            enableSuggestions: false,
+            autofillHints: const [
+              AutofillHints.username,
+              AutofillHints.email,
+            ],
             decoration: const InputDecoration(
               labelText: 'Username',
+              hintText: 'Username or email',
               prefixIcon: Icon(Icons.person_outline),
               border: OutlineInputBorder(),
             ),
@@ -253,8 +262,15 @@ class _LoginFormState extends State<LoginForm> {
           TextFormField(
             controller: _passwordController,
             obscureText: _obscurePassword,
+            keyboardType: TextInputType.visiblePassword,
+            textInputAction: TextInputAction.done,
+            autocorrect: false,
+            enableSuggestions: false,
+            autofillHints: const [AutofillHints.password],
+            onFieldSubmitted: (_) => _handleLogin(),
             decoration: InputDecoration(
               labelText: 'Password',
+              hintText: 'Enter your password',
               prefixIcon: const Icon(Icons.lock_outline),
               border: const OutlineInputBorder(),
               suffixIcon: IconButton(
@@ -266,6 +282,7 @@ class _LoginFormState extends State<LoginForm> {
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
                 ),
+                tooltip: _obscurePassword ? 'Show password' : 'Hide password',
               ),
             ),
             validator: (value) {
@@ -302,7 +319,7 @@ class _LoginFormState extends State<LoginForm> {
           _buildDemoCredentials(context),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildDemoCredentials(BuildContext context) {
@@ -339,12 +356,22 @@ class _LoginFormState extends State<LoginForm> {
   Widget _buildServerSelector() {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
+        // Get current endpoint name or default to 'Custom' if none selected
+        final currentEndpointName =
+            settingsProvider.getCurrentPredefinedEndpoint()?['name'] ??
+                'Custom';
+
         return DropdownButtonFormField<String>(
-          value: settingsProvider.getCurrentPredefinedEndpoint()?['name'] ?? '',
-          decoration: const InputDecoration(
+          value: currentEndpointName,
+          decoration: InputDecoration(
             labelText: 'Server',
-            prefixIcon: Icon(Icons.dns_outlined),
-            border: OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.dns_outlined),
+            border: const OutlineInputBorder(),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.wifi_find),
+              tooltip: 'Test server connection',
+              onPressed: () => _testServerConnection(context, settingsProvider),
+            ),
           ),
           items: [
             ...SettingsProvider.predefinedEndpoints.map((endpoint) {
@@ -397,7 +424,7 @@ class _LoginFormState extends State<LoginForm> {
             onPressed: () async {
               final apiUrl = controller.text.trim();
               if (apiUrl.isNotEmpty) {
-                final wsUrl = '${apiUrl.replaceFirst('http', 'ws')}/msg';
+                final wsUrl = SettingsProvider.generateWebSocketUrl(apiUrl);
                 await settingsProvider.setApiEndpoint(apiUrl);
                 await settingsProvider.setWebsocketEndpoint(wsUrl);
               }
@@ -408,6 +435,75 @@ class _LoginFormState extends State<LoginForm> {
         ],
       ),
     );
+  }
+
+  Future<void> _testServerConnection(
+      BuildContext context, SettingsProvider settingsProvider) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Testing server connection...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Create a temporary API service for testing
+      final testApiService = ApiService(baseUrl: settingsProvider.apiEndpoint);
+      final success = await testApiService.pingServer();
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  success ? Icons.check_circle : Icons.error,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(success
+                    ? 'Server is reachable!'
+                    : 'Server is not responding'),
+              ],
+            ),
+            backgroundColor: success ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Text('Connection test failed: ${e.toString()}')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -464,7 +560,8 @@ class _RegisterFormState extends State<RegisterForm> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    return Form(
+    return AutofillGroup(
+        child: Form(
       key: _formKey,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -472,8 +569,13 @@ class _RegisterFormState extends State<RegisterForm> {
         children: [
           TextFormField(
             controller: _usernameController,
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
+            enableSuggestions: false,
+            autofillHints: const [AutofillHints.newUsername],
             decoration: const InputDecoration(
               labelText: 'Username',
+              hintText: 'Choose a username',
               prefixIcon: Icon(Icons.person_outline),
               border: OutlineInputBorder(),
             ),
@@ -490,8 +592,14 @@ class _RegisterFormState extends State<RegisterForm> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
+            enableSuggestions: false,
+            autofillHints: const [AutofillHints.email],
             decoration: const InputDecoration(
               labelText: 'Email',
+              hintText: 'Enter your email address',
               prefixIcon: Icon(Icons.email_outlined),
               border: OutlineInputBorder(),
             ),
@@ -509,8 +617,14 @@ class _RegisterFormState extends State<RegisterForm> {
           TextFormField(
             controller: _passwordController,
             obscureText: _obscurePassword,
+            keyboardType: TextInputType.visiblePassword,
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
+            enableSuggestions: false,
+            autofillHints: const [AutofillHints.newPassword],
             decoration: InputDecoration(
               labelText: 'Password',
+              hintText: 'Create a secure password',
               prefixIcon: const Icon(Icons.lock_outline),
               border: const OutlineInputBorder(),
               suffixIcon: IconButton(
@@ -522,6 +636,7 @@ class _RegisterFormState extends State<RegisterForm> {
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
                 ),
+                tooltip: _obscurePassword ? 'Show password' : 'Hide password',
               ),
             ),
             validator: (value) {
@@ -535,8 +650,15 @@ class _RegisterFormState extends State<RegisterForm> {
           TextFormField(
             controller: _confirmPasswordController,
             obscureText: _obscureConfirmPassword,
+            keyboardType: TextInputType.visiblePassword,
+            textInputAction: TextInputAction.done,
+            autocorrect: false,
+            enableSuggestions: false,
+            autofillHints: const [AutofillHints.newPassword],
+            onFieldSubmitted: (_) => _handleRegister(),
             decoration: InputDecoration(
               labelText: 'Confirm Password',
+              hintText: 'Re-enter your password',
               prefixIcon: const Icon(Icons.lock_outline),
               border: const OutlineInputBorder(),
               suffixIcon: IconButton(
@@ -550,6 +672,8 @@ class _RegisterFormState extends State<RegisterForm> {
                       ? Icons.visibility_off
                       : Icons.visibility,
                 ),
+                tooltip:
+                    _obscureConfirmPassword ? 'Show password' : 'Hide password',
               ),
             ),
             validator: (value) {
@@ -587,127 +711,6 @@ class _RegisterFormState extends State<RegisterForm> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _ApiEndpointSelector extends StatefulWidget {
-  const _ApiEndpointSelector();
-
-  @override
-  State<_ApiEndpointSelector> createState() => _ApiEndpointSelectorState();
-}
-
-class _ApiEndpointSelectorState extends State<_ApiEndpointSelector> {
-  final _customApiController = TextEditingController();
-  final _customWebsocketController = TextEditingController();
-  String? _selectedEndpoint;
-
-  @override
-  void initState() {
-    super.initState();
-    final settings = context.read<SettingsProvider>();
-    
-    // Check if the current endpoint is a predefined one
-    final predefinedMatches = SettingsProvider.predefinedEndpoints
-        .where((e) => e['api'] == settings.apiEndpoint);
-    
-    if (predefinedMatches.isNotEmpty) {
-      // Use the predefined endpoint API value
-      _selectedEndpoint = predefinedMatches.first['api'];
-    } else {
-      // Use custom and populate the controllers
-      _selectedEndpoint = 'custom';
-      _customApiController.text = settings.apiEndpoint;
-      _customWebsocketController.text = settings.websocketEndpoint;
-    }
-  }
-
-  @override
-  void dispose() {
-    _customApiController.dispose();
-    _customWebsocketController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final settings = Provider.of<SettingsProvider>(context);
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'API Endpoint',
-          style: theme.textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: _selectedEndpoint,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          ),
-          items: [
-            ...SettingsProvider.predefinedEndpoints.map((endpoint) {
-              return DropdownMenuItem<String>(
-                value: endpoint['api'],
-                child: Text(endpoint['name']!),
-              );
-            }),
-            const DropdownMenuItem<String>(
-              value: 'custom',
-              child: Text('Custom'),
-            ),
-          ],
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _selectedEndpoint = value;
-              });
-              if (value != 'custom') {
-                final endpoint = SettingsProvider.predefinedEndpoints
-                    .firstWhere((e) => e['api'] == value);
-                settings.setApiEndpoint(endpoint['api']!);
-                settings.setWebsocketEndpoint(endpoint['websocket']!);
-              }
-            }
-          },
-        ),
-        if (_selectedEndpoint == 'custom') ...[
-          const SizedBox(height: 16),
-          TextField(
-            controller: _customApiController,
-            decoration: const InputDecoration(
-              labelText: 'Custom API URL',
-              hintText: 'https://api.example.com',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-              settings.setApiEndpoint(value);
-              // Also update websocket URL based on API URL
-              if (value.isNotEmpty) {
-                final wsUrl = '${value.replaceFirst('http', 'ws')}/msg';
-                _customWebsocketController.text = wsUrl;
-                settings.setWebsocketEndpoint(wsUrl);
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _customWebsocketController,
-            decoration: const InputDecoration(
-              labelText: 'Custom WebSocket URL',
-              hintText: 'wss://api.example.com/msg',
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-              settings.setWebsocketEndpoint(value);
-            },
-          ),
-        ],
-      ],
-    );
+    ));
   }
 }

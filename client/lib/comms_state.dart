@@ -29,6 +29,12 @@ class CommsState extends ChangeNotifier {
   String? get currentChannelId => _currentChannelId;
   bool get isInitialized => _isInitialized;
 
+  // Check if wakelock is enabled (for background operation)
+  Future<bool> get isWakelockEnabled async {
+    if (_communicationService == null) return false;
+    return await _communicationService!.isWakelockEnabled;
+  }
+
   // Initialize communication service with settings provider
   void initialize(SettingsProvider settingsProvider) {
     if (_isInitialized) return;

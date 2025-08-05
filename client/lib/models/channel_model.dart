@@ -19,12 +19,14 @@ class ChannelResponse {
   final String channelUuid;
   final String channelName;
   final String? eventUuid;
+  final String? inviteCode;
   final bool isCreator;
 
   ChannelResponse({
     required this.channelUuid,
     required this.channelName,
     this.eventUuid,
+    this.inviteCode,
     this.isCreator = false,
   });
 
@@ -33,6 +35,7 @@ class ChannelResponse {
       channelUuid: json['channel_uuid'] ?? '',
       channelName: json['channel_name'] ?? '',
       eventUuid: json['event_uuid'],
+      inviteCode: json['invite_code'],
       isCreator: json['is_creator'] ?? false,
     );
   }
@@ -42,6 +45,7 @@ class ChannelResponse {
       'channel_uuid': channelUuid,
       'channel_name': channelName,
       'event_uuid': eventUuid,
+      'invite_code': inviteCode,
       'is_creator': isCreator,
     };
   }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../providers/settings_provider.dart';
 import 'websocket_service.dart';
 import 'audio_service.dart';
@@ -151,6 +152,15 @@ class CommunicationService extends ChangeNotifier {
     _currentChannelId = channelId;
     await _webSocketService.joinChannel(channelId);
 
+    // Enable wakelock to keep the app active when screen is off
+    try {
+      await WakelockPlus.enable();
+      debugPrint(
+          '[Comm] Wakelock enabled - app will stay active with screen off');
+    } catch (e) {
+      debugPrint('[Comm] Failed to enable wakelock: $e');
+    }
+
     // Start audio playing mode to receive audio
     await _audioService.startPlaying();
 
@@ -190,6 +200,14 @@ class CommunicationService extends ChangeNotifier {
     }
 
     await _audioService.stopPlaying();
+
+    // Disable wakelock when leaving channel to save battery
+    try {
+      await WakelockPlus.disable();
+      debugPrint('[Comm] Wakelock disabled - device can sleep normally');
+    } catch (e) {
+      debugPrint('[Comm] Failed to disable wakelock: $e');
+    }
 
     // Clear channel ID first to prevent duplicate calls
     final channelId = _currentChannelId;
@@ -356,6 +374,16 @@ class CommunicationService extends ChangeNotifier {
   // Magic Mic status
   bool get isMagicMicEnabled => _audioService.magicMicEnabled;
 
+  // Check if wakelock is currently enabled
+  Future<bool> get isWakelockEnabled async {
+    try {
+      return await WakelockPlus.enabled;
+    } catch (e) {
+      debugPrint('[Comm] Failed to check wakelock status: $e');
+      return false;
+    }
+  }
+
   // Join emergency channel (overrides current channel)
   Future<void> joinEmergencyChannel() async {
     const emergencyChannelId = 'EMERGENCY';
@@ -390,6 +418,12 @@ class CommunicationService extends ChangeNotifier {
   void dispose() {
     stopPTT();
     disconnectWebSocket();
+
+    // Ensure wakelock is disabled when service is disposed
+    WakelockPlus.disable().catchError((e) {
+      debugPrint('[Comm] Failed to disable wakelock on dispose: $e');
+    });
+
     _audioDataSubscription?.cancel();
     _incomingAudioSubscription?.cancel();
     _settingsProvider.removeListener(_onSettingsChanged);

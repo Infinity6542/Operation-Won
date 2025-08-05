@@ -95,7 +95,7 @@ class PTTGestureGuide extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'The PTT button now has a larger activation zone for easier use!',
+                      'The PTT button now has a gesture zone covering the bottom third of the screen for easier use!',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

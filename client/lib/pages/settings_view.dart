@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../comms_state.dart';
 import '../services/state_synchronization_service.dart';
+import '../services/api_service.dart';
 import '../widgets/ptt_gesture_guide.dart';
 import '../services/permission_service.dart';
 
@@ -111,6 +112,38 @@ class _SettingsViewState extends State<SettingsView>
                   ]);
                 },
               ),
+              const SizedBox(height: 32),
+
+              // Connection Settings Section
+              _buildSectionHeader(context, 'Connection Settings'),
+              const SizedBox(height: 12),
+              _buildSettingsCard(context, [
+                _buildInfoTile(
+                  context,
+                  title: 'API Endpoint',
+                  subtitle: settingsProvider.apiEndpoint,
+                  icon: LucideIcons.server,
+                  onTap: () => _testApiEndpoint(context, settingsProvider),
+                ),
+                const Divider(),
+                _buildInfoTile(
+                  context,
+                  title: 'WebSocket Endpoint',
+                  subtitle: settingsProvider.websocketEndpoint,
+                  icon: LucideIcons.radio,
+                  onTap: () =>
+                      _testWebSocketEndpoint(context, settingsProvider),
+                ),
+                const Divider(),
+                _buildActionTile(
+                  context,
+                  title: 'Change Server',
+                  subtitle: 'Switch to a different server',
+                  icon: LucideIcons.settings,
+                  onTap: () =>
+                      _showServerConfigDialog(context, settingsProvider),
+                ),
+              ]),
               const SizedBox(height: 32),
 
               // Permissions Section
@@ -440,6 +473,7 @@ class _SettingsViewState extends State<SettingsView>
     required String title,
     required String subtitle,
     required IconData icon,
+    VoidCallback? onTap,
   }) {
     final theme = Theme.of(context);
     return ListTile(
@@ -451,6 +485,14 @@ class _SettingsViewState extends State<SettingsView>
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
+      trailing: onTap != null
+          ? Icon(
+              LucideIcons.activity,
+              size: 20,
+              color: theme.colorScheme.primary,
+            )
+          : null,
+      onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
   }
@@ -487,6 +529,114 @@ class _SettingsViewState extends State<SettingsView>
           const Icon(LucideIcons.chevronRight, color: Colors.grey, size: 20),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    );
+  }
+
+  void _showServerConfigDialog(
+      BuildContext context, SettingsProvider settingsProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Server Configuration'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Select a server or configure a custom one:',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              // Predefined servers
+              ...SettingsProvider.predefinedEndpoints.map((endpoint) {
+                return ListTile(
+                  title: Text(endpoint['name']!),
+                  subtitle: Text(endpoint['api']!),
+                  leading: Radio<String>(
+                    value: endpoint['api']!,
+                    groupValue: settingsProvider.apiEndpoint,
+                    onChanged: (value) {
+                      if (value != null) {
+                        settingsProvider.setPredefinedEndpoint(endpoint);
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
+                  onTap: () {
+                    settingsProvider.setPredefinedEndpoint(endpoint);
+                    Navigator.of(context).pop();
+                  },
+                );
+              }),
+              // Custom server option
+              ListTile(
+                title: const Text('Custom Server'),
+                subtitle: const Text('Configure your own server'),
+                leading: Radio<String>(
+                  value: 'custom',
+                  groupValue: settingsProvider.isUsingCustomEndpoint
+                      ? 'custom'
+                      : settingsProvider.apiEndpoint,
+                  onChanged: (value) {
+                    Navigator.of(context).pop();
+                    _showCustomServerDialog(context, settingsProvider);
+                  },
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _showCustomServerDialog(context, settingsProvider);
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCustomServerDialog(
+      BuildContext context, SettingsProvider settingsProvider) {
+    final controller =
+        TextEditingController(text: settingsProvider.apiEndpoint);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Custom Server'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'API Endpoint',
+            hintText: 'https://api.example.com',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final apiUrl = controller.text.trim();
+              if (apiUrl.isNotEmpty) {
+                final wsUrl = SettingsProvider.generateWebSocketUrl(apiUrl);
+                await settingsProvider.setApiEndpoint(apiUrl);
+                await settingsProvider.setWebsocketEndpoint(wsUrl);
+              }
+              if (context.mounted) Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -533,5 +683,150 @@ class _SettingsViewState extends State<SettingsView>
         ],
       ),
     );
+  }
+
+  Future<void> _testApiEndpoint(
+      BuildContext context, SettingsProvider settingsProvider) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Testing API connection...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Get the API service
+      final apiService = Provider.of<ApiService>(context, listen: false);
+      final success = await apiService.pingServer();
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  success ? Icons.check_circle : Icons.error,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(success
+                    ? 'API server is reachable!'
+                    : 'API server is not responding'),
+              ],
+            ),
+            backgroundColor: success ? Colors.green : Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Connection failed: ${e.toString()}')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _testWebSocketEndpoint(
+      BuildContext context, SettingsProvider settingsProvider) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Testing WebSocket connection...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Test WebSocket connection
+      final wsUrl = settingsProvider.websocketEndpoint;
+
+      // Simple WebSocket connection test
+      final uri = Uri.parse(wsUrl);
+      bool success = false;
+
+      if (uri.scheme == 'ws' || uri.scheme == 'wss') {
+        // For now, just check if the URL is valid
+        // In a real implementation, you might try to establish a brief WebSocket connection
+        success = uri.host.isNotEmpty;
+      }
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  success ? Icons.check_circle : Icons.error,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(success
+                    ? 'WebSocket endpoint looks valid!'
+                    : 'WebSocket endpoint format is invalid'),
+              ],
+            ),
+            backgroundColor: success ? Colors.green : Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close loading dialog
+
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Test failed: ${e.toString()}')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }

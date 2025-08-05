@@ -338,6 +338,29 @@ class ApiService {
     _refreshCompleters.clear();
   }
 
+  // Test server connectivity
+  Future<bool> pingServer() async {
+    try {
+      debugPrint('[ApiService] Testing server connectivity...');
+      final response = await _dio.get(
+        '/ping',
+        options: Options(
+          sendTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ),
+      );
+
+      debugPrint('[ApiService] Ping response: ${response.statusCode}');
+      return response.statusCode == 200;
+    } on DioException catch (e) {
+      debugPrint('[ApiService] Ping failed: ${e.message}');
+      return false;
+    } catch (e) {
+      debugPrint('[ApiService] Ping error: $e');
+      return false;
+    }
+  }
+
   // Event endpoints
   Future<List<EventResponse>> getEvents() async {
     try {
@@ -423,6 +446,32 @@ class ApiService {
       throw _handleError(e);
     } catch (e) {
       debugPrint('[API] General exception joining event: $e');
+      rethrow;
+    }
+  }
+
+  Future<String> joinChannel(String inviteCode) async {
+    try {
+      debugPrint('[API] Joining channel with invite code: $inviteCode');
+      final response = await _dio.post(
+        '/api/protected/channels/join',
+        data: {'invite_code': inviteCode},
+      );
+
+      debugPrint('[API] Join channel response: ${response.data}');
+
+      // Extract channel name from response if available
+      if (response.data is Map && response.data['channel_name'] != null) {
+        return response.data['channel_name'].toString();
+      }
+
+      return 'Channel'; // Fallback name
+    } on DioException catch (e) {
+      debugPrint('[API] DioException joining channel: ${e.message}');
+      debugPrint('[API] Response data: ${e.response?.data}');
+      throw _handleError(e);
+    } catch (e) {
+      debugPrint('[API] General exception joining channel: $e');
       rethrow;
     }
   }

@@ -36,7 +36,7 @@ func main() {
 		log.Printf("[WARN] Invalid STARTUP_DELAY_SECONDS value '%s', using 0", startupDelayStr)
 		startupDelay = 0
 	}
-	
+
 	if startupDelay > 0 {
 		log.Printf("[LOG] [SRV] Waiting %d seconds before starting server...", startupDelay)
 		time.Sleep(time.Duration(startupDelay) * time.Second)
@@ -98,10 +98,10 @@ func main() {
 	var e2 error
 	maxRetries := 5
 	retryDelay := 3 * time.Second
-	
+
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		log.Printf("[LOG] [SRV] MySQL connection attempt %d/%d", attempt, maxRetries)
-		
+
 		db, e2 = sql.Open("mysql", dsn)
 		if e2 != nil {
 			log.Printf("[ERR] [SRV] Failed to open MySQL connection (attempt %d): %v", attempt, e2)
@@ -122,7 +122,7 @@ func main() {
 			time.Sleep(retryDelay)
 			continue
 		}
-		
+
 		// Success!
 		log.Println("[LOG] [SRV] Connected to MySQL successfully")
 		break
@@ -170,6 +170,7 @@ func main() {
 	// Protected API endpoints
 	http.Handle("/api/protected/channels/create", corsHandler(server.Security(http.HandlerFunc(server.CreateChannel))))
 	http.Handle("/api/protected/channels", corsHandler(server.Security(http.HandlerFunc(server.GetChannels))))
+	http.Handle("/api/protected/channels/join", corsHandler(server.Security(http.HandlerFunc(server.JoinChannel))))
 	http.Handle("/api/protected/events/create", corsHandler(server.Security(http.HandlerFunc(server.CreateEvent))))
 	http.Handle("/api/protected/events/join", corsHandler(server.Security(http.HandlerFunc(server.JoinEvent))))
 	http.Handle("/api/protected/events", corsHandler(server.Security(http.HandlerFunc(server.GetEvents))))

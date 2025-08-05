@@ -1,13 +1,12 @@
 name: operation_won
 description: an app i suppose
 publish_to: none
-version: 1.0.0+1
+version: 0.0.1
 environment:
   sdk: ">=3.2.0 <4.0.0"
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.2
   dio: ^5.5.0+1
   flutter_html: ^3.0.0-beta.2
   flutter_secure_storage: ^9.2.2
@@ -18,6 +17,7 @@ dependencies:
   provider: ^6.1.1
   shared_preferences: ^2.2.3
   web_socket_channel: ^3.0.3
+  wakelock_plus: ^1.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -33,3 +33,6 @@ flutter:
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter.ttf
+    - family: Lucide
+      fonts:
+        - asset: assets/fonts/lucide.ttf

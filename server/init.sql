@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS channels (
     channel_name VARCHAR(100) NOT NULL,
     channel_description TEXT,
     channel_link VARCHAR(255),
+    invite_code VARCHAR(10) UNIQUE NOT NULL,
     event_id INT NULL,
     max_participants INT DEFAULT NULL,
     is_public BOOLEAN DEFAULT FALSE,
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS channels (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL,
     INDEX idx_channel_uuid (channel_uuid),
+    INDEX idx_invite_code (invite_code),
     INDEX idx_event_id (event_id),
     INDEX idx_created_by (created_by),
     INDEX idx_is_public (is_public)
@@ -228,9 +230,21 @@ SET invite_code = CONCAT(
 )
 WHERE invite_code IS NULL OR invite_code = '';
 
-INSERT IGNORE INTO channels (channel_uuid, channel_name, channel_description, created_by, channel_link, is_public) VALUES 
-('channel-550e8400-e29b-41d4-a716-446655440001', 'General Discussion', 'Main discussion channel for general topics', 1, 'https://operationwon.com/channels/general', TRUE),
-('channel-550e8400-e29b-41d4-a716-446655440002', 'Tech Talk', 'Channel for technical discussions and support', 1, 'https://operationwon.com/channels/tech', TRUE);
+-- Add invite codes to any channels that might be missing them
+UPDATE channels 
+SET invite_code = CONCAT(
+    CHAR(65 + FLOOR(RAND() * 26)),  -- Random A-Z
+    CHAR(65 + FLOOR(RAND() * 26)),  -- Random A-Z
+    CHAR(65 + FLOOR(RAND() * 26)),  -- Random A-Z
+    CHAR(48 + FLOOR(RAND() * 10)),  -- Random 0-9
+    CHAR(48 + FLOOR(RAND() * 10)),  -- Random 0-9
+    CHAR(48 + FLOOR(RAND() * 10))   -- Random 0-9
+)
+WHERE invite_code IS NULL OR invite_code = '';
+
+INSERT IGNORE INTO channels (channel_uuid, channel_name, channel_description, created_by, channel_link, is_public, invite_code) VALUES 
+('channel-550e8400-e29b-41d4-a716-446655440001', 'General Discussion', 'Main discussion channel for general topics', 1, 'https://operationwon.com/channels/general', TRUE, 'GEN001'),
+('channel-550e8400-e29b-41d4-a716-446655440002', 'Tech Talk', 'Channel for technical discussions and support', 1, 'https://operationwon.com/channels/tech', TRUE, 'TEC002');
 
 -- Add the admin user as a member (admin) of the default channels
 INSERT IGNORE INTO channel_members (channel_id, user_id, role) VALUES 
