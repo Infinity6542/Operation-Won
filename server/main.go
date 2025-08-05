@@ -29,7 +29,9 @@ func main() {
 	log.Println("Starting Operation Won Server...")
 
 	// Load environment variables with defaults
+	redisHost := getEnv("REDIS_HOST", "opwon_redis")
 	redisPort := getEnv("REDIS_PORT", "6379")
+	mysqlHost := getEnv("MYSQL_HOST", "opwon_mysql") // Use service name by default for Docker
 	mysqlPort := getEnv("MYSQL_PORT", "3306")
 	mysqlUser := getEnv("MYSQL_USER", "opwon_user")
 	mysqlPassword := getEnv("MYSQL_PASSWORD", "opwon_password")
@@ -37,8 +39,6 @@ func main() {
 	serverPort := getEnv("SERVER_PORT", "8000")
 
 	// Redis configuration
-	redisHost := "192.168.100.3"
-
 	redisAddr := fmt.Sprintf("%s:%s", redisHost, redisPort)
 	log.Printf("[LOG] [SRV] Connecting to Redis at %s", redisAddr)
 
@@ -77,10 +77,8 @@ func main() {
 	client.Del(ctx, "foo").Result()
 
 	// MySQL configuration
-	mysqlHost := "192.168.100.2"
-
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
 	log.Printf("[LOG] [SRV] Connecting to MySQL at %s:%s", mysqlHost, mysqlPort)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
 
 	var e2 error
 	db, e2 = sql.Open("mysql", dsn)
