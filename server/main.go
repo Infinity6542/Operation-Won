@@ -29,7 +29,6 @@ func main() {
 	log.Println("Starting Operation Won Server...")
 
 	// Load environment variables with defaults
-	redisHost := getEnv("REDIS_HOST", "redis")
 	redisPort := getEnv("REDIS_PORT", "6379")
 	mysqlPort := getEnv("MYSQL_PORT", "3306")
 	mysqlUser := getEnv("MYSQL_USER", "opwon_user")
@@ -38,6 +37,10 @@ func main() {
 	serverPort := getEnv("SERVER_PORT", "8000")
 
 	// Redis configuration
+	var redisHost string
+	fmt.Print("Enter the Redis IP address: ")
+	fmt.Scanln(&redisHost)
+
 	redisAddr := fmt.Sprintf("%s:%s", redisHost, redisPort)
 	log.Printf("[LOG] [SRV] Connecting to Redis at %s", redisAddr)
 
