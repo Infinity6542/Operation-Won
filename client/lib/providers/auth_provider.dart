@@ -4,7 +4,7 @@ import '../services/api_service.dart';
 import 'settings_provider.dart';
 
 class AuthProvider extends ChangeNotifier {
-  late final ApiService _apiService;
+  final ApiService? _apiService;
   final SettingsProvider? _settingsProvider;
 
   bool _isLoading = false;
@@ -14,38 +14,13 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   JWTClaims? get user => _user;
-  bool get isLoggedIn => _apiService.isLoggedIn;
+  bool get isLoggedIn => _apiService?.isLoggedIn ?? false;
   SettingsProvider? get settingsProvider => _settingsProvider;
 
-  AuthProvider({SettingsProvider? settingsProvider})
-      : _settingsProvider = settingsProvider {
-    _initializeApiService();
+  AuthProvider({SettingsProvider? settingsProvider, ApiService? apiService})
+      : _settingsProvider = settingsProvider, _apiService = apiService {
+    _apiService?.onAuthenticationFailed = _handleAuthenticationFailure;
     _initialize();
-  }
-
-  void _initializeApiService() {
-    if (_settingsProvider != null) {
-      debugPrint(
-          'AuthProvider: Using settings provider endpoint: ${_settingsProvider.apiEndpoint}');
-      _apiService = ApiService(
-        baseUrl: _settingsProvider.apiEndpoint,
-        onAuthenticationFailed: _handleAuthenticationFailure,
-      );
-      // Listen to settings changes to update API endpoint
-      _settingsProvider.addListener(_onSettingsChanged);
-    } else {
-      debugPrint(
-          'AuthProvider: No settings provider, using default API service');
-      _apiService = ApiService(
-        onAuthenticationFailed: _handleAuthenticationFailure,
-      );
-    }
-  }
-
-  void _onSettingsChanged() {
-    if (_settingsProvider != null) {
-      _apiService.updateBaseUrl(_settingsProvider.apiEndpoint);
-    }
   }
 
   void _handleAuthenticationFailure() {
@@ -56,7 +31,7 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(false); // Ensure loading state is cleared
 
     // Force clear any cached tokens to prevent retry loops
-    _apiService.clearAuthenticationData();
+    _apiService?.clearAuthenticationData();
 
     // Force notify listeners to update UI state immediately
     if (!_isDisposed) {
@@ -70,7 +45,6 @@ class AuthProvider extends ChangeNotifier {
   void dispose() {
     if (_isDisposed) return; // Prevent duplicate disposal
 
-    _settingsProvider?.removeListener(_onSettingsChanged);
     _isDisposed = true;
 
     try {
@@ -83,6 +57,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _initialize() async {
+    if (_apiService == null) return;
     _setLoading(true);
     try {
       await _apiService.initializeToken();
@@ -93,59 +68,68 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> register(String username, String email, String password) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
     _setLoading(true);
     _clearError();
 
     try {
       await _apiService.register(username, email, password);
-
-      // Automatically log in the user after successful registration
-      String loginIdentifier = username.contains('@') ? username : email;
-      await _apiService.login(loginIdentifier, password);
-      _user = _apiService.decodeToken();
-
-      _setLoading(false);
       return true;
     } catch (e) {
       _setError(e.toString());
-      _setLoading(false);
       return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<bool> login(String username, String password) async {
+  Future<bool> login(String email, String password) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
     _setLoading(true);
     _clearError();
 
     try {
-      // Send the username as-is to the server, let server handle email vs username lookup
-      await _apiService.login(username, password);
+      await _apiService.login(email, password);
       _user = _apiService.decodeToken();
-      _setLoading(false);
+      notifyListeners();
       return true;
     } catch (e) {
       _setError(e.toString());
-      _setLoading(false);
       return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
   Future<void> logout() async {
+    if (_apiService == null) return;
     _setLoading(true);
     try {
       await _apiService.logout();
       _user = null;
-      _clearError();
-      debugPrint('[AuthProvider] User logged out successfully');
-
-      // Ensure auth state is immediately updated to prevent any pending operations
-      if (!_isDisposed) {
-        notifyListeners();
-      }
+      notifyListeners();
+    } catch (e) {
+      _setError(e.toString());
     } finally {
       _setLoading(false);
     }
-    // notifyListeners() is already called in _setLoading(false)
+  }
+
+  Future<void> refresh() async {
+    if (_apiService == null) return;
+    try {
+      await _apiService.refreshToken();
+      _user = _apiService.decodeToken();
+      notifyListeners();
+    } catch (e) {
+      _setError(e.toString());
+    }
   }
 
   void _setLoading(bool loading) {

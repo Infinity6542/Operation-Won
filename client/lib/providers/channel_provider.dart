@@ -4,8 +4,7 @@ import '../models/channel_model.dart';
 import 'settings_provider.dart';
 
 class ChannelProvider extends ChangeNotifier {
-  late final ApiService _apiService;
-  final SettingsProvider? _settingsProvider;
+  final ApiService? _apiService;
 
   List<ChannelResponse> _channels = [];
   bool _isLoading = false;
@@ -15,34 +14,14 @@ class ChannelProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  ChannelProvider({SettingsProvider? settingsProvider})
-      : _settingsProvider = settingsProvider {
-    _initializeApiService();
-  }
-
-  void _initializeApiService() {
-    if (_settingsProvider != null) {
-      _apiService = ApiService(baseUrl: _settingsProvider.apiEndpoint);
-      // Listen to settings changes to update API endpoint
-      _settingsProvider.addListener(_onSettingsChanged);
-    } else {
-      _apiService = ApiService();
-    }
-  }
-
-  void _onSettingsChanged() {
-    if (_settingsProvider != null) {
-      _apiService.updateBaseUrl(_settingsProvider.apiEndpoint);
-    }
-  }
-
-  @override
-  void dispose() {
-    _settingsProvider?.removeListener(_onSettingsChanged);
-    super.dispose();
-  }
+  ChannelProvider({SettingsProvider? settingsProvider, ApiService? apiService})
+      : _apiService = apiService;
 
   Future<void> loadChannels() async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return;
+    }
     _setLoading(true);
     _clearError();
 
@@ -66,12 +45,17 @@ class ChannelProvider extends ChangeNotifier {
   }
 
   Future<bool> createChannel(String channelName, {String? eventUuid}) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
     _setLoading(true);
     _clearError();
 
     try {
       debugPrint('[ChannelProvider] Creating channel: $channelName');
-      await _apiService.createChannel(channelName, eventUuid: eventUuid);
+      await _apiService
+          .createChannel(channelName, eventUuid: eventUuid);
       debugPrint(
           '[ChannelProvider] Channel created successfully, refreshing list...');
       await loadChannels(); // Refresh the list
@@ -88,6 +72,10 @@ class ChannelProvider extends ChangeNotifier {
   }
 
   Future<bool> deleteChannel(String channelUuid) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
     _setLoading(true);
     _clearError();
 
@@ -101,6 +89,33 @@ class ChannelProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('[ChannelProvider] Error deleting channel: $e');
+      _setError(e.toString());
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  Future<bool> updateChannel(
+      String channelUuid, String newChannelName) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
+    _setLoading(true);
+    _clearError();
+
+    try {
+      debugPrint(
+          '[ChannelProvider] Updating channel $channelUuid to $newChannelName');
+      await _apiService
+          .updateChannel(channelUuid, newChannelName);
+      debugPrint(
+          '[ChannelProvider] Channel updated successfully, refreshing list...');
+      await loadChannels(); // Refresh the list
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      debugPrint('[ChannelProvider] Error updating channel: $e');
       _setError(e.toString());
       _setLoading(false);
       return false;

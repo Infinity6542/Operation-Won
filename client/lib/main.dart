@@ -11,6 +11,7 @@ import 'package:operation_won/providers/auth_provider.dart';
 import 'package:operation_won/providers/channel_provider.dart';
 import 'package:operation_won/providers/event_provider.dart';
 import 'package:operation_won/providers/settings_provider.dart';
+import 'package:operation_won/services/api_service.dart';
 import 'package:operation_won/widgets/auth_state_listener.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,6 +49,24 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => AppState()),
         ChangeNotifierProvider(create: (context) => SettingsProvider()),
+        ProxyProvider<SettingsProvider, ApiService>(
+          update: (context, settings, previous) {
+            if (settings.isLoaded) {
+              if (previous == null) {
+                return ApiService(baseUrl: settings.apiEndpoint);
+              } else {
+                previous.setBaseUrl(settings.apiEndpoint);
+                return previous;
+              }
+            }
+            // Return a dummy/default while settings are loading
+            return previous ??
+                ApiService(baseUrl: SettingsProvider.predefinedEndpoints.first['api']!);
+          },
+          dispose: (_, apiService) {
+            // Dio will be disposed automatically if that's how you've set it up
+          },
+        ),
         ChangeNotifierProxyProvider<SettingsProvider, CommsState>(
           create: (context) => CommsState(),
           update: (context, settingsProvider, commsState) {
@@ -56,37 +75,41 @@ class MyApp extends StatelessWidget {
             return commsState;
           },
         ),
-        ChangeNotifierProxyProvider<SettingsProvider, AuthProvider>(
-          create: (context) =>
-              AuthProvider(), // Initial creation without settings
-          update: (context, settingsProvider, authProvider) {
-            // Only recreate if settings are loaded and current provider doesn't have settings
-            if (settingsProvider.isLoaded &&
-                authProvider != null &&
-                authProvider.settingsProvider == null) {
-              authProvider.dispose(); // Properly dispose the old one
-              return AuthProvider(settingsProvider: settingsProvider);
+        ChangeNotifierProxyProvider2<SettingsProvider, ApiService, AuthProvider>(
+          create: (context) => AuthProvider(),
+          update: (context, settingsProvider, apiService, authProvider) {
+            if (settingsProvider.isLoaded) {
+              return AuthProvider(
+                settingsProvider: settingsProvider,
+                apiService: apiService,
+              );
             }
-            return authProvider ??
-                AuthProvider(settingsProvider: settingsProvider);
+            return authProvider ?? AuthProvider();
           },
         ),
-        ChangeNotifierProxyProvider<SettingsProvider, EventProvider>(
+        ChangeNotifierProxyProvider2<SettingsProvider, ApiService, EventProvider>(
           create: (context) => EventProvider(),
-          update: (context, settingsProvider, eventProvider) {
-            if (eventProvider == null) {
-              return EventProvider(settingsProvider: settingsProvider);
+          update: (context, settingsProvider, apiService, eventProvider) {
+            if (settingsProvider.isLoaded) {
+              return EventProvider(
+                settingsProvider: settingsProvider,
+                apiService: apiService,
+              );
             }
-            return eventProvider;
+            return eventProvider ?? EventProvider();
           },
         ),
-        ChangeNotifierProxyProvider<SettingsProvider, ChannelProvider>(
+        ChangeNotifierProxyProvider2<SettingsProvider, ApiService, ChannelProvider>(
           create: (context) => ChannelProvider(),
-          update: (context, settingsProvider, channelProvider) {
-            if (channelProvider == null) {
-              return ChannelProvider(settingsProvider: settingsProvider);
+          update:
+              (context, settingsProvider, apiService, channelProvider) {
+            if (settingsProvider.isLoaded) {
+              return ChannelProvider(
+                settingsProvider: settingsProvider,
+                apiService: apiService,
+              );
             }
-            return channelProvider;
+            return channelProvider ?? ChannelProvider();
           },
         ),
       ],

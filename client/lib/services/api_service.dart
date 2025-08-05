@@ -8,10 +8,8 @@ import '../models/event_model.dart';
 import 'secure_storage_service.dart';
 
 class ApiService {
-  static const String defaultBaseURL = 'http://localhost:8000';
   final Dio _dio;
   String? _token;
-  String _baseUrl = defaultBaseURL;
   bool _isRefreshing = false; // Flag to prevent concurrent token refreshes
   final List<Completer<void>> _refreshCompleters =
       []; // Queue for pending requests during refresh
@@ -19,10 +17,9 @@ class ApiService {
   // Callback for when authentication fails (token revoked/invalid)
   Function()? onAuthenticationFailed;
 
-  ApiService({String? baseUrl, this.onAuthenticationFailed})
-      : _baseUrl = baseUrl ?? defaultBaseURL,
-        _dio = Dio(BaseOptions(
-          baseUrl: baseUrl ?? defaultBaseURL,
+  ApiService({required String baseUrl, this.onAuthenticationFailed})
+      : _dio = Dio(BaseOptions(
+          baseUrl: baseUrl,
           connectTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10),
           sendTimeout: const Duration(seconds: 10),
@@ -30,7 +27,7 @@ class ApiService {
             'Content-Type': 'application/json',
           },
         )) {
-    debugPrint('ApiService initialized with base URL: $_baseUrl');
+    debugPrint('ApiService initialized with base URL: $baseUrl');
 
     // Add request interceptor for auth token and automatic refresh
     _dio.interceptors.add(
@@ -100,35 +97,31 @@ class ApiService {
               onAuthenticationFailed?.call();
             }
           }
-
-          debugPrint('API Error: ${error.message}');
           handler.next(error);
         },
       ),
     );
-
     _loadToken();
+  }
+
+  void setBaseUrl(String newBaseUrl) {
+    _dio.options.baseUrl = newBaseUrl;
+    debugPrint('ApiService base URL updated to: $newBaseUrl');
   }
 
   bool _isPublicEndpoint(String path) {
     return path.startsWith('/auth/') ||
         path.startsWith('/health') ||
-        path.startsWith('/msg');
+        path.startsWith('/metrics');
   }
-
-  // Method to update the base URL
-  void updateBaseUrl(String newBaseUrl) {
-    if (_baseUrl != newBaseUrl) {
-      _baseUrl = newBaseUrl;
-      _dio.options.baseUrl = newBaseUrl;
-      debugPrint('API Service: Updated base URL to $newBaseUrl');
-    }
-  }
-
-  String get baseUrl => _baseUrl;
 
   Future<void> _loadToken() async {
     _token = await SecureStorageService.getToken();
+    if (_token != null) {
+      debugPrint('Token loaded successfully.');
+    } else {
+      debugPrint('No token found in storage.');
+    }
   }
 
   // Public method to ensure token is loaded before checking auth state
@@ -498,7 +491,7 @@ class ApiService {
       debugPrint(
           '[API] ERROR: Could not extract channel_uuid from response: ${response.data}');
       throw Exception(
-          'Invalid response format: missing or null channel_uuid'); // Fixed
+          'Invalid response format: missing or null channel_uuid');
     } on DioException catch (e) {
       debugPrint('[API] DioException creating channel: ${e.message}');
       debugPrint('[API] Response data: ${e.response?.data}');
@@ -507,7 +500,7 @@ class ApiService {
       debugPrint('[API] General exception creating channel: $e');
       rethrow;
     }
-  } // Debug version
+  }
 
   Future<void> deleteChannel(String channelUuid) async {
     try {
@@ -537,6 +530,47 @@ class ApiService {
       throw _handleError(e);
     } catch (e) {
       debugPrint('[API] General exception deleting event: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateChannel(String channelUuid, String newChannelName) async {
+    try {
+      debugPrint('[API] Updating channel: $channelUuid to $newChannelName');
+      final response = await _dio.put(
+        '/api/protected/channels/$channelUuid/update',
+        data: {'channel_name': newChannelName},
+      );
+      debugPrint('[API] Channel update response: ${response.data}');
+    } on DioException catch (e) {
+      debugPrint('[API] DioException updating channel: ${e.message}');
+      debugPrint('[API] Response data: ${e.response?.data}');
+      throw _handleError(e);
+    } catch (e) {
+      debugPrint('[API] General exception updating channel: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateEvent(String eventUuid, String newEventName,
+      {String? newEventDescription}) async {
+    try {
+      debugPrint('[API] Updating event: $eventUuid to $newEventName');
+      final response = await _dio.put(
+        '/api/protected/events/$eventUuid/update',
+        data: {
+          'event_name': newEventName,
+          if (newEventDescription != null)
+            'event_description': newEventDescription,
+        },
+      );
+      debugPrint('[API] Event update response: ${response.data}');
+    } on DioException catch (e) {
+      debugPrint('[API] DioException updating event: ${e.message}');
+      debugPrint('[API] Response data: ${e.response?.data}');
+      throw _handleError(e);
+    } catch (e) {
+      debugPrint('[API] General exception updating event: $e');
       rethrow;
     }
   }

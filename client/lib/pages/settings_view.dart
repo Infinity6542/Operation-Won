@@ -63,6 +63,14 @@ class _SettingsViewState extends State<SettingsView>
               ]),
               const SizedBox(height: 28),
 
+              // Connection Settings Section
+              _buildSectionHeader(context, 'Connection'),
+              const SizedBox(height: 12),
+              _buildSettingsCard(context, [
+                _buildConnectionSetting(context, settingsProvider),
+              ]),
+              const SizedBox(height: 28),
+
               // Audio Settings Section
               _buildSectionHeader(context, 'Audio Settings'),
               const SizedBox(height: 12),
@@ -820,5 +828,36 @@ class _SettingsViewState extends State<SettingsView>
         );
       }
     }
+  }
+
+  Widget _buildConnectionSetting(
+      BuildContext context, SettingsProvider settingsProvider) {
+    return ListTile(
+      title: const Text('API Endpoint'),
+      subtitle: Text(settingsProvider.apiEndpoint),
+      trailing: const Icon(LucideIcons.chevronRight),
+      onTap: () {
+        _showConnectionDialog(context, settingsProvider);
+      },
+    );
+  }
+
+  void _showConnectionDialog(
+      BuildContext context, SettingsProvider settingsProvider) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Connection Settings'),
+          content: Text('API Endpoint: ${settingsProvider.apiEndpoint}\nWebSocket: ${settingsProvider.websocketEndpoint}'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

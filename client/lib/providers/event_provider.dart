@@ -4,8 +4,7 @@ import '../models/event_model.dart';
 import 'settings_provider.dart';
 
 class EventProvider extends ChangeNotifier {
-  late final ApiService _apiService;
-  final SettingsProvider? _settingsProvider;
+  final ApiService? _apiService;
 
   List<EventResponse> _events = [];
   bool _isLoading = false;
@@ -16,37 +15,13 @@ class EventProvider extends ChangeNotifier {
   String? get error => _error;
 
   EventProvider({SettingsProvider? settingsProvider, ApiService? apiService})
-      : _settingsProvider = settingsProvider {
-    if (apiService != null) {
-      _apiService = apiService;
-    } else {
-      _initializeApiService();
-    }
-  }
-
-  void _initializeApiService() {
-    if (_settingsProvider != null) {
-      _apiService = ApiService(baseUrl: _settingsProvider.apiEndpoint);
-      // Listen to settings changes to update API endpoint
-      _settingsProvider.addListener(_onSettingsChanged);
-    } else {
-      _apiService = ApiService();
-    }
-  }
-
-  void _onSettingsChanged() {
-    if (_settingsProvider != null) {
-      _apiService.updateBaseUrl(_settingsProvider.apiEndpoint);
-    }
-  }
-
-  @override
-  void dispose() {
-    _settingsProvider?.removeListener(_onSettingsChanged);
-    super.dispose();
-  }
+      : _apiService = apiService;
 
   Future<void> loadEvents() async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return;
+    }
     _setLoading(true);
     _clearError();
 
@@ -72,13 +47,17 @@ class EventProvider extends ChangeNotifier {
   }
 
   Future<bool> createEvent(String eventName, {String? eventDescription}) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
     _setLoading(true);
     _clearError();
 
     try {
       debugPrint('[EventProvider] Creating event: $eventName');
-      await _apiService.createEvent(eventName,
-          eventDescription: eventDescription);
+      await _apiService
+          .createEvent(eventName, eventDescription: eventDescription);
       debugPrint(
           '[EventProvider] Event created successfully, refreshing list...');
       await loadEvents(); // Refresh the list
@@ -94,6 +73,10 @@ class EventProvider extends ChangeNotifier {
   }
 
   Future<bool> deleteEvent(String eventUuid) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
     _setLoading(true);
     _clearError();
 
@@ -113,23 +96,53 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
-  Future<String?> joinEvent(String inviteCode) async {
+  Future<bool> updateEvent(String eventUuid, String newEventName,
+      {String? newEventDescription}) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
     _setLoading(true);
     _clearError();
 
     try {
-      debugPrint('[EventProvider] Joining event with invite code: $inviteCode');
-      final eventName = await _apiService.joinEvent(inviteCode);
+      debugPrint('[EventProvider] Updating event $eventUuid to $newEventName');
+      await _apiService.updateEvent(eventUuid, newEventName,
+          newEventDescription: newEventDescription);
       debugPrint(
-          '[EventProvider] Event joined successfully: $eventName, refreshing list...');
+          '[EventProvider] Event updated successfully, refreshing list...');
       await loadEvents(); // Refresh the list
       _setLoading(false);
-      return eventName;
+      return true;
+    } catch (e) {
+      debugPrint('[EventProvider] Error updating event: $e');
+      _setError(e.toString());
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  Future<bool> joinEvent(String inviteCode) async {
+    if (_apiService == null) {
+      _setError('API service not available');
+      return false;
+    }
+    _setLoading(true);
+    _clearError();
+
+    try {
+      debugPrint('[EventProvider] Joining event with code: $inviteCode');
+      await _apiService.joinEvent(inviteCode);
+      debugPrint(
+          '[EventProvider] Joined event successfully, refreshing list...');
+      await loadEvents(); // Refresh the list
+      _setLoading(false);
+      return true;
     } catch (e) {
       debugPrint('[EventProvider] Error joining event: $e');
       _setError(e.toString());
       _setLoading(false);
-      return null;
+      return false;
     }
   }
 

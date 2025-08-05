@@ -88,6 +88,8 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 24),
                   _buildFooter(context),
+                  const SizedBox(height: 24),
+                  const _ApiEndpointSelector(),
                 ],
               ),
             ),
@@ -585,6 +587,127 @@ class _RegisterFormState extends State<RegisterForm> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ApiEndpointSelector extends StatefulWidget {
+  const _ApiEndpointSelector();
+
+  @override
+  State<_ApiEndpointSelector> createState() => _ApiEndpointSelectorState();
+}
+
+class _ApiEndpointSelectorState extends State<_ApiEndpointSelector> {
+  final _customApiController = TextEditingController();
+  final _customWebsocketController = TextEditingController();
+  String? _selectedEndpoint;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = context.read<SettingsProvider>();
+    
+    // Check if the current endpoint is a predefined one
+    final predefinedMatches = SettingsProvider.predefinedEndpoints
+        .where((e) => e['api'] == settings.apiEndpoint);
+    
+    if (predefinedMatches.isNotEmpty) {
+      // Use the predefined endpoint API value
+      _selectedEndpoint = predefinedMatches.first['api'];
+    } else {
+      // Use custom and populate the controllers
+      _selectedEndpoint = 'custom';
+      _customApiController.text = settings.apiEndpoint;
+      _customWebsocketController.text = settings.websocketEndpoint;
+    }
+  }
+
+  @override
+  void dispose() {
+    _customApiController.dispose();
+    _customWebsocketController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsProvider>(context);
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'API Endpoint',
+          style: theme.textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _selectedEndpoint,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          items: [
+            ...SettingsProvider.predefinedEndpoints.map((endpoint) {
+              return DropdownMenuItem<String>(
+                value: endpoint['api'],
+                child: Text(endpoint['name']!),
+              );
+            }),
+            const DropdownMenuItem<String>(
+              value: 'custom',
+              child: Text('Custom'),
+            ),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _selectedEndpoint = value;
+              });
+              if (value != 'custom') {
+                final endpoint = SettingsProvider.predefinedEndpoints
+                    .firstWhere((e) => e['api'] == value);
+                settings.setApiEndpoint(endpoint['api']!);
+                settings.setWebsocketEndpoint(endpoint['websocket']!);
+              }
+            }
+          },
+        ),
+        if (_selectedEndpoint == 'custom') ...[
+          const SizedBox(height: 16),
+          TextField(
+            controller: _customApiController,
+            decoration: const InputDecoration(
+              labelText: 'Custom API URL',
+              hintText: 'https://api.example.com',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              settings.setApiEndpoint(value);
+              // Also update websocket URL based on API URL
+              if (value.isNotEmpty) {
+                final wsUrl = '${value.replaceFirst('http', 'ws')}/msg';
+                _customWebsocketController.text = wsUrl;
+                settings.setWebsocketEndpoint(wsUrl);
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _customWebsocketController,
+            decoration: const InputDecoration(
+              labelText: 'Custom WebSocket URL',
+              hintText: 'wss://api.example.com/msg',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              settings.setWebsocketEndpoint(value);
+            },
+          ),
+        ],
+      ],
     );
   }
 }
