@@ -156,16 +156,23 @@ func (h *Hub) broadcastMsg(message *Message) {
 	channelClients := h.channels[message.ChannelID]
 	h.mu.Unlock()
 
+	log.Printf("[HUB] [BROADCAST] Broadcasting %d bytes to channel %s, sender: %s (UserID: %d)", len(message.Data), message.ChannelID, message.Sender.ID, message.Sender.UserID)
+	clientCount := 0
 	for client := range channelClients {
 		if client != message.Sender {
+			log.Printf("[HUB] [BROADCAST] Sending to client %s (UserID: %d)", client.ID, client.UserID)
 			select {
 			case client.send <- message.Data:
+				clientCount++
 			default:
 				close(client.send)
 				delete(channelClients, client)
 			}
+		} else {
+			log.Printf("[HUB] [BROADCAST] Skipping sender %s (UserID: %d)", client.ID, client.UserID)
 		}
 	}
+	log.Printf("[HUB] [BROADCAST] Sent to %d clients", clientCount)
 }
 
 func (h *Hub) switchChannel(req *ChannelChangeRequest) {
@@ -371,6 +378,18 @@ func (c *Client) handleSignal(s Signal) {
 						log.Printf("[PTT] [STOP] Audio file %s missing on PTT stop: %v", audioFile, err)
 					} else {
 						log.Printf("[PTT] [STOP] Audio file %s exists on PTT stop (size: %d bytes)", audioFile, stat.Size())
+						
+						// List all files in audio directory for debugging
+						if files, err := os.ReadDir("./audio"); err != nil {
+							log.Printf("[PTT] [STOP] Failed to read audio directory: %v", err)
+						} else {
+							log.Printf("[PTT] [STOP] Audio directory contains %d files:", len(files))
+							for _, file := range files {
+								if fileInfo, err := file.Info(); err == nil {
+									log.Printf("[PTT] [STOP]   - %s (%d bytes)", file.Name(), fileInfo.Size())
+								}
+							}
+						}
 					}
 				}
 
