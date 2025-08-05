@@ -11,7 +11,7 @@ class SettingsProvider extends ChangeNotifier {
 
   // Default values
   static const String _defaultApiEndpoint = 'http://localhost:8000';
-  static const String _defaultWebsocketEndpoint = 'ws://localhost:8000/msg';
+  static const String _defaultWebsocketEndpoint = 'http://localhost:8000/msg';
   static const String _defaultThemeMode = 'dark';
   static const String _defaultPttMode = 'hold';
   static const bool _defaultMagicMicEnabled = true;
@@ -52,7 +52,7 @@ class SettingsProvider extends ChangeNotifier {
     {
       'name': 'Stable',
       'api': 'http://192.9.165.5:8000',
-      'websocket': 'ws://192.9.165.5:8000/msg',
+      'websocket': 'http://192.9.165.5:8000/msg',
     },
     // {
     //   'name': 'Staging',
