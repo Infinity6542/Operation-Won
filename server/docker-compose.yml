@@ -71,9 +71,9 @@ services:
     ports:
       - "${SERVER_PORT:-8000}:8000"
     depends_on:
-      mysql:
+      opwon_mysql:
         condition: service_healthy
-      redis:
+      opwon_redis:
         condition: service_healthy
     networks:
       opwon_network:
