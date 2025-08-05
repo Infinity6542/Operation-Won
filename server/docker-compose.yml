@@ -10,8 +10,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-opwon_root_password}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-operation_won}
-      # Remove MYSQL_USER and MYSQL_PASSWORD to avoid conflicts with init.sql
-      # The init.sql script will create the user with proper permissions
+      MYSQL_USER: ${MYSQL_USER:-opwon_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-opwon_password}
     ports:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
@@ -65,6 +65,9 @@ services:
       # Server configuration
       SERVER_PORT: ${SERVER_PORT:-8000}
       JWT_SECRET: ${JWT_SECRET:-verymuchasecr3t_change_in_production}
+      
+      # Startup delay (in seconds) to wait for MySQL/Redis to be ready
+      STARTUP_DELAY_SECONDS: ${STARTUP_DELAY_SECONDS:-10}
       
       # Environment
       GO_ENV: ${GO_ENV:-production}

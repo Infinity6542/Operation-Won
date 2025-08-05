@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +28,20 @@ var (
 
 func main() {
 	log.Println("Starting Operation Won Server...")
+
+	// Check for startup delay environment variable
+	startupDelayStr := getEnv("STARTUP_DELAY_SECONDS", "0")
+	startupDelay, err := strconv.Atoi(startupDelayStr)
+	if err != nil {
+		log.Printf("[WARN] Invalid STARTUP_DELAY_SECONDS value '%s', using 0", startupDelayStr)
+		startupDelay = 0
+	}
+	
+	if startupDelay > 0 {
+		log.Printf("[LOG] [SRV] Waiting %d seconds before starting server...", startupDelay)
+		time.Sleep(time.Duration(startupDelay) * time.Second)
+		log.Printf("[LOG] [SRV] Startup delay complete, proceeding with initialization")
+	}
 
 	// Load environment variables with defaults
 	redisHost := getEnv("REDIS_HOST", "opwon_redis")
