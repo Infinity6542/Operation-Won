@@ -222,13 +222,19 @@ class ApiService {
       // Determine if input is email or username
       bool isEmail = usernameOrEmail.contains('@');
 
+      final loginData = AuthRequest(
+        username: isEmail ? null : usernameOrEmail,
+        email: isEmail ? usernameOrEmail : '',
+        password: password,
+      ).toJson();
+
+      // Debug logging
+      debugPrint(
+          '[ApiService] Login attempt - Username: ${loginData['username']}, Email: ${loginData['email']}, Password length: ${password.length}');
+
       final response = await _dio.post(
         '/auth/login',
-        data: AuthRequest(
-          username: isEmail ? null : usernameOrEmail,
-          email: isEmail ? usernameOrEmail : '',
-          password: password,
-        ).toJson(),
+        data: loginData,
       );
 
       final authResponse = AuthResponse.fromJson(response.data);
@@ -490,8 +496,7 @@ class ApiService {
 
       debugPrint(
           '[API] ERROR: Could not extract channel_uuid from response: ${response.data}');
-      throw Exception(
-          'Invalid response format: missing or null channel_uuid');
+      throw Exception('Invalid response format: missing or null channel_uuid');
     } on DioException catch (e) {
       debugPrint('[API] DioException creating channel: ${e.message}');
       debugPrint('[API] Response data: ${e.response?.data}');
