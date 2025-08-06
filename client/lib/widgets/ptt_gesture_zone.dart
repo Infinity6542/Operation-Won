@@ -394,19 +394,21 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                     children: [
                       Positioned.fill(
                         child: AnimatedBuilder(
-                          animation: Listenable.merge(
-                              [_stateTransitionAnimation, _colorTransitionAnimation]),
+                          animation: Listenable.merge([
+                            _stateTransitionAnimation,
+                            _colorTransitionAnimation
+                          ]),
                           builder: (context, child) {
                             Color baseColor;
                             Color activeColor;
 
                             if (!canUsePTT) {
-                              baseColor = activeColor =
-                                  Colors.white.withAlpha(30);
+                              baseColor =
+                                  activeColor = Colors.white.withAlpha(30);
                             } else if (_currentGesture ==
                                 PTTGestureType.swipeDown) {
-                              baseColor = activeColor =
-                                  Colors.yellow.withAlpha(64);
+                              baseColor =
+                                  activeColor = Colors.yellow.withAlpha(64);
                             } else {
                               baseColor = Colors.grey.withAlpha(51);
                               activeColor = Colors.blue.withAlpha(89);
@@ -424,13 +426,9 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                                 color: dotColor,
                                 animationValue: _isPressed
                                     ? 0.3 +
-                                        0.3 *
-                                            _stateTransitionAnimation
-                                                .value
+                                        0.3 * _stateTransitionAnimation.value
                                     : 0.6 +
-                                        0.4 *
-                                            _stateTransitionAnimation
-                                                .value,
+                                        0.4 * _stateTransitionAnimation.value,
                               ),
                             );
                           },
@@ -672,8 +670,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                                 color: Colors.red.withAlpha(51),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.red
-                                        .withAlpha((255 * 0.4 * pulseValue).round()),
+                                    color: Colors.red.withAlpha(
+                                        (255 * 0.4 * pulseValue).round()),
                                     blurRadius: 40 * pulseValue,
                                     spreadRadius: 20 * pulseValue,
                                   ),

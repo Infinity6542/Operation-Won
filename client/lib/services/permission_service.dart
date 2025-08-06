@@ -84,11 +84,13 @@ class PermissionService {
                 children: [
                   Icon(Icons.mic, color: Colors.blue),
                   SizedBox(width: 8),
-                  Text('Microphone Permission'),
+                  Flexible(
+                    child: Text('Microphone Permission'),
+                  ),
                 ],
               ),
               content: const Text(
-                'Operation Won needs access to your microphone to enable Push-to-Talk communication with your team.\n\n'
+                'Operation Won needs access to your microphone to enable Push-to-Talk communication with your team.\n\n' 
                 'Your audio is only transmitted when you actively press and hold the PTT button.',
               ),
               actions: [
@@ -119,11 +121,13 @@ class PermissionService {
                 children: [
                   Icon(Icons.settings, color: Colors.orange),
                   SizedBox(width: 8),
-                  Text('Permission Required'),
+                  Flexible(
+                    child: Text('Permission Required'),
+                  ),
                 ],
               ),
               content: const Text(
-                'Microphone permission is required for Push-to-Talk functionality.\n\n'
+                'Microphone permission is required for Push-to-Talk functionality.\n\n' 
                 'Please enable microphone access in your device settings to use voice communication.',
               ),
               actions: [
