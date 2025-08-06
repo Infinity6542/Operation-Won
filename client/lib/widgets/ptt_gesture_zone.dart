@@ -49,6 +49,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
   bool _showEmergencyCountdown = false;
   int _countdownSeconds = 3;
   bool _isStandaloneChannel = false;
+  bool _isShowingLeaveDialog = false;
 
   final List<Offset> _velocityTracker = [];
   final List<int> _velocityTimestamps = [];
@@ -177,6 +178,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
       _currentTouchPosition = null;
       _showEmergencyCountdown = false;
       _isPressed = false;
+      _isShowingLeaveDialog = false;
     });
 
     _velocityTracker.clear();
@@ -293,6 +295,11 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
   }
 
   void _showLeaveChannelDialog(CommsState commsState) {
+    // Prevent showing multiple dialogs
+    if (_isShowingLeaveDialog) return;
+
+    _isShowingLeaveDialog = true;
+
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -318,7 +325,10 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
           ),
         ],
       ),
-    );
+    ).then((_) {
+      // Reset the flag when dialog is dismissed by any means
+      _isShowingLeaveDialog = false;
+    });
   }
 
   void _startEmergencyCountdown(CommsState commsState) {

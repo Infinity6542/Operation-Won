@@ -112,23 +112,34 @@ class _HomeViewState extends State<HomeView>
                         left: MediaQuery.of(context).padding.left,
                         right: MediaQuery.of(context).padding.right,
                       ),
-                      child: Column(
-                        children: [
-                          _buildAppBar(theme, user?.username, isInChannel),
-                          _buildCommsStatusBar(theme, isInChannel),
-                          _buildTabBar(theme, isInChannel),
-                          Expanded(
-                            child: CustomRefreshIndicator(
-                              onRefresh: _loadData,
-                              child: TabBarView(
-                                controller: _tabController,
-                                children: [
-                                  _buildEventsTab(context, events),
-                                  _buildChannelsTab(context, channels),
-                                ],
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Column(
+                            children: [
+                              // Fixed header sections - only show if there's enough space
+                              if (constraints.maxHeight > 120)
+                                _buildAppBar(theme, user?.username, isInChannel),
+                              _buildCommsStatusBar(theme, isInChannel),
+                              if (constraints.maxHeight > 150)
+                                _buildTabBar(theme, isInChannel),
+
+                              // Scrollable content area
+                              Expanded(
+                                child: CustomRefreshIndicator(
+                                  onRefresh: _loadData,
+                                  child: TabBarView(
+                                    controller: _tabController,
+                                    children: [
+                                      _buildEventsTab(context, events),
+                                      _buildChannelsTab(context, channels),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
+                            ],
+                          );
+                        },
+                      ),
                         ],
                       ),
                     ),
@@ -193,12 +204,6 @@ class _HomeViewState extends State<HomeView>
   }
 
   Widget _buildAppBar(ThemeData theme, String? username, bool isCollapsed) {
-    if (isCollapsed) {
-      return const SizedBox.shrink(); // Hide app bar when collapsed
-    }
-    if (isCollapsed) {
-      return const SizedBox.shrink(); // Hide app bar when collapsed
-    }
     if (isCollapsed) {
       return const SizedBox.shrink(); // Hide app bar when collapsed
     }
