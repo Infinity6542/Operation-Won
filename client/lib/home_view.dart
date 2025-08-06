@@ -112,34 +112,26 @@ class _HomeViewState extends State<HomeView>
                         left: MediaQuery.of(context).padding.left,
                         right: MediaQuery.of(context).padding.right,
                       ),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          return Column(
-                            children: [
-                              // Fixed header sections - only show if there's enough space
-                              if (constraints.maxHeight > 120)
-                                _buildAppBar(theme, user?.username, isInChannel),
-                              _buildCommsStatusBar(theme, isInChannel),
-                              if (constraints.maxHeight > 150)
-                                _buildTabBar(theme, isInChannel),
+                      child: Column(
+                        children: [
+                          // Fixed header sections
+                          _buildAppBar(theme, user?.username, isInChannel),
+                          _buildCommsStatusBar(theme, isInChannel),
+                          _buildTabBar(theme, isInChannel),
 
-                              // Scrollable content area
-                              Expanded(
-                                child: CustomRefreshIndicator(
-                                  onRefresh: _loadData,
-                                  child: TabBarView(
-                                    controller: _tabController,
-                                    children: [
-                                      _buildEventsTab(context, events),
-                                      _buildChannelsTab(context, channels),
-                                    ],
-                                  ),
-                                ),
+                          // Scrollable content area
+                          Expanded(
+                            child: CustomRefreshIndicator(
+                              onRefresh: _loadData,
+                              child: TabBarView(
+                                controller: _tabController,
+                                children: [
+                                  _buildEventsTab(context, events),
+                                  _buildChannelsTab(context, channels),
+                                ],
                               ),
-                            ],
-                          );
-                        },
-                      ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
