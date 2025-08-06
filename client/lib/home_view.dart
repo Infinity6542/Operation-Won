@@ -114,9 +114,9 @@ class _HomeViewState extends State<HomeView>
                       ),
                       child: Column(
                         children: [
-                          _buildAppBar(theme, user?.username),
-                          _buildCommsStatusBar(theme),
-                          _buildTabBar(theme),
+                          _buildAppBar(theme, user?.username, isInChannel),
+                          _buildCommsStatusBar(theme, isInChannel),
+                          _buildTabBar(theme, isInChannel),
                           Expanded(
                             child: CustomRefreshIndicator(
                               onRefresh: _loadData,
@@ -192,7 +192,16 @@ class _HomeViewState extends State<HomeView>
     );
   }
 
-  Widget _buildAppBar(ThemeData theme, String? username) {
+  Widget _buildAppBar(ThemeData theme, String? username, bool isCollapsed) {
+    if (isCollapsed) {
+      return const SizedBox.shrink(); // Hide app bar when collapsed
+    }
+    if (isCollapsed) {
+      return const SizedBox.shrink(); // Hide app bar when collapsed
+    }
+    if (isCollapsed) {
+      return const SizedBox.shrink(); // Hide app bar when collapsed
+    }
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -244,12 +253,12 @@ class _HomeViewState extends State<HomeView>
     );
   }
 
-  Widget _buildCommsStatusBar(ThemeData theme) {
+  Widget _buildCommsStatusBar(ThemeData theme, bool isCollapsed) {
     return Consumer<CommsState>(
       builder: (context, commsState, child) {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(isCollapsed ? 8 : 12),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainer,
             borderRadius: BorderRadius.circular(12),
@@ -262,14 +271,15 @@ class _HomeViewState extends State<HomeView>
               Icon(
                 LucideIcons.radio,
                 color: theme.colorScheme.primary,
-                size: 16,
+                size: isCollapsed ? 12 : 16,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: isCollapsed ? 4 : 8),
               Expanded(
                 child: Text(
                   commsState.currentChannelId ?? 'No channel selected',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
+                    fontSize: isCollapsed ? 12 : null,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -295,7 +305,10 @@ class _HomeViewState extends State<HomeView>
     );
   }
 
-  Widget _buildTabBar(ThemeData theme) {
+  Widget _buildTabBar(ThemeData theme, bool isCollapsed) {
+    if (isCollapsed) {
+      return const SizedBox.shrink(); // Hide tab bar when collapsed
+    }
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(

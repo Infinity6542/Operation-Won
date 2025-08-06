@@ -404,7 +404,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
 
                             if (!canUsePTT) {
                               baseColor =
-                                  activeColor = Colors.white.withAlpha(30);
+                                  activeColor = Colors.grey.withAlpha(30);
                             } else if (_currentGesture ==
                                 PTTGestureType.swipeDown) {
                               baseColor =
@@ -530,7 +530,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
 
     if (!canUsePTT) {
       baseGlowColor = activeGlowColor = Colors.grey;
-      baseOpacity = 0.2;
+      baseOpacity = 0.1;
     } else if (_showEmergencyCountdown ||
         _currentGesture == PTTGestureType.swipeUp) {
       baseGlowColor = activeGlowColor = Colors.red;
@@ -562,7 +562,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
         glowColor.withAlpha((255 * animatedOpacity * 0.5).round()),
         glowColor.withAlpha((255 * animatedOpacity).round()),
       ],
-      stops: const [0.0, 0.7, 1.0],
+      stops: const [0.0, 0.5, 1.0],
     );
   }
 
