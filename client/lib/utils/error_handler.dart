@@ -53,16 +53,26 @@ class EnhancedErrorHandler {
     required BuildContext context,
     required String message,
     Duration duration = const Duration(seconds: 3),
+    bool showProgress = false,
   }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white),
+            if (showProgress)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )            else
+              const Icon(Icons.check_circle_outline, color: Colors.white),
             const SizedBox(width: 8),
-            Text(
-              message,
-              style: const TextStyle(color: Colors.white),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),

@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
+import 'package:opus_dart/opus_dart.dart';
 
 class AudioService extends ChangeNotifier {
   static const MethodChannel _channel = MethodChannel('operation_won/audio');
@@ -11,9 +14,16 @@ class AudioService extends ChangeNotifier {
   Uint8List? _e2eeKey;
   StreamSubscription? _audioStreamSubscription;
 
+  // Opus codec: use opus_dart with opus_flutter
+  bool _opusInitialized = false;
+
   // Audio recording stream controller
   final StreamController<Uint8List> _audioDataController =
       StreamController<Uint8List>.broadcast();
+
+  // Error stream controller
+  final StreamController<String> _errorController =
+      StreamController<String>.broadcast();
 
   // Getters
   bool get isRecording => _isRecording;
@@ -21,11 +31,25 @@ class AudioService extends ChangeNotifier {
   bool get magicMicEnabled => _magicMicEnabled;
   bool get hasE2EEKey => _e2eeKey != null;
   Stream<Uint8List> get audioDataStream => _audioDataController.stream;
+  Stream<String> get errorStream => _errorController.stream;
 
   AudioService() {
+    _initializeOpus();
     _setupMethodCallHandler();
     // Skip E2EE key generation for now since native implementation is not available
     // _generateE2EEKey();
+  }
+
+  Future<void> _initializeOpus() async {
+    try {
+      initOpus(await opus_flutter.load());
+      _opusInitialized = true;
+      debugPrint('[Audio] Opus initialized successfully');
+    } catch (e) {
+      _errorController.add('Failed to initialize Opus: $e');
+      debugPrint('[Audio] Failed to initialize Opus: $e');
+      _opusInitialized = false;
+    }
   }
 
   void _setupMethodCallHandler() {
@@ -34,11 +58,15 @@ class AudioService extends ChangeNotifier {
         case 'onAudioData':
           final audioData = call.arguments as Uint8List;
           debugPrint(
-              '[Audio] Received audio data from native: ${audioData.length} bytes');
-          _audioDataController.add(audioData);
+              '[Audio] Received raw audio data from native: ${audioData.length} bytes');
+          final encodedData = await encryptAudioData(audioData);
+          if (encodedData != null) {
+            _audioDataController.add(encodedData);
+          }
           break;
         case 'onRecordingError':
           final error = call.arguments as String;
+          _errorController.add('Recording error: $error');
           debugPrint('[Audio] Recording error: $error');
           _isRecording = false;
           notifyListeners();
@@ -55,6 +83,7 @@ class AudioService extends ChangeNotifier {
       final result = await _channel.invokeMethod('requestMicrophonePermission');
       return result as bool;
     } catch (e) {
+      _errorController.add('Failed to request microphone permission: $e');
       debugPrint('[Audio] Failed to request microphone permission: $e');
       return false;
     }
@@ -67,6 +96,7 @@ class AudioService extends ChangeNotifier {
 
       final hasPermission = await requestMicrophonePermission();
       if (!hasPermission) {
+        _errorController.add('Microphone permission denied');
         debugPrint('[Audio] Microphone permission denied');
         return false;
       }
@@ -78,6 +108,7 @@ class AudioService extends ChangeNotifier {
       debugPrint('[Audio] Recording started: $_isRecording');
       return _isRecording;
     } catch (e) {
+      _errorController.add('Failed to start recording: $e');
       debugPrint('[Audio] Failed to start recording: $e');
       return false;
     }
@@ -94,6 +125,7 @@ class AudioService extends ChangeNotifier {
 
       debugPrint('[Audio] Recording stopped');
     } catch (e) {
+      _errorController.add('Failed to stop recording: $e');
       debugPrint('[Audio] Failed to stop recording: $e');
     }
   }
@@ -101,9 +133,16 @@ class AudioService extends ChangeNotifier {
   // Play audio chunk
   Future<void> playAudioChunk(Uint8List audioData) async {
     try {
-      debugPrint('[Audio] Playing audio chunk: ${audioData.length} bytes');
-      await _channel.invokeMethod('playAudioChunk', audioData);
+      debugPrint(
+          '[Audio] Received encoded audio chunk for playback: ${audioData.length} bytes');
+      final decodedData = await decryptAudioData(audioData);
+      if (decodedData != null) {
+        debugPrint(
+            '[Audio] Playing decoded audio chunk: ${decodedData.length} bytes');
+        await _channel.invokeMethod('playAudioChunk', decodedData);
+      }
     } catch (e) {
+      _errorController.add('Failed to play audio chunk: $e');
       debugPrint('[Audio] Failed to play audio chunk: $e');
     }
   }
@@ -117,6 +156,7 @@ class AudioService extends ChangeNotifier {
 
       debugPrint('[Audio] Playing mode started');
     } catch (e) {
+      _errorController.add('Failed to start playing mode: $e');
       debugPrint('[Audio] Failed to start playing mode: $e');
     }
   }
@@ -130,6 +170,7 @@ class AudioService extends ChangeNotifier {
 
       debugPrint('[Audio] Playing mode stopped');
     } catch (e) {
+      _errorController.add('Failed to stop playing mode: $e');
       debugPrint('[Audio] Failed to stop playing mode: $e');
     }
   }
@@ -150,6 +191,7 @@ class AudioService extends ChangeNotifier {
       debugPrint(
           '[Audio] Audio config set: $sampleRate Hz, $channels ch, $bitRate bps');
     } catch (e) {
+      _errorController.add('Failed to set audio config: $e');
       debugPrint('[Audio] Failed to set audio config: $e');
     }
   }
@@ -163,6 +205,7 @@ class AudioService extends ChangeNotifier {
 
       debugPrint('[Audio] Magic Mic ${enabled ? 'enabled' : 'disabled'}');
     } catch (e) {
+      _errorController.add('Failed to set Magic Mic: $e');
       debugPrint('[Audio] Failed to set Magic Mic: $e');
     }
   }
@@ -178,6 +221,7 @@ class AudioService extends ChangeNotifier {
     } catch (e) {
       // Skip error logging for missing plugin implementation
       if (!e.toString().contains('MissingPluginException')) {
+        _errorController.add('Failed to generate E2EE key: $e');
         debugPrint('[Audio] Failed to generate E2EE key: $e');
       }
     }
@@ -194,6 +238,7 @@ class AudioService extends ChangeNotifier {
       }
       return false;
     } catch (e) {
+      _errorController.add('Failed to set E2EE key: $e');
       debugPrint('[Audio] Failed to set E2EE key: $e');
       return false;
     }
@@ -212,50 +257,63 @@ class AudioService extends ChangeNotifier {
 
   // Encrypt audio data
   Future<Uint8List?> encryptAudioData(Uint8List audioData) async {
-    if (!hasE2EEKey) {
-      // No key available, return unencrypted
+    if (!_opusInitialized) {
+      debugPrint('[Audio] Opus not initialized, returning raw audio data');
       return audioData;
     }
 
     try {
-      final encryptedData =
-          await _channel.invokeMethod('encryptAudioData', audioData);
-      if (encryptedData != null) {
-        return Uint8List.fromList(encryptedData);
-      }
+      // Create a simple encoder for real-time encoding
+      final encoder = SimpleOpusEncoder(
+        sampleRate: 48000,
+        channels: 1,
+        application: Application.voip,
+      );
+
+      // Convert Uint8List to Int16List for Opus encoding
+      final int16Data = Int16List.fromList(
+          audioData.buffer.asUint16List().map((e) => e.toSigned(16)).toList());
+
+      final encodedData = encoder.encode(input: int16Data);
+      encoder.destroy(); // Clean up resources
+      debugPrint(
+          '[Audio] Encoded audio: ${audioData.length} bytes -> ${encodedData.length} bytes');
+      return encodedData;
     } catch (e) {
-      // Check if it's a missing plugin implementation
-      if (e.toString().contains('MissingPluginException')) {
-        // Native encryption not implemented, return unencrypted audio silently
-        return audioData;
-      }
-      debugPrint('[Audio] Failed to encrypt audio data: $e');
+      _errorController.add('Failed to encode audio data: $e');
+      debugPrint('[Audio] Failed to encode audio data: $e');
+      return audioData;
     }
-    return audioData; // Fallback to unencrypted
   }
 
   // Decrypt audio data
   Future<Uint8List?> decryptAudioData(Uint8List encryptedData) async {
-    if (!hasE2EEKey) {
-      // No key available, return data as-is
+    if (!_opusInitialized) {
+      debugPrint('[Audio] Opus not initialized, returning raw audio data');
       return encryptedData;
     }
 
     try {
-      final decryptedData =
-          await _channel.invokeMethod('decryptAudioData', encryptedData);
-      if (decryptedData != null) {
-        return Uint8List.fromList(decryptedData);
-      }
+      // Create a simple decoder for real-time decoding
+      final decoder = SimpleOpusDecoder(
+        sampleRate: 48000,
+        channels: 1,
+      );
+
+      final decodedInt16 = decoder.decode(input: encryptedData);
+      decoder.destroy(); // Clean up resources
+
+      // Convert Int16List back to Uint8List
+      final decodedData = Uint8List.fromList(decodedInt16.buffer.asUint8List());
+
+      debugPrint(
+          '[Audio] Decoded audio: ${encryptedData.length} bytes -> ${decodedData.length} bytes');
+      return decodedData;
     } catch (e) {
-      // Check if it's a missing plugin implementation
-      if (e.toString().contains('MissingPluginException')) {
-        // Native decryption not implemented, return data as-is silently
-        return encryptedData;
-      }
-      debugPrint('[Audio] Failed to decrypt audio data: $e');
+      _errorController.add('Failed to decode audio data: $e');
+      debugPrint('[Audio] Failed to decode audio data: $e');
+      return encryptedData;
     }
-    return encryptedData; // Fallback to returning as-is
   }
 
   @override
@@ -263,6 +321,7 @@ class AudioService extends ChangeNotifier {
     stopRecording();
     stopPlaying();
     _audioDataController.close();
+    _errorController.close();
     _audioStreamSubscription?.cancel();
     super.dispose();
   }
@@ -279,6 +338,7 @@ class WebAudioService extends AudioService {
   @override
   Future<bool> startRecording() async {
     // Web implementation would use MediaRecorder API
+    _errorController.add('Web audio recording not yet implemented');
     debugPrint('[Audio] Web audio recording not yet implemented');
     return false;
   }
@@ -286,12 +346,14 @@ class WebAudioService extends AudioService {
   @override
   Future<void> playAudioChunk(Uint8List audioData) async {
     // Web implementation would use Web Audio API
+    _errorController.add('Web audio playback not yet implemented');
     debugPrint('[Audio] Web audio playback not yet implemented');
   }
 
   @override
   Future<Uint8List?> encryptAudioData(Uint8List audioData) async {
     // Web implementation would use crypto-js or Web Crypto API
+    _errorController.add('Web audio encryption not yet implemented');
     debugPrint('[Audio] Web audio encryption not yet implemented');
     return audioData; // Return unencrypted for now
   }
@@ -299,6 +361,7 @@ class WebAudioService extends AudioService {
   @override
   Future<Uint8List?> decryptAudioData(Uint8List encryptedData) async {
     // Web implementation would use crypto-js or Web Crypto API
+    _errorController.add('Web audio decryption not yet implemented');
     debugPrint('[Audio] Web audio decryption not yet implemented');
     return encryptedData; // Return as-is for now
   }

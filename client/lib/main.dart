@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nowa_runtime/nowa_runtime.dart';
@@ -12,6 +13,8 @@ import 'package:operation_won/providers/channel_provider.dart';
 import 'package:operation_won/providers/event_provider.dart';
 import 'package:operation_won/providers/settings_provider.dart';
 import 'package:operation_won/services/api_service.dart';
+import 'package:operation_won/services/audio_service.dart';
+import 'package:operation_won/utils/error_handler.dart';
 import 'package:operation_won/widgets/auth_state_listener.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,9 +42,42 @@ void main() async {
 }
 
 @NowaGenerated({'visibleInNowa': false})
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   @NowaGenerated({'loader': 'auto-constructor'})
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  StreamSubscription? _audioErrorSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // We need to add a post-frame callback because we can't access context
+    // directly in initState to get the AudioService.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _listenToAudioErrors();
+    });
+  }
+
+  void _listenToAudioErrors() {
+    final audioService = Provider.of<AudioService>(context, listen: false);
+    _audioErrorSubscription = audioService.errorStream.listen((errorMessage) {
+      EnhancedErrorHandler.showErrorSnackBar(
+        context: context,
+        message: 'Audio Error: $errorMessage',
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _audioErrorSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +85,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => AppState()),
         ChangeNotifierProvider(create: (context) => SettingsProvider()),
+        ChangeNotifierProvider(create: (context) => AudioService()),
         ProxyProvider<SettingsProvider, ApiService>(
           update: (context, settings, previous) {
             if (settings.isLoaded) {
@@ -61,7 +98,9 @@ class MyApp extends StatelessWidget {
             }
             // Return a dummy/default while settings are loading
             return previous ??
-                ApiService(baseUrl: SettingsProvider.predefinedEndpoints.first['api']!);
+                ApiService(
+                    baseUrl:
+                        SettingsProvider.predefinedEndpoints.first['api']!);
           },
           dispose: (_, apiService) {
             // Dio will be disposed automatically if that's how you've set it up
@@ -75,7 +114,8 @@ class MyApp extends StatelessWidget {
             return commsState;
           },
         ),
-        ChangeNotifierProxyProvider2<SettingsProvider, ApiService, AuthProvider>(
+        ChangeNotifierProxyProvider2<SettingsProvider, ApiService,
+            AuthProvider>(
           create: (context) => AuthProvider(),
           update: (context, settingsProvider, apiService, authProvider) {
             if (settingsProvider.isLoaded) {
@@ -87,7 +127,8 @@ class MyApp extends StatelessWidget {
             return authProvider ?? AuthProvider();
           },
         ),
-        ChangeNotifierProxyProvider2<SettingsProvider, ApiService, EventProvider>(
+        ChangeNotifierProxyProvider2<SettingsProvider, ApiService,
+            EventProvider>(
           create: (context) => EventProvider(),
           update: (context, settingsProvider, apiService, eventProvider) {
             if (settingsProvider.isLoaded) {
@@ -99,10 +140,10 @@ class MyApp extends StatelessWidget {
             return eventProvider ?? EventProvider();
           },
         ),
-        ChangeNotifierProxyProvider2<SettingsProvider, ApiService, ChannelProvider>(
+        ChangeNotifierProxyProvider2<SettingsProvider, ApiService,
+            ChannelProvider>(
           create: (context) => ChannelProvider(),
-          update:
-              (context, settingsProvider, apiService, channelProvider) {
+          update: (context, settingsProvider, apiService, channelProvider) {
             if (settingsProvider.isLoaded) {
               return ChannelProvider(
                 settingsProvider: settingsProvider,

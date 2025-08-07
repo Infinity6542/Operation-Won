@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:operation_won/utils/error_handler.dart';
 
 /// Utility for immediate UI feedback after operations
 class UIFeedbackHelper {
@@ -9,20 +10,10 @@ class UIFeedbackHelper {
     VoidCallback? onComplete,
     Duration duration = const Duration(seconds: 3),
   }) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-      ),
+    EnhancedErrorHandler.showSuccessSnackBar(
+      context: context,
+      message: message,
+      duration: duration,
     );
 
     // Call completion callback after a brief delay
@@ -38,27 +29,11 @@ class UIFeedbackHelper {
     VoidCallback? onRetry,
     Duration duration = const Duration(seconds: 5),
   }) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        duration: duration,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        action: onRetry != null
-            ? SnackBarAction(
-                label: 'Retry',
-                textColor: Colors.white,
-                onPressed: onRetry,
-              )
-            : null,
-      ),
+    EnhancedErrorHandler.showErrorSnackBar(
+      context: context,
+      message: message,
+      onRetry: onRetry,
+      duration: duration,
     );
   }
 
@@ -67,25 +42,11 @@ class UIFeedbackHelper {
     required BuildContext context,
     required String message,
   }) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.white),
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-      ),
+    EnhancedErrorHandler.showSuccessSnackBar(
+      context: context,
+      message: message,
+      duration: const Duration(seconds: 2),
+      showProgress: true,
     );
   }
 

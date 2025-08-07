@@ -351,7 +351,7 @@ class CommunicationService extends ChangeNotifier {
         _audioService.playAudioChunk(decryptedData);
       } else {
         debugPrint(
-            '[Comm] Failed to decrypt audio, trying unencrypted fallback');
+            '[Comm] Failed to decrypt audio, playing unencrypted fallback');
         _audioService.playAudioChunk(audioData);
       }
     }).catchError((error) {
