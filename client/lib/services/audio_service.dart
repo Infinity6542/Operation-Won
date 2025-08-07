@@ -16,6 +16,8 @@ class AudioService extends ChangeNotifier {
 
   // Opus codec: use opus_dart with opus_flutter
   bool _opusInitialized = false;
+  SimpleOpusEncoder? _opusEncoder;
+  SimpleOpusDecoder? _opusDecoder;
 
   // Audio recording stream controller
   final StreamController<Uint8List> _audioDataController =
@@ -43,6 +45,15 @@ class AudioService extends ChangeNotifier {
   Future<void> _initializeOpus() async {
     try {
       initOpus(await opus_flutter.load());
+      _opusEncoder = SimpleOpusEncoder(
+        sampleRate: 48000,
+        channels: 1,
+        application: Application.voip,
+      );
+      _opusDecoder = SimpleOpusDecoder(
+        sampleRate: 48000,
+        channels: 1,
+      );
       _opusInitialized = true;
       debugPrint('[Audio] Opus initialized successfully');
     } catch (e) {
@@ -57,9 +68,7 @@ class AudioService extends ChangeNotifier {
       switch (call.method) {
         case 'onAudioData':
           final audioData = call.arguments as Uint8List;
-          debugPrint(
-              '[Audio] Received raw audio data from native: ${audioData.length} bytes');
-          final encodedData = await encryptAudioData(audioData);
+          final encodedData = await encodeAudioData(audioData);
           if (encodedData != null) {
             _audioDataController.add(encodedData);
           }
@@ -135,7 +144,7 @@ class AudioService extends ChangeNotifier {
     try {
       debugPrint(
           '[Audio] Received encoded audio chunk for playback: ${audioData.length} bytes');
-      final decodedData = await decryptAudioData(audioData);
+      final decodedData = await decodeAudioData(audioData);
       if (decodedData != null) {
         debugPrint(
             '[Audio] Playing decoded audio chunk: ${decodedData.length} bytes');
@@ -255,29 +264,37 @@ class AudioService extends ChangeNotifier {
     return _e2eeKey;
   }
 
-  // Encrypt audio data
-  Future<Uint8List?> encryptAudioData(Uint8List audioData) async {
+  // Encode audio data using Opus
+  Future<Uint8List?> encodeAudioData(Uint8List audioData) async {
     if (!_opusInitialized) {
       debugPrint('[Audio] Opus not initialized, returning raw audio data');
       return audioData;
     }
 
     try {
-      // Create a simple encoder for real-time encoding
-      final encoder = SimpleOpusEncoder(
-        sampleRate: 48000,
-        channels: 1,
-        application: Application.voip,
-      );
+      // Ensure we have the correct amount of data for Opus frame
+      const int expectedSamples = 960; // 20ms at 48kHz
+      const int bytesPerSample = 2; // 16-bit samples
+      const int expectedBytes = expectedSamples * bytesPerSample;
 
-      // Convert Uint8List to Int16List for Opus encoding
-      final int16Data = Int16List.fromList(
-          audioData.buffer.asUint16List().map((e) => e.toSigned(16)).toList());
+      if (audioData.length != expectedBytes) {
+        debugPrint(
+            '[Audio] Invalid audio data size: ${audioData.length}, expected: $expectedBytes');
+        return audioData; // Return original data if size is wrong
+      }
 
-      final encodedData = encoder.encode(input: int16Data);
-      encoder.destroy(); // Clean up resources
-      debugPrint(
-          '[Audio] Encoded audio: ${audioData.length} bytes -> ${encodedData.length} bytes');
+      // Convert Uint8List to Int16List properly
+      final ByteData byteData = audioData.buffer.asByteData();
+      final Int16List int16Data = Int16List(expectedSamples);
+
+      for (int i = 0; i < expectedSamples; i++) {
+        int16Data[i] = byteData.getInt16(i * 2, Endian.little);
+      }
+
+      debugPrint('[Audio] Encoding ${int16Data.length} samples');
+      final encodedData = _opusEncoder!.encode(input: int16Data);
+      debugPrint('[Audio] Encoded to ${encodedData.length} bytes');
+
       return encodedData;
     } catch (e) {
       _errorController.add('Failed to encode audio data: $e');
@@ -286,36 +303,32 @@ class AudioService extends ChangeNotifier {
     }
   }
 
-  // Decrypt audio data
-  Future<Uint8List?> decryptAudioData(Uint8List encryptedData) async {
+  // Decode audio data using Opus
+  Future<Uint8List?> decodeAudioData(Uint8List encodedData) async {
     if (!_opusInitialized) {
       debugPrint('[Audio] Opus not initialized, returning raw audio data');
-      return encryptedData;
+      return encodedData;
     }
 
     try {
-      // Create a simple decoder for real-time decoding
-      final decoder = SimpleOpusDecoder(
-        sampleRate: 48000,
-        channels: 1,
-      );
+      final decodedInt16 = _opusDecoder!.decode(input: encodedData);
 
-      final decodedInt16 = decoder.decode(input: encryptedData);
-      decoder.destroy(); // Clean up resources
+      // Convert Int16List back to Uint8List, explicitly handling endianness
+      final Uint8List decodedData = Uint8List(decodedInt16.length * 2);
+      final ByteData byteData = decodedData.buffer.asByteData();
+      for (int i = 0; i < decodedInt16.length; i++) {
+        byteData.setInt16(i * 2, decodedInt16[i], Endian.little);
+      }
 
-      // Convert Int16List back to Uint8List
-      final decodedData = Uint8List.fromList(decodedInt16.buffer.asUint8List());
-
-      debugPrint(
-          '[Audio] Decoded audio: ${encryptedData.length} bytes -> ${decodedData.length} bytes');
       return decodedData;
     } catch (e) {
       _errorController.add('Failed to decode audio data: $e');
       debugPrint('[Audio] Failed to decode audio data: $e');
-      return encryptedData;
+      return encodedData;
     }
   }
 
+  @override
   @override
   void dispose() {
     stopRecording();
@@ -323,6 +336,8 @@ class AudioService extends ChangeNotifier {
     _audioDataController.close();
     _errorController.close();
     _audioStreamSubscription?.cancel();
+    _opusEncoder?.destroy();
+    _opusDecoder?.destroy();
     super.dispose();
   }
 }
@@ -339,7 +354,6 @@ class WebAudioService extends AudioService {
   Future<bool> startRecording() async {
     // Web implementation would use MediaRecorder API
     _errorController.add('Web audio recording not yet implemented');
-    debugPrint('[Audio] Web audio recording not yet implemented');
     return false;
   }
 
@@ -347,22 +361,21 @@ class WebAudioService extends AudioService {
   Future<void> playAudioChunk(Uint8List audioData) async {
     // Web implementation would use Web Audio API
     _errorController.add('Web audio playback not yet implemented');
-    debugPrint('[Audio] Web audio playback not yet implemented');
   }
 
   @override
-  Future<Uint8List?> encryptAudioData(Uint8List audioData) async {
-    // Web implementation would use crypto-js or Web Crypto API
-    _errorController.add('Web audio encryption not yet implemented');
-    debugPrint('[Audio] Web audio encryption not yet implemented');
-    return audioData; // Return unencrypted for now
+  Future<Uint8List?> encodeAudioData(Uint8List audioData) async {
+    // Web implementation would use Opus.js or similar
+    _errorController.add('Web audio encoding not yet implemented');
+    debugPrint('[Audio] Web audio encoding not yet implemented');
+    return audioData; // Return unencoded for now
   }
 
   @override
-  Future<Uint8List?> decryptAudioData(Uint8List encryptedData) async {
-    // Web implementation would use crypto-js or Web Crypto API
-    _errorController.add('Web audio decryption not yet implemented');
-    debugPrint('[Audio] Web audio decryption not yet implemented');
-    return encryptedData; // Return as-is for now
+  Future<Uint8List?> decodeAudioData(Uint8List encodedData) async {
+    // Web implementation would use Opus.js or similar
+    _errorController.add('Web audio decoding not yet implemented');
+    debugPrint('[Audio] Web audio decoding not yet implemented');
+    return encodedData; // Return as-is for now
   }
 }

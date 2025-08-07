@@ -17,7 +17,7 @@ class CommunicationService extends ChangeNotifier {
   bool _isPTTActive = false;
   bool _isPTTToggleMode = false; // true for tap mode, false for hold mode
   bool _isPersistentRecording =
-      false; // Track if mic is persistently active in channel
+      true; // Track if mic is persistently active in channel
   String? _currentChannelId;
   bool _isEmergencyMode = false;
   String? _previousChannelId; // Store previous channel for emergency exit
@@ -316,20 +316,20 @@ class CommunicationService extends ChangeNotifier {
         '[Comm] Received outgoing audio data: ${audioData.length} bytes (PTT active: $_isPTTActive, WebSocket connected: ${_webSocketService.isConnected})');
 
     if (_isPTTActive && _webSocketService.isConnected) {
-      debugPrint('[Comm] Encrypting and sending audio data to WebSocket');
-      // Encrypt audio data before sending (async operation)
-      _audioService.encryptAudioData(audioData).then((encryptedData) {
-        if (encryptedData != null) {
+      debugPrint('[Comm] Encoding and sending audio data to WebSocket');
+      // Encode audio data before sending (async operation)
+      _audioService.encodeAudioData(audioData).then((encodedData) {
+        if (encodedData != null) {
           debugPrint(
-              '[Comm] Sending encrypted audio: ${encryptedData.length} bytes');
-          _webSocketService.sendAudioData(encryptedData);
+              '[Comm] Sending encoded audio: ${encodedData.length} bytes');
+          _webSocketService.sendAudioData(encodedData);
         } else {
-          debugPrint('[Comm] Encryption failed, sending unencrypted data');
+          debugPrint('[Comm] Encoding failed, sending unencoded data');
           _webSocketService.sendAudioData(audioData);
         }
       }).catchError((error) {
-        debugPrint('[Comm] Failed to encrypt outgoing audio: $error');
-        // Send unencrypted as fallback
+        debugPrint('[Comm] Failed to encode outgoing audio: $error');
+        // Send raw data as fallback
         _webSocketService.sendAudioData(audioData);
       });
     } else {
@@ -343,22 +343,20 @@ class CommunicationService extends ChangeNotifier {
     debugPrint(
         '[Comm] Received incoming audio data: ${audioData.length} bytes');
 
-    // Decrypt audio data before playing (async operation)
-    _audioService.decryptAudioData(audioData).then((decryptedData) {
-      if (decryptedData != null) {
-        debugPrint(
-            '[Comm] Playing decrypted audio: ${decryptedData.length} bytes');
-        _audioService.playAudioChunk(decryptedData);
+    // Decode audio data before playing (async operation)
+    _audioService.decodeAudioData(audioData).then((decodedData) {
+      if (decodedData != null) {
+        debugPrint('[Comm] Playing decoded audio: ${decodedData.length} bytes');
+        _audioService.playAudioChunk(decodedData);
       } else {
-        debugPrint(
-            '[Comm] Failed to decrypt audio, playing unencrypted fallback');
+        debugPrint('[Comm] Failed to decode audio, playing unencoded fallback');
         _audioService.playAudioChunk(audioData);
       }
     }).catchError((error) {
-      debugPrint('[Comm] Failed to decrypt incoming audio: $error');
+      debugPrint('[Comm] Failed to decode incoming audio: $error');
       debugPrint(
-          '[Comm] Playing unencrypted audio as fallback: ${audioData.length} bytes');
-      // Play unencrypted as fallback
+          '[Comm] Playing unencoded audio as fallback: ${audioData.length} bytes');
+      // Play unencoded as fallback
       _audioService.playAudioChunk(audioData);
     });
   }

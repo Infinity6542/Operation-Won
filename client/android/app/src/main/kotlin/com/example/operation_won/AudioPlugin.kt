@@ -68,7 +68,7 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
         channel.setMethodCallHandler(this)
         context = flutterPluginBinding.applicationContext
         
-        // Initialize buffer size
+        // Initialize buffer size (no longer needs to be a multiple of Opus frame size for recording loop)
         bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
         if (bufferSize == AudioRecord.ERROR || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
             bufferSize = sampleRate * 2 // 1 second buffer as fallback
@@ -209,32 +209,33 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
     
     private suspend fun recordAudio() {
         android.util.Log.d("AudioPlugin", "recordAudio: Starting audio recording loop")
-        val buffer = ByteArray(bufferSize)
+        val OPUS_FRAME_SIZE_BYTES = 1920 // 20ms frame at 48kHz, 1 channel, 16-bit PCM (960 samples * 2 bytes)
+        val audioBuffer = ByteArray(OPUS_FRAME_SIZE_BYTES)
         var totalBytesRead = 0
         var chunksProcessed = 0
-        
+
         while (isRecording && audioRecord != null) {
-            val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: 0
-            
-            if (bytesRead > 0) {
+            val bytesRead = audioRecord?.read(audioBuffer, 0, audioBuffer.size) ?: 0
+
+            if (bytesRead == OPUS_FRAME_SIZE_BYTES) {
                 totalBytesRead += bytesRead
                 chunksProcessed++
-                
+
                 // Log every 50 chunks to avoid spam
                 if (chunksProcessed % 50 == 0) {
                     android.util.Log.d("AudioPlugin", "recordAudio: Processed $chunksProcessed chunks, total bytes: $totalBytesRead")
                 }
-                
-                // E2EE disabled for testing - send data unencrypted
-                val dataToSend = buffer.copyOf(bytesRead)
-                android.util.Log.d("AudioPlugin", "recordAudio: E2EE disabled, sending ${dataToSend.size} bytes unencrypted")
-                
+
+                android.util.Log.d("AudioPlugin", "recordAudio: E2EE disabled, sending ${audioBuffer.size} bytes unencrypted")
+
                 // Send audio data to Flutter
                 withContext(Dispatchers.Main) {
                     try {
-                        channel.invokeMethod("onAudioData", dataToSend)
+                        channel.invokeMethod("onAudioData", audioBuffer)
                         if (chunksProcessed <= 5) {
-                            android.util.Log.d("AudioPlugin", "recordAudio: Sent audio chunk #$chunksProcessed to Flutter (${dataToSend.size} bytes)")
+                            android.util.Log.d("AudioPlugin", "recordAudio: Sent audio chunk #$chunksProcessed to Flutter (${audioBuffer.size} bytes)")
+                        } else {
+                            // Nothing
                         }
                     } catch (e: Exception) {
                         android.util.Log.e("AudioPlugin", "recordAudio: Failed to send audio data to Flutter", e)
@@ -242,9 +243,13 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
                 }
             } else if (bytesRead < 0) {
                 android.util.Log.w("AudioPlugin", "recordAudio: AudioRecord.read() returned error code: $bytesRead")
+            } else if (bytesRead > 0 && bytesRead != OPUS_FRAME_SIZE_BYTES) {
+                android.util.Log.w("AudioPlugin", "recordAudio: Partial frame read: $bytesRead bytes. Expected $OPUS_FRAME_SIZE_BYTES.")
+                // Handle partial frames if necessary, e.g., by discarding or buffering until a full frame is available.
+                // For now, we'll just log and continue, as the Opus encoder expects full frames.
             }
         }
-        
+
         android.util.Log.d("AudioPlugin", "recordAudio: Recording loop ended. Total chunks: $chunksProcessed, total bytes: $totalBytesRead")
     }
     

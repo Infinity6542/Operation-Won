@@ -2,12 +2,16 @@ import 'dart:typed_data';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
 import 'package:opus_dart/opus_dart.dart';
 
 void main() {
-  test('Opus encode/decode round-trip over Go WebSocket server', () async {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('Opus encode/decode round-trip over Go WebSocket server',
+      (WidgetTester tester) async {
     // Initialize Opus
     initOpus(await opus_flutter.load());
 
@@ -32,7 +36,8 @@ void main() {
     encoder.destroy();
 
     // Connect to Go WebSocket server
-    final channel = WebSocketChannel.connect(Uri.parse('ws://localhost:8000/msg'));
+    final channel =
+        WebSocketChannel.connect(Uri.parse('ws://10.0.2.2:8000/msg'));
     channel.sink.add(encoded);
 
     // Wait for echo response
@@ -44,7 +49,8 @@ void main() {
         completer.complete(Uint8List.fromList(message));
       }
     });
-    final Uint8List echoed = await completer.future.timeout(Duration(seconds: 5));
+    final Uint8List echoed =
+        await completer.future.timeout(Duration(seconds: 5));
 
     // Decode with Opus
     final decoder = SimpleOpusDecoder(
@@ -61,6 +67,7 @@ void main() {
     }
     mse /= min(pcm.length, decoded.length);
     print('Mean squared error: $mse');
-    expect(mse < 1000, true, reason: 'Decoded audio should be similar to original');
+    expect(mse < 1000, true,
+        reason: 'Decoded audio should be similar to original');
   });
 }
