@@ -259,6 +259,35 @@ func (c *Client) readPump() {
 		case websocket.BinaryMessage:
 			log.Printf("[WBS] [BIN] Received binary message: %d bytes, isRecording: %v, messageID: %s", len(messageData), c.isRecording, c.currentMessageeID)
 			if c.isRecording {
+				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageeID)
+
+				// Check if directory exists and create if necessary
+				if err := os.MkdirAll("./audio", os.ModePerm); err != nil {
+					log.Printf("[REC] [DIR] Failed to create audio directory: %v", err)
+					continue
+				}
+
+				f, e := os.OpenFile(file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+				if e != nil {
+					log.Printf("[REC] [OPN] Failed to open file %s: %v", file, e)
+					continue
+				}
+
+				bytesWritten, e := f.Write(messageData)
+				if e != nil {
+					log.Printf("[REC] [WRT] Failed to write to file %s: %v", file, e)
+					f.Close()
+					continue
+				}
+				f.Close()
+
+				// Verify file exists after writing
+				if stat, err := os.Stat(file); err != nil {
+					log.Printf("[REC] [ERR] File %s does not exist after writing: %v", file, err)
+				} else {
+					log.Printf("[REC] [SUC] Successfully wrote %d bytes to %s (total size: %d bytes)", bytesWritten, file, stat.Size())
+				}
+
 				msg := &Message{ChannelID: c.ChannelID, Data: messageData, Sender: c}
 				c.hub.broadcast <- msg
 			} else {
