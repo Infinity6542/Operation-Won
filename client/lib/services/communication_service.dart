@@ -312,29 +312,52 @@ class CommunicationService extends ChangeNotifier {
 
   // Handle outgoing audio data (from microphone)
   void _onAudioDataReceived(Uint8List audioData) {
+    debugPrint(
+        '[Comm] Received outgoing audio data: ${audioData.length} bytes (PTT active: $_isPTTActive, WebSocket connected: ${_webSocketService.isConnected})');
+
     if (_isPTTActive && _webSocketService.isConnected) {
+      debugPrint('[Comm] Encrypting and sending audio data to WebSocket');
       // Encrypt audio data before sending (async operation)
       _audioService.encryptAudioData(audioData).then((encryptedData) {
         if (encryptedData != null) {
+          debugPrint(
+              '[Comm] Sending encrypted audio: ${encryptedData.length} bytes');
           _webSocketService.sendAudioData(encryptedData);
+        } else {
+          debugPrint('[Comm] Encryption failed, sending unencrypted data');
+          _webSocketService.sendAudioData(audioData);
         }
       }).catchError((error) {
         debugPrint('[Comm] Failed to encrypt outgoing audio: $error');
         // Send unencrypted as fallback
         _webSocketService.sendAudioData(audioData);
       });
+    } else {
+      debugPrint(
+          '[Comm] NOT sending audio - PTT not active or WebSocket not connected');
     }
   }
 
   // Handle incoming audio data (from other users)
   void _onIncomingAudioReceived(Uint8List audioData) {
+    debugPrint(
+        '[Comm] Received incoming audio data: ${audioData.length} bytes');
+
     // Decrypt audio data before playing (async operation)
     _audioService.decryptAudioData(audioData).then((decryptedData) {
       if (decryptedData != null) {
+        debugPrint(
+            '[Comm] Playing decrypted audio: ${decryptedData.length} bytes');
         _audioService.playAudioChunk(decryptedData);
+      } else {
+        debugPrint(
+            '[Comm] Failed to decrypt audio, trying unencrypted fallback');
+        _audioService.playAudioChunk(audioData);
       }
     }).catchError((error) {
       debugPrint('[Comm] Failed to decrypt incoming audio: $error');
+      debugPrint(
+          '[Comm] Playing unencrypted audio as fallback: ${audioData.length} bytes');
       // Play unencrypted as fallback
       _audioService.playAudioChunk(audioData);
     });

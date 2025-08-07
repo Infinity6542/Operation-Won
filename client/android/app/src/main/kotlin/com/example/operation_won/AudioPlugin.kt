@@ -74,8 +74,9 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
             bufferSize = sampleRate * 2 // 1 second buffer as fallback
         }
         
-        // Generate E2EE key
-        generateEncryptionKey()
+        // TEMPORARILY DISABLE E2EE - Generate E2EE key
+        // generateEncryptionKey()
+        android.util.Log.d("AudioPlugin", "onAttachedToEngine: E2EE disabled for testing")
     }
     
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -97,6 +98,16 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
             "setMagicMicEnabled" -> setMagicMicEnabled(call, result)
             "generateE2EEKey" -> generateE2EEKey(result)
             "setE2EEKey" -> setE2EEKey(call, result)
+            "encryptAudioData" -> {
+                // E2EE disabled for testing - return unencrypted data
+                android.util.Log.d("AudioPlugin", "encryptAudioData: E2EE disabled, returning unencrypted data")
+                result.success(call.arguments)
+            }
+            "decryptAudioData" -> {
+                // E2EE disabled for testing - return data as-is
+                android.util.Log.d("AudioPlugin", "decryptAudioData: E2EE disabled, returning data as-is")
+                result.success(call.arguments)
+            }
             else -> result.notImplemented()
         }
     }
@@ -112,6 +123,7 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
     
     private fun startRecording(result: Result) {
         if (isRecording) {
+            android.util.Log.d("AudioPlugin", "startRecording: Already recording")
             result.success(true)
             return
         }
@@ -119,11 +131,14 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
         // Check permission
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) 
             != PackageManager.PERMISSION_GRANTED) {
+            android.util.Log.w("AudioPlugin", "startRecording: Microphone permission not granted")
             result.success(false)
             return
         }
         
         try {
+            android.util.Log.d("AudioPlugin", "startRecording: Creating AudioRecord with sampleRate=$sampleRate, bufferSize=$bufferSize")
+            
             // Create AudioRecord instance
             audioRecord = AudioRecord(
                 MediaRecorder.AudioSource.MIC,
@@ -134,25 +149,33 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
             )
             
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                android.util.Log.e("AudioPlugin", "startRecording: AudioRecord failed to initialize, state=${audioRecord?.state}")
                 result.success(false)
                 return
             }
             
+            android.util.Log.d("AudioPlugin", "startRecording: AudioRecord initialized successfully")
+            
             // Setup audio effects if Magic Mic is enabled
             if (magicMicEnabled) {
+                android.util.Log.d("AudioPlugin", "startRecording: Setting up Magic Mic audio effects")
                 setupAudioEffects()
             }
             
             audioRecord?.startRecording()
             isRecording = true
             
+            android.util.Log.d("AudioPlugin", "startRecording: AudioRecord.startRecording() called")
+            
             // Start recording in background coroutine
             recordingJob = CoroutineScope(Dispatchers.IO).launch {
                 recordAudio()
             }
             
+            android.util.Log.d("AudioPlugin", "startRecording: Recording coroutine started")
             result.success(true)
         } catch (e: Exception) {
+            android.util.Log.e("AudioPlugin", "startRecording: Exception occurred", e)
             result.error("RECORDING_ERROR", "Failed to start recording: ${e.message}", null)
         }
     }
@@ -185,33 +208,54 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
     }
     
     private suspend fun recordAudio() {
+        android.util.Log.d("AudioPlugin", "recordAudio: Starting audio recording loop")
         val buffer = ByteArray(bufferSize)
+        var totalBytesRead = 0
+        var chunksProcessed = 0
         
         while (isRecording && audioRecord != null) {
             val bytesRead = audioRecord?.read(buffer, 0, buffer.size) ?: 0
             
             if (bytesRead > 0) {
-                // Apply E2EE encryption if key is available
-                val dataToSend = if (encryptionKey != null) {
-                    encryptAudioData(buffer.copyOf(bytesRead))
-                } else {
-                    buffer.copyOf(bytesRead)
+                totalBytesRead += bytesRead
+                chunksProcessed++
+                
+                // Log every 50 chunks to avoid spam
+                if (chunksProcessed % 50 == 0) {
+                    android.util.Log.d("AudioPlugin", "recordAudio: Processed $chunksProcessed chunks, total bytes: $totalBytesRead")
                 }
+                
+                // E2EE disabled for testing - send data unencrypted
+                val dataToSend = buffer.copyOf(bytesRead)
+                android.util.Log.d("AudioPlugin", "recordAudio: E2EE disabled, sending ${dataToSend.size} bytes unencrypted")
                 
                 // Send audio data to Flutter
                 withContext(Dispatchers.Main) {
-                    channel.invokeMethod("onAudioData", dataToSend)
+                    try {
+                        channel.invokeMethod("onAudioData", dataToSend)
+                        if (chunksProcessed <= 5) {
+                            android.util.Log.d("AudioPlugin", "recordAudio: Sent audio chunk #$chunksProcessed to Flutter (${dataToSend.size} bytes)")
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("AudioPlugin", "recordAudio: Failed to send audio data to Flutter", e)
+                    }
                 }
+            } else if (bytesRead < 0) {
+                android.util.Log.w("AudioPlugin", "recordAudio: AudioRecord.read() returned error code: $bytesRead")
             }
         }
+        
+        android.util.Log.d("AudioPlugin", "recordAudio: Recording loop ended. Total chunks: $chunksProcessed, total bytes: $totalBytesRead")
     }
     
     private fun stopRecording(result: Result? = null) {
         if (!isRecording) {
+            android.util.Log.d("AudioPlugin", "stopRecording: Not currently recording")
             result?.success(null)
             return
         }
         
+        android.util.Log.d("AudioPlugin", "stopRecording: Stopping audio recording")
         isRecording = false
         recordingJob?.cancel()
         
@@ -221,18 +265,22 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
         
         releaseAudioEffects()
         
+        android.util.Log.d("AudioPlugin", "stopRecording: Audio recording stopped and released")
         result?.success(null)
     }
     
     private fun startPlaying(result: Result) {
         if (isPlaying) {
+            android.util.Log.d("AudioPlugin", "startPlaying: Already playing")
             result.success(null)
             return
         }
         
         try {
+            android.util.Log.d("AudioPlugin", "startPlaying: Initializing AudioTrack with sampleRate=$sampleRate")
             val outChannelConfig = AudioFormat.CHANNEL_OUT_MONO
             val outBufferSize = AudioTrack.getMinBufferSize(sampleRate, outChannelConfig, audioFormat)
+            android.util.Log.d("AudioPlugin", "startPlaying: Buffer size calculated: $outBufferSize")
             
             audioTrack = AudioTrack.Builder()
                 .setAudioAttributes(
@@ -255,49 +303,53 @@ class AudioPlugin : FlutterPlugin, MethodCallHandler {
             audioTrack?.play()
             isPlaying = true
             
+            android.util.Log.d("AudioPlugin", "startPlaying: AudioTrack started successfully")
             result.success(null)
         } catch (e: Exception) {
+            android.util.Log.e("AudioPlugin", "startPlaying: Failed to start playback", e)
             result.error("PLAYBACK_ERROR", "Failed to start playback: ${e.message}", null)
         }
     }
     
     private fun stopPlaying(result: Result? = null) {
         if (!isPlaying) {
+            android.util.Log.d("AudioPlugin", "stopPlaying: Not currently playing")
             result?.success(null)
             return
         }
         
+        android.util.Log.d("AudioPlugin", "stopPlaying: Stopping AudioTrack")
         isPlaying = false
         
         audioTrack?.stop()
         audioTrack?.release()
         audioTrack = null
         
+        android.util.Log.d("AudioPlugin", "stopPlaying: AudioTrack stopped and released")
         result?.success(null)
     }
     
     private fun playAudioChunk(call: MethodCall, result: Result) {
         if (!isPlaying || audioTrack == null) {
+            android.util.Log.d("AudioPlugin", "playAudioChunk: Cannot play - isPlaying=$isPlaying, audioTrack=${audioTrack != null}")
             result.success(null)
             return
         }
         
         try {
             val audioData = call.arguments as ByteArray
+            android.util.Log.d("AudioPlugin", "playAudioChunk: Received ${audioData.size} bytes")
             
-            // Apply E2EE decryption if key is available
-            val decryptedData = if (encryptionKey != null) {
-                decryptAudioData(audioData)
-            } else {
-                audioData
-            }
+            // E2EE disabled for testing - use audio data directly
+            val dataToPlay = audioData
+            android.util.Log.d("AudioPlugin", "playAudioChunk: E2EE disabled, playing data directly (${dataToPlay.size} bytes)")
             
-            if (decryptedData != null) {
-                audioTrack?.write(decryptedData, 0, decryptedData.size)
-            }
+            val bytesWritten = audioTrack?.write(dataToPlay, 0, dataToPlay.size)
+            android.util.Log.d("AudioPlugin", "playAudioChunk: Wrote $bytesWritten bytes to AudioTrack")
             
             result.success(null)
         } catch (e: Exception) {
+            android.util.Log.e("AudioPlugin", "playAudioChunk: Error playing audio", e)
             result.error("PLAYBACK_ERROR", "Failed to play audio chunk: ${e.message}", null)
         }
     }

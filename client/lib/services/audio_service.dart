@@ -33,6 +33,8 @@ class AudioService extends ChangeNotifier {
       switch (call.method) {
         case 'onAudioData':
           final audioData = call.arguments as Uint8List;
+          debugPrint(
+              '[Audio] Received audio data from native: ${audioData.length} bytes');
           _audioDataController.add(audioData);
           break;
         case 'onRecordingError':
@@ -99,8 +101,8 @@ class AudioService extends ChangeNotifier {
   // Play audio chunk
   Future<void> playAudioChunk(Uint8List audioData) async {
     try {
-      await _channel.invokeMethod('playAudioChunk', audioData);
       debugPrint('[Audio] Playing audio chunk: ${audioData.length} bytes');
+      await _channel.invokeMethod('playAudioChunk', audioData);
     } catch (e) {
       debugPrint('[Audio] Failed to play audio chunk: $e');
     }
