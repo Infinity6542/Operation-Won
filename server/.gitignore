@@ -1,0 +1,22 @@
+# Build artifacts
+opwon_server
+*.exe
+*.dll
+*.dylib
+
+# Test coverage
+*.out
+
+# Temporary files
+*.tmp
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

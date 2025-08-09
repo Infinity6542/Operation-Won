@@ -1,0 +1,33 @@
+plugins {
+  
+  // Add any other plugin dependencies here
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// Suppress Java obsolete warnings from Flutter plugins
+subprojects {
+    project.tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:-options"
+    }
+}
+    
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+dependencies {
+
+}
