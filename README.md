@@ -16,12 +16,12 @@ Operation Won is a full-stack application consisting of a Go backend server, Flu
 - WebSocket support for instant messaging
 - Live audio streaming capabilities
 - Push-to-talk (PTT) functionality
-- Real-time notifications
+- [SOON] E2EE
 
 ### 🎉 **Event Management**
 - Create and manage events
 - Event-based channel organization
-- User role management (organizer, member)
+- User role management (organiser, member)
 - Event discovery and participation
 
 ### 💬 **Channel System**
@@ -49,7 +49,6 @@ Operation Won/
 │   ├── hub.go         # WebSocket management
 │   ├── utils.go       # Utility functions
 │   └── all_test.go    # Comprehensive test suite
-└── 📋 docs/           # Documentation and guides
 ```
 
 ### 🔧 **Tech Stack**
@@ -84,15 +83,8 @@ cd Operation-Won
 
 ```bash
 cd server
-./deploy.sh
+podman compose up --build -d
 ```
-
-This script will:
-- ✅ Auto-detect Podman/Docker
-- ✅ Set up environment configuration  
-- ✅ Build and start all services
-- ✅ Run health checks
-- ✅ Display connection information
 
 ### 3. Access the Application
 
@@ -101,7 +93,6 @@ This script will:
 | **API Server** | http://localhost:8000 | Backend API endpoints |
 | **Health Check** | http://localhost:8000/health | Service status |
 | **WebSocket** | ws://localhost:8000/msg | Real-time messaging |
-| **Website** | [View Live](https://opwonweb.vercel.app/) | Official website |
 
 ## 📱 Client Applications
 
@@ -119,13 +110,6 @@ flutter run
 - Push notifications
 - Offline capability
 - Material Design UI
-
-### 🌐 **Web Interface**
-
-The web interface is available at [opwonweb.vercel.app](https://opwonweb.vercel.app/) and provides:
-- Project information and documentation
-- Download links for mobile apps
-- Community resources and support
 
 ## 🔧 Development
 
@@ -179,152 +163,3 @@ The application uses a relational database with the following key tables:
 - `event_members` - Event participation tracking
 - `channel_members` - Channel access control
 - `messages` - Chat message history
-
-## 🚀 Deployment
-
-### 🐳 **Container Deployment (Recommended)**
-
-**Option 1: Automated Script**
-```bash
-cd server
-./deploy.sh
-```
-
-**Option 2: Manual Deployment**
-```bash
-# Set up environment
-cp .env.example .env
-# Edit .env with your configuration
-
-# Start with Podman (recommended)
-podman-compose up -d
-
-# OR start with Docker
-docker-compose up -d
-```
-
-### ⚙️ **Production Configuration**
-
-1. **Security Setup**
-   ```bash
-   # Generate secure JWT secret (32+ characters)
-   openssl rand -base64 32
-   
-   # Update .env file
-   JWT_SECRET=your_generated_secret_here
-   MYSQL_PASSWORD=your_secure_database_password
-   ```
-
-2. **SSL/TLS Setup**
-   - Use nginx or Traefik as reverse proxy
-   - Configure SSL certificates (Let's Encrypt recommended)
-   - Update CORS settings for production domains
-
-3. **Monitoring & Logging**
-   ```bash
-   # View service logs
-   podman-compose logs -f
-   
-   # Monitor container health
-   podman-compose ps
-   ```
-
-### 🔍 **Health Monitoring**
-
-```bash
-# Check all services
-curl http://localhost:8000/health
-
-# View detailed status
-podman-compose ps
-
-# Check logs
-podman-compose logs --tail=50 server
-```
-
-## 🤝 Contributing
-
-We welcome contributions from the community! Here's how to get started:
-
-### 🛠️ **Development Setup**
-
-1. **Fork the repository**
-2. **Clone your fork**
-   ```bash
-   git clone https://github.com/your-username/Operation-Won.git
-   cd Operation-Won
-   ```
-
-3. **Set up development environment**
-   ```bash
-   # Backend development
-   cd server
-   go mod tidy
-   go test
-   
-   # Frontend development  
-   cd ../client
-   flutter pub get
-   flutter test
-   ```
-
-4. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-5. **Make your changes and test**
-   ```bash
-   # Run tests
-   cd server && go test
-   cd ../client && flutter test
-   ```
-
-6. **Submit a pull request**
-
-### 📋 **Contribution Guidelines**
-
-- **Code Style**: Follow Go and Dart formatting standards
-- **Testing**: Add tests for new features
-- **Documentation**: Update README and code comments
-- **Security**: Follow security best practices
-- **Performance**: Consider performance implications
-
-### 🐛 **Bug Reports**
-
-Please use GitHub Issues to report bugs with:
-- Detailed description
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment information (OS, versions)
-- Logs (if applicable)
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **Go Community** - For excellent libraries and tools
-- **Flutter Team** - For the amazing cross-platform framework
-- **Contributors** - Everyone who has contributed to this project
-- **Open Source** - Built with and for the open source community
-
-## 📞 Support & Community
-
-- **📧 Issues**: [GitHub Issues](https://github.com/Infinity6542/Operation-Won/issues)
-- **🌐 Website**: [opwonweb.vercel.app](https://opwonweb.vercel.app/)
-- **📖 Documentation**: Available in each component's README
-- **💬 Discussions**: GitHub Discussions for questions and ideas
-
----
-
-**Ready to get started?** 🎉
-
-```bash
-git clone https://github.com/Infinity6542/Operation-Won.git
-cd Operation-Won/server
-./deploy.sh
-```
-
-Happy coding! 🚀
