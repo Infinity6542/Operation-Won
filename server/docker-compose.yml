@@ -1,0 +1,103 @@
+# Podman Compose for Operation Won Server
+# Can also be used with Docker Compose
+version: '3.8'
+
+services:
+  # MySQL Database
+  opwon_mysql:
+    image: mysql:8.0
+    container_name: opwon_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-opwon_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-operation_won}
+      MYSQL_USER: ${MYSQL_USER:-opwon_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-opwon_password}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      opwon_network:
+        ipv4_address: 192.168.100.2
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis Cache
+  opwon_redis:
+    image: redis:7-alpine
+    container_name: opwon_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      opwon_network:
+        ipv4_address: 192.168.100.3
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Go Server
+  opwon_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opwon_server
+    environment:
+      # Database configuration
+      MYSQL_HOST: opwon_mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-opwon_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-opwon_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-operation_won}
+      
+      # Redis configuration
+      REDIS_HOST: opwon_redis
+      REDIS_PORT: 6379
+      
+      # Server configuration
+      SERVER_PORT: ${SERVER_PORT:-8000}
+      JWT_SECRET: ${JWT_SECRET:-verymuchasecr3t_change_in_production}
+      
+      # Environment
+      GO_ENV: ${GO_ENV:-production}
+    ports:
+      - "${SERVER_PORT:-8000}:8000"
+    depends_on:
+      opwon_mysql:
+        condition: service_healthy
+      opwon_redis:
+        condition: service_healthy
+    networks:
+      opwon_network:
+        ipv4_address: 192.168.100.4
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  opwon_network:
+    driver: bridge
+    # Using a more unique subnet (192.168.100.0/24) to avoid conflicts
+    # This is different from common default subnets
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.100.0/24
+          gateway: 192.168.100.1
