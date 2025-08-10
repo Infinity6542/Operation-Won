@@ -9,9 +9,10 @@ class SettingsProvider extends ChangeNotifier {
   static const String _pttModeKey = 'ptt_mode';
   static const String _magicMicKey = 'magic_mic_enabled';
 
-  // Default values
-  static const String _defaultApiEndpoint = 'http://localhost:8000';
-  static const String _defaultWebsocketEndpoint = 'ws://localhost:8000/msg';
+  static final String _defaultApiEndpoint =
+      predefinedEndpoints.firstWhere((e) => e['name'] == 'Stable')['api']!;
+  static final String _defaultWebsocketEndpoint = predefinedEndpoints
+      .firstWhere((e) => e['name'] == 'Stable')['websocket']!;
   static const String _defaultThemeMode = 'dark';
   static const String _defaultPttMode = 'hold';
   static const bool _defaultMagicMicEnabled = true;
