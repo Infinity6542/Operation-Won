@@ -84,7 +84,7 @@ class _JoinEventDialogState extends State<JoinEventDialog>
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to join event: ${e.toString()}'),
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),

@@ -359,6 +359,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer2<CommsState, ChannelProvider>(
       builder: (context, commsState, channelProvider, child) {
         final canUsePTT = commsState.currentChannelId != null;
@@ -395,7 +396,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                       width: double.infinity,
                       height: constraints.maxHeight,
                       decoration: BoxDecoration(
-                        gradient: _buildZoneGradient(commsState, canUsePTT),
+                        gradient:
+                            _buildZoneGradient(commsState, canUsePTT, theme),
                       ),
                       child: child,
                     );
@@ -413,15 +415,23 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                             Color activeColor;
 
                             if (!canUsePTT) {
-                              baseColor =
-                                  activeColor = Colors.grey.withAlpha(30);
+                              baseColor = activeColor =
+                                  theme.colorScheme.onSurface.withAlpha(
+                                      (theme.colorScheme.onSurface.alpha * 0.12)
+                                          .round());
                             } else if (_currentGesture ==
                                 PTTGestureType.swipeDown) {
-                              baseColor =
-                                  activeColor = Colors.yellow.withAlpha(64);
+                              baseColor = activeColor =
+                                  theme.colorScheme.secondary.withAlpha(
+                                      (theme.colorScheme.secondary.alpha * 0.25)
+                                          .round());
                             } else {
-                              baseColor = Colors.grey.withAlpha(51);
-                              activeColor = Colors.blue.withAlpha(89);
+                              baseColor = theme.colorScheme.onSurface.withAlpha(
+                                  (theme.colorScheme.onSurface.alpha * 0.2)
+                                      .round());
+                              activeColor = theme.colorScheme.primary.withAlpha(
+                                  (theme.colorScheme.primary.alpha * 0.35)
+                                      .round());
                             }
 
                             Color dotColor = Color.lerp(
@@ -449,7 +459,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                         Positioned(
                           left: _currentTouchPosition!.dx - 40,
                           top: _currentTouchPosition!.dy - 40,
-                          child: _buildCircleProgressIndicator(),
+                          child: _buildCircleProgressIndicator(theme),
                         ),
                     ],
                   ),
@@ -460,13 +470,13 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                   child: Center(
                     child: IgnorePointer(
                       ignoring: true,
-                      child: _buildGestureHints(_isStandaloneChannel),
+                      child: _buildGestureHints(_isStandaloneChannel, theme),
                     ),
                   ),
                 ),
               if (_showEmergencyCountdown)
                 Positioned.fill(
-                  child: _buildEmergencyCountdown(),
+                  child: _buildEmergencyCountdown(theme),
                 ),
             ],
           );
@@ -475,14 +485,16 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
     );
   }
 
-  Widget _buildGestureHints(bool isStandaloneChannel) {
+  Widget _buildGestureHints(bool isStandaloneChannel, ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withAlpha(102),
+        color: theme.colorScheme.surface
+            .withAlpha((theme.colorScheme.surface.alpha * 0.4).round()),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.white.withAlpha(38),
+          color: theme.colorScheme.onSurface
+              .withAlpha((theme.colorScheme.onSurface.alpha * 0.15).round()),
           width: 1,
         ),
       ),
@@ -493,17 +505,20 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
           _buildGestureHint(
             LucideIcons.handMetal,
             'Hold anywhere to talk',
+            theme,
           ),
           const SizedBox(height: 6),
           _buildGestureHint(
             LucideIcons.arrowDown,
             'Fast swipe ↓ to leave',
+            theme,
           ),
           if (!isStandaloneChannel) ...[
             const SizedBox(height: 6),
             _buildGestureHint(
               LucideIcons.arrowUp,
               'Fast swipe ↑ emergency',
+              theme,
             ),
           ],
         ],
@@ -511,20 +526,24 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
     );
   }
 
-  Widget _buildGestureHint(IconData icon, String text) {
+  Widget _buildGestureHint(IconData icon, String text, ThemeData theme) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           icon,
           size: 18,
-          color: Colors.white.withAlpha(178),
+          color: theme.colorScheme.onSurface.withAlpha(
+              (((theme.colorScheme.onSurface.value >> 24) & 0xFF) * 0.7)
+                  .round()),
         ),
         const SizedBox(width: 8),
         Text(
           text,
           style: TextStyle(
-            color: Colors.white.withAlpha(178),
+            color: theme.colorScheme.onSurface.withAlpha(
+                (((theme.colorScheme.onSurface.value >> 24) & 0xFF) * 0.7)
+                    .round()),
             fontSize: 13,
             fontWeight: FontWeight.w500,
           ),
@@ -533,24 +552,25 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
     );
   }
 
-  LinearGradient _buildZoneGradient(CommsState commsState, bool canUsePTT) {
+  LinearGradient _buildZoneGradient(
+      CommsState commsState, bool canUsePTT, ThemeData theme) {
     Color baseGlowColor;
     Color activeGlowColor;
     double baseOpacity;
 
     if (!canUsePTT) {
-      baseGlowColor = activeGlowColor = Colors.grey;
+      baseGlowColor = activeGlowColor = theme.colorScheme.onSurface;
       baseOpacity = 0.1;
     } else if (_showEmergencyCountdown ||
         _currentGesture == PTTGestureType.swipeUp) {
-      baseGlowColor = activeGlowColor = Colors.red;
+      baseGlowColor = activeGlowColor = theme.colorScheme.error;
       baseOpacity = 0.4;
     } else if (_currentGesture == PTTGestureType.swipeDown) {
-      baseGlowColor = activeGlowColor = Colors.yellow;
+      baseGlowColor = activeGlowColor = theme.colorScheme.secondary;
       baseOpacity = 0.35;
     } else {
-      baseGlowColor = Colors.grey;
-      activeGlowColor = Colors.blue;
+      baseGlowColor = theme.colorScheme.onSurface;
+      activeGlowColor = theme.colorScheme.primary;
       baseOpacity = 0.25;
     }
 
@@ -569,14 +589,14 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
       end: Alignment.bottomCenter,
       colors: [
         Colors.transparent,
-        glowColor.withAlpha((255 * animatedOpacity * 0.5).round()),
-        glowColor.withAlpha((255 * animatedOpacity).round()),
+        glowColor.withValues(alpha: animatedOpacity * 0.5),
+        glowColor.withValues(alpha: animatedOpacity),
       ],
       stops: const [0.0, 0.5, 1.0],
     );
   }
 
-  Widget _buildCircleProgressIndicator() {
+  Widget _buildCircleProgressIndicator(ThemeData theme) {
     return AnimatedBuilder(
       animation: _holdProgressAnimation,
       builder: (context, child) {
@@ -590,9 +610,9 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.black.withAlpha(76),
+                  color: theme.colorScheme.surface.withValues(alpha: 0.3),
                   border: Border.all(
-                    color: Colors.white.withAlpha(128),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                     width: 2,
                   ),
                 ),
@@ -601,7 +621,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                 child: CustomPaint(
                   painter: _CircleProgressPainter(
                     progress: _holdProgressAnimation.value,
-                    color: Colors.blue,
+                    color: theme.colorScheme.primary,
                     strokeWidth: 4,
                   ),
                 ),
@@ -609,7 +629,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
               Center(
                 child: Icon(
                   LucideIcons.mic,
-                  color: Colors.white.withAlpha(230),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.9),
                   size: 28,
                 ),
               ),
@@ -620,11 +640,11 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
     );
   }
 
-  Widget _buildEmergencyCountdown() {
+  Widget _buildEmergencyCountdown(ThemeData theme) {
     return GestureDetector(
       onTap: _cancelEmergencyCountdown,
       child: Container(
-        color: Colors.black.withAlpha(242),
+        color: theme.colorScheme.surface.withValues(alpha: 0.95),
         child: SafeArea(
           child: AnimatedBuilder(
             animation: Listenable.merge(
@@ -648,16 +668,16 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                         Text(
                           'Emergency Mode',
                           style: TextStyle(
-                            color: Colors.red.shade300,
+                            color: theme.colorScheme.error,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const Spacer(),
-                        const Text(
+                        Text(
                           'Cancel',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: theme.colorScheme.onSurface,
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
@@ -677,11 +697,12 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                               height: 120,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.red.withAlpha(51),
+                                color: theme.colorScheme.error
+                                    .withValues(alpha: 0.2),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.red.withAlpha(
-                                        (255 * 0.4 * pulseValue).round()),
+                                    color: theme.colorScheme.error
+                                        .withValues(alpha: 0.4 * pulseValue),
                                     blurRadius: 40 * pulseValue,
                                     spreadRadius: 20 * pulseValue,
                                   ),
@@ -689,7 +710,7 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                               ),
                               child: Icon(
                                 LucideIcons.shield,
-                                color: Colors.red.shade400,
+                                color: theme.colorScheme.error,
                                 size: 60,
                               ),
                             ),
@@ -703,19 +724,20 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.red.shade400,
+                                  color: theme.colorScheme.error,
                                   width: 4,
                                 ),
-                                color: Colors.red.withAlpha(25),
+                                color: theme.colorScheme.error
+                                    .withValues(alpha: 0.1),
                               ),
                               child: Center(
                                 child: Text(
                                   '$_countdownSeconds',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.onSurface,
                                     fontSize: 72,
                                     fontWeight: FontWeight.w300,
-                                    fontFeatures: [
+                                    fontFeatures: const [
                                       FontFeature.tabularFigures()
                                     ],
                                   ),
@@ -724,10 +746,10 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                             ),
                           ),
                           const SizedBox(height: 48),
-                          const Text(
+                          Text(
                             'Emergency SOS',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: theme.colorScheme.onSurface,
                               fontSize: 32,
                               fontWeight: FontWeight.w600,
                               letterSpacing: -0.5,
@@ -740,7 +762,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                               'An emergency channel will be created and your contacts will be notified.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: Colors.white.withAlpha(204),
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.8),
                                 fontSize: 17,
                                 fontWeight: FontWeight.w400,
                                 height: 1.4,
@@ -759,7 +782,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                           width: 60,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(76),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),
@@ -767,7 +791,8 @@ class _PTTGestureZoneState extends State<PTTGestureZone>
                         Text(
                           'Tap anywhere to cancel',
                           style: TextStyle(
-                            color: Colors.white.withAlpha(153),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),

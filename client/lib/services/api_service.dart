@@ -441,6 +441,9 @@ class ApiService {
 
       return 'Event'; // Fallback name
     } on DioException catch (e) {
+      if (e.response?.data['error'] == 'user is already in the event or is the organizer') {
+        throw Exception('You are already in this event or you are the organizer.');
+      }
       debugPrint('[API] DioException joining event: ${e.message}');
       debugPrint('[API] Response data: ${e.response?.data}');
       throw _handleError(e);
@@ -467,6 +470,9 @@ class ApiService {
 
       return 'Channel'; // Fallback name
     } on DioException catch (e) {
+      if (e.response?.data['error'] == 'user is already in the channel or is the organizer') {
+        throw Exception('You are already in this channel or you are the organizer.');
+      }
       debugPrint('[API] DioException joining channel: ${e.message}');
       debugPrint('[API] Response data: ${e.response?.data}');
       throw _handleError(e);

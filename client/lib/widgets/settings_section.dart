@@ -10,15 +10,6 @@ class SettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Theme setting - only rebuilds when theme changes
-        Selector<SettingsProvider, String>(
-          selector: (context, settings) => settings.themeModeName,
-          builder: (context, themeMode, child) {
-            return _ThemeDropdown(currentTheme: themeMode);
-          },
-        ),
-        const SizedBox(height: 16),
-
         // PTT Mode setting - only rebuilds when PTT mode changes
         Selector<SettingsProvider, String>(
           selector: (context, settings) => settings.pttMode,
@@ -36,33 +27,6 @@ class SettingsSection extends StatelessWidget {
           },
         ),
       ],
-    );
-  }
-}
-
-class _ThemeDropdown extends StatelessWidget {
-  const _ThemeDropdown({required this.currentTheme});
-
-  final String currentTheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: const Text('Theme'),
-      subtitle: const Text('Choose your preferred theme'),
-      trailing: DropdownButton<String>(
-        value: currentTheme,
-        items: const [
-          DropdownMenuItem(value: 'dark', child: Text('Dark')),
-          DropdownMenuItem(value: 'light', child: Text('Light')),
-          DropdownMenuItem(value: 'system', child: Text('System Default')),
-        ],
-        onChanged: (value) {
-          if (value != null) {
-            context.read<SettingsProvider>().setThemeMode(value);
-          }
-        },
-      ),
     );
   }
 }

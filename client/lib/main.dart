@@ -12,6 +12,7 @@ import 'package:operation_won/providers/auth_provider.dart';
 import 'package:operation_won/providers/channel_provider.dart';
 import 'package:operation_won/providers/event_provider.dart';
 import 'package:operation_won/providers/settings_provider.dart';
+import 'package:operation_won/providers/theme_provider.dart';
 import 'package:operation_won/services/api_service.dart';
 import 'package:operation_won/services/audio_service.dart';
 import 'package:operation_won/utils/error_handler.dart';
@@ -85,6 +86,7 @@ class _MyAppState extends State<MyApp> {
       providers: [
         ChangeNotifierProvider(create: (context) => AppState()),
         ChangeNotifierProvider(create: (context) => SettingsProvider()),
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
         ChangeNotifierProvider(create: (context) => AudioService()),
         ProxyProvider<SettingsProvider, ApiService>(
           update: (context, settings, previous) {
@@ -154,8 +156,8 @@ class _MyAppState extends State<MyApp> {
           },
         ),
       ],
-      child: Consumer<SettingsProvider>(
-        builder: (context, settings, child) {
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
           return MaterialApp(
             title: 'Operation Won',
             theme: ThemeData(
@@ -175,15 +177,16 @@ class _MyAppState extends State<MyApp> {
                 onSurface: Colors.white,
                 surfaceContainer: const Color(0xFF1A1A1A),
                 surfaceContainerHighest: const Color(0xFF2A2A2A),
+                error: Colors.redAccent,
               ),
               scaffoldBackgroundColor: Colors.black, // AMOLED black
-              cardTheme: const CardThemeData(
+              cardTheme: CardThemeData(
                 elevation: 0,
-                color: Color(0xFF1A1A1A), // Slightly off-black
+                color: const Color(0xFF1A1A1A), // Slightly off-black
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
                   side: BorderSide(
-                    color: Color(0xFF333333),
+                    color: const Color(0xFF333333).withAlpha((const Color(0xFF333333).alpha * 0.5).round()),
                     width: 1,
                   ),
                 ),
@@ -213,7 +216,7 @@ class _MyAppState extends State<MyApp> {
               ),
               useMaterial3: true,
             ),
-            themeMode: ThemeMode.dark, // Enforce dark mode
+            themeMode: themeProvider.themeMode,
             home: const AuthStateListener(
               child: AuthenticationFlow(),
             ),

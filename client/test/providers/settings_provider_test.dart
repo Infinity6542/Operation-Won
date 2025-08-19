@@ -22,7 +22,6 @@ void main() {
         // Wait for async initialization
         await Future.delayed(const Duration(milliseconds: 200));
 
-        expect(settingsProvider.themeMode, 'dark');
         expect(settingsProvider.pttMode, 'hold');
         expect(settingsProvider.magicMicEnabled, true);
         expect(settingsProvider.apiEndpoint, isNotNull);
@@ -56,43 +55,7 @@ void main() {
       });
     });
 
-    group('Theme Management Tests', () {
-      setUp(() async {
-        settingsProvider = SettingsProvider();
-        // Wait for async initialization
-        await Future.delayed(const Duration(milliseconds: 200));
-      });
-
-      test('should update theme mode', () async {
-        await settingsProvider.setThemeMode('light');
-        expect(settingsProvider.themeMode, 'light');
-
-        await settingsProvider.setThemeMode('dark');
-        expect(settingsProvider.themeMode, 'dark');
-
-        await settingsProvider.setThemeMode('system');
-        expect(settingsProvider.themeMode, 'system');
-      });
-
-      test('should validate theme mode values', () async {
-        // Test valid values
-        await settingsProvider.setThemeMode('light');
-        expect(settingsProvider.themeMode, 'light');
-
-        await settingsProvider.setThemeMode('dark');
-        expect(settingsProvider.themeMode, 'dark');
-
-        await settingsProvider.setThemeMode('system');
-        expect(settingsProvider.themeMode, 'system');
-      });
-
-      test('should persist theme mode changes', () async {
-        const testTheme = 'light';
-        await settingsProvider.setThemeMode(testTheme);
-
-        expect(settingsProvider.themeMode, testTheme);
-      });
-    });
+    
 
     group('PTT Mode Tests', () {
       setUp(() async {
@@ -300,17 +263,14 @@ void main() {
       });
 
       test('should maintain settings across operations', () async {
-        const themeMode = 'light';
         const pttMode = 'tap';
         const magicMic = false;
         const apiEndpoint = 'http://test.com';
 
-        await settingsProvider.setThemeMode(themeMode);
         await settingsProvider.setPttMode(pttMode);
         await settingsProvider.setMagicMicEnabled(magicMic);
         await settingsProvider.setApiEndpoint(apiEndpoint);
 
-        expect(settingsProvider.themeMode, themeMode);
         expect(settingsProvider.pttMode, pttMode);
         expect(settingsProvider.magicMicEnabled, magicMic);
         expect(settingsProvider.apiEndpoint, apiEndpoint);
@@ -319,15 +279,12 @@ void main() {
       test('should handle concurrent setting updates', () async {
         final futures = <Future>[];
 
-        futures.add(settingsProvider.setThemeMode('light'));
         futures.add(settingsProvider.setPttMode('tap'));
         futures.add(settingsProvider.setMagicMicEnabled(false));
         futures.add(settingsProvider.setApiEndpoint('http://concurrent.com'));
 
         await Future.wait(futures);
 
-        // All settings should be applied
-        expect(settingsProvider.themeMode, 'light');
         expect(settingsProvider.pttMode, 'tap');
         expect(settingsProvider.magicMicEnabled, false);
         expect(settingsProvider.apiEndpoint, 'http://concurrent.com');
@@ -348,14 +305,12 @@ void main() {
           notificationCount++;
         });
 
-        await settingsProvider.setThemeMode('light');
         await settingsProvider.setPttMode('tap');
 
         expect(notificationCount, greaterThan(0));
       });
 
       test('should maintain consistent state types', () {
-        expect(settingsProvider.themeMode, isA<String>());
         expect(settingsProvider.pttMode, isA<String>());
         expect(settingsProvider.magicMicEnabled, isA<bool>());
         expect(settingsProvider.apiEndpoint, isA<String>());
@@ -404,7 +359,6 @@ void main() {
           final provider = SettingsProvider();
           await Future.delayed(const Duration(milliseconds: 100));
 
-          expect(provider.themeMode, isA<String>());
           expect(provider.pttMode, isA<String>());
           expect(provider.magicMicEnabled, isA<bool>());
           expect(provider.apiEndpoint, isA<String>());
@@ -426,13 +380,11 @@ void main() {
         // These should be handled gracefully or rejected
         await settingsProvider.setApiEndpoint('');
         await settingsProvider.setWebsocketEndpoint('');
-        await settingsProvider.setThemeMode('');
         await settingsProvider.setPttMode('');
 
         // Provider should maintain some valid state
         expect(settingsProvider.apiEndpoint, isA<String>());
         expect(settingsProvider.websocketEndpoint, isA<String>());
-        expect(settingsProvider.themeMode, isA<String>());
         expect(settingsProvider.pttMode, isA<String>());
       });
 
@@ -447,17 +399,15 @@ void main() {
 
       test('should maintain data integrity', () async {
         // Store original values for reference
-        settingsProvider.themeMode;
         settingsProvider.pttMode;
         settingsProvider.magicMicEnabled;
         settingsProvider.apiEndpoint;
         settingsProvider.websocketEndpoint;
 
         // After any operations, we should still have valid data
-        await settingsProvider.setThemeMode('invalid_theme');
+        
         await settingsProvider.setPttMode('invalid_ptt');
 
-        expect(settingsProvider.themeMode, isA<String>());
         expect(settingsProvider.pttMode, isA<String>());
         expect(settingsProvider.magicMicEnabled, isA<bool>());
         expect(settingsProvider.apiEndpoint, isA<String>());

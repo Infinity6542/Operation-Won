@@ -61,6 +61,50 @@ class _HomeViewState extends State<HomeView>
     );
   }
 
+  void _showSignOutDialog(BuildContext context, AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text(
+          'Are you sure you want to sign out? You\'ll need to sign in again to access your account.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(context).pop(); // Close the confirm dialog
+
+              // Handle sign out with proper state synchronization
+              await StateSynchronizationService.handleSignOut(context);
+
+              if (context.mounted) {
+                // Close the settings bottom sheet
+                Navigator.of(context).pop();
+                // Show success message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Signed out successfully'),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    behavior: SnackBarBehavior.floating,
+                    margin: const EdgeInsets.all(16),
+                  ),
+                );
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -90,7 +134,7 @@ class _HomeViewState extends State<HomeView>
         final double pttTop = contentHeight;
 
         return Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: theme.colorScheme.surface,
           body: Stack(
             children: [
               // Animated Content Area (Events/Channels)
@@ -206,10 +250,10 @@ class _HomeViewState extends State<HomeView>
           CircleAvatar(
             radius: 20,
             backgroundColor: theme.colorScheme.primary,
-            child: const Icon(
+            child: Icon(
               LucideIcons.user,
               size: 20,
-              color: Colors.white,
+              color: theme.colorScheme.onPrimary,
             ),
           ),
           const SizedBox(width: 12),
@@ -324,7 +368,7 @@ class _HomeViewState extends State<HomeView>
           borderRadius: BorderRadius.circular(12),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
-        labelColor: Colors.white,
+        labelColor: theme.colorScheme.onPrimary,
         unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
         tabs: const [
           Tab(
@@ -583,7 +627,7 @@ class _HomeViewState extends State<HomeView>
                   });
                 },
                 backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: theme.colorScheme.onPrimary,
                 elevation: _isSpeedDialOpen ? 8 : 6,
                 child: AnimatedRotation(
                   duration:
@@ -722,7 +766,7 @@ class _HomeViewState extends State<HomeView>
                       HapticFeedback.mediumImpact();
                       onTap();
                     },
-                    backgroundColor: theme.colorScheme.surfaceContainer,
+                    backgroundColor: theme.colorScheme.surface,
                     foregroundColor: theme.colorScheme.primary,
                     elevation: 4,
                     heroTag: label, // Prevent hero animation conflicts
@@ -759,8 +803,7 @@ class _HomeViewState extends State<HomeView>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color:
-                    theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color: theme.colorScheme.onSurfaceVariant.withAlpha((theme.colorScheme.onSurfaceVariant.alpha * 0.4).round()),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -830,11 +873,11 @@ class _HomeViewState extends State<HomeView>
                       icon: LucideIcons.logOut,
                       title: 'Sign Out',
                       subtitle: 'Sign out of your account',
-                      onTap: () async {
+                      onTap: () {
                         // Heavy haptic feedback for destructive actions
                         HapticFeedback.heavyImpact();
                         Navigator.pop(context);
-                        await authProvider.logout();
+                        _showSignOutDialog(context, authProvider);
                       },
                       isDestructive: true,
                       theme: theme,

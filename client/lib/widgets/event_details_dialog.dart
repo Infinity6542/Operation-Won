@@ -508,10 +508,12 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
   Widget _buildChannelTile(ThemeData theme, dynamic channel) {
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh,
+        color: theme.brightness == Brightness.dark
+            ? theme.colorScheme.surfaceContainerHigh
+            : theme.colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.2),
+          color: theme.colorScheme.outline.withAlpha((theme.colorScheme.outline.alpha * 0.2).round()),
         ),
       ),
       child: ListTile(
@@ -562,7 +564,9 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.cardTheme.color,
+        color: theme.brightness == Brightness.dark
+            ? theme.cardTheme.color
+            : theme.colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: theme.cardTheme.shape is RoundedRectangleBorder

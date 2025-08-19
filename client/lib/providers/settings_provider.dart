@@ -5,22 +5,20 @@ import 'dart:async';
 class SettingsProvider extends ChangeNotifier {
   static const String _apiEndpointKey = 'api_endpoint';
   static const String _websocketEndpointKey = 'websocket_endpoint';
-  static const String _themeModeKey = 'theme_mode';
   static const String _pttModeKey = 'ptt_mode';
   static const String _magicMicKey = 'magic_mic_enabled';
 
+  // Default values from predefinedEndpoints
   static final String _defaultApiEndpoint =
       predefinedEndpoints.firstWhere((e) => e['name'] == 'Stable')['api']!;
   static final String _defaultWebsocketEndpoint = predefinedEndpoints
       .firstWhere((e) => e['name'] == 'Stable')['websocket']!;
-  static const String _defaultThemeMode = 'dark';
   static const String _defaultPttMode = 'hold';
   static const bool _defaultMagicMicEnabled = true;
 
   // Private fields
   String _apiEndpoint = _defaultApiEndpoint;
   String _websocketEndpoint = _defaultWebsocketEndpoint;
-  String _themeMode = _defaultThemeMode;
   String _pttMode = _defaultPttMode;
   bool _magicMicEnabled = _defaultMagicMicEnabled;
 
@@ -35,16 +33,6 @@ class SettingsProvider extends ChangeNotifier {
   // Getters
   String get apiEndpoint => _apiEndpoint;
   String get websocketEndpoint => _websocketEndpoint;
-  ThemeMode get themeMode {
-    if (_themeMode == 'light') {
-      return ThemeMode.light;
-    } else if (_themeMode == 'dark') {
-      return ThemeMode.dark;
-    }
-    return ThemeMode.system;
-  }
-
-  String get themeModeName => _themeMode;
   String get pttMode => _pttMode;
   bool get magicMicEnabled => _magicMicEnabled;
   bool get isLoaded => _isLoaded;
@@ -74,7 +62,6 @@ class SettingsProvider extends ChangeNotifier {
       _apiEndpoint = _prefs?.getString(_apiEndpointKey) ?? _defaultApiEndpoint;
       _websocketEndpoint =
           _prefs?.getString(_websocketEndpointKey) ?? _defaultWebsocketEndpoint;
-      _themeMode = _prefs?.getString(_themeModeKey) ?? _defaultThemeMode;
       _pttMode = _prefs?.getString(_pttModeKey) ?? _defaultPttMode;
       _magicMicEnabled =
           _prefs?.getBool(_magicMicKey) ?? _defaultMagicMicEnabled;
@@ -156,17 +143,6 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
-  // Set theme mode
-  Future<void> setThemeMode(String mode) async {
-    if (_themeMode != mode) {
-      _themeMode = mode;
-      _debouncedSave(_themeModeKey, mode);
-      if (!_isDisposed) {
-        notifyListeners();
-      }
-    }
-  }
-
   // Set PTT mode
   Future<void> setPttMode(String mode) async {
     if (_pttMode != mode) {
@@ -193,7 +169,6 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> resetToDefaults() async {
     _apiEndpoint = _defaultApiEndpoint;
     _websocketEndpoint = _defaultWebsocketEndpoint;
-    _themeMode = _defaultThemeMode;
     _pttMode = _defaultPttMode;
     _magicMicEnabled = _defaultMagicMicEnabled;
 

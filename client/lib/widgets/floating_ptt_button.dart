@@ -128,10 +128,10 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('🚨 Emergency channel activated'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
+        SnackBar(
+          content: const Text('🚨 Emergency channel activated'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 3),
         ),
       );
     }
@@ -139,6 +139,7 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Consumer<CommsState>(
       builder: (context, commsState, child) {
         // Only show if user is connected and in a channel
@@ -171,10 +172,10 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                               width: 60,
                               height: 60,
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
+                                gradient: LinearGradient(
                                   colors: [
-                                    Color(0xFFDC2626),
-                                    Color(0xFF991B1B)
+                                    theme.colorScheme.error,
+                                    theme.colorScheme.errorContainer,
                                   ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
@@ -182,15 +183,15 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.red.withValues(alpha: 0.4),
+                                    color: theme.colorScheme.error.withAlpha((theme.colorScheme.error.alpha * 0.4).round()),
                                     blurRadius: 20,
                                     spreadRadius: 5,
                                   ),
                                 ],
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 LucideIcons.triangle,
-                                color: Colors.white,
+                                color: theme.colorScheme.onError,
                                 size: 24,
                               ),
                             ),
@@ -200,10 +201,10 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                     );
                   },
                 ),
-                const Text(
+                Text(
                   'Emergency',
                   style: TextStyle(
-                    color: Colors.red,
+                    color: theme.colorScheme.error,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -230,17 +231,17 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            gradient: _buildPTTGradient(commsState),
+                            gradient: _buildPTTGradient(commsState, theme),
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: _buildPTTShadowColor(commsState),
+                                color: _buildPTTShadowColor(commsState, theme),
                                 blurRadius: commsState.isPTTActive ? 25 : 15,
                                 spreadRadius: commsState.isPTTActive ? 8 : 3,
                               ),
                             ],
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3),
+                              color: theme.colorScheme.onSurface.withAlpha((theme.colorScheme.onSurface.alpha * 0.3).round()),
                               width: 2,
                             ),
                           ),
@@ -248,7 +249,7 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                             commsState.isPTTActive
                                 ? LucideIcons.mic
                                 : LucideIcons.micOff,
-                            color: Colors.white,
+                            color: theme.colorScheme.onPrimary,
                             size: 32,
                           ),
                         ),
@@ -265,13 +266,13 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
+                  color: theme.colorScheme.surface.withAlpha((theme.colorScheme.surface.alpha * 0.7).round()),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   commsState.isPTTToggleMode ? 'TAP TO TOGGLE' : 'HOLD TO TALK',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -285,22 +286,22 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.9),
+                    color: theme.colorScheme.error.withAlpha((theme.colorScheme.error.alpha * 0.9).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         LucideIcons.triangle,
-                        color: Colors.white,
+                        color: theme.colorScheme.onError,
                         size: 12,
                       ),
-                      SizedBox(width: 4),
+                      const SizedBox(width: 4),
                       Text(
                         'EMERGENCY MODE',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: theme.colorScheme.onError,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -316,39 +317,39 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
     );
   }
 
-  Gradient _buildPTTGradient(CommsState commsState) {
+  Gradient _buildPTTGradient(CommsState commsState, ThemeData theme) {
     if (commsState.isEmergencyMode) {
-      return const LinearGradient(
-        colors: [Color(0xFFDC2626), Color(0xFF7F1D1D)],
+      return LinearGradient(
+        colors: [theme.colorScheme.error, theme.colorScheme.errorContainer],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       );
     }
 
     if (commsState.isPTTActive) {
-      return const LinearGradient(
-        colors: [Color(0xFF059669), Color(0xFF047857)],
+      return LinearGradient(
+        colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       );
     }
 
-    return const LinearGradient(
-      colors: [Color(0xFF374151), Color(0xFF1F2937)],
+    return LinearGradient(
+      colors: [theme.colorScheme.surface, theme.colorScheme.surfaceContainer],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
   }
 
-  Color _buildPTTShadowColor(CommsState commsState) {
+  Color _buildPTTShadowColor(CommsState commsState, ThemeData theme) {
     if (commsState.isEmergencyMode) {
-      return Colors.red.withValues(alpha: 0.4);
+      return theme.colorScheme.error.withAlpha((theme.colorScheme.error.alpha * 0.4).round());
     }
 
     if (commsState.isPTTActive) {
-      return Colors.green.withValues(alpha: 0.4);
+      return theme.colorScheme.primary.withAlpha((theme.colorScheme.primary.alpha * 0.4).round());
     }
 
-    return Colors.grey.withValues(alpha: 0.3);
+    return theme.colorScheme.onSurface.withAlpha((theme.colorScheme.onSurface.alpha * 0.3).round());
   }
 }

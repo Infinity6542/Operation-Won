@@ -3,232 +3,227 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/theme_provider.dart';
 import '../comms_state.dart';
 import '../services/state_synchronization_service.dart';
 import '../services/api_service.dart';
 import '../widgets/ptt_gesture_guide.dart';
 import '../services/permission_service.dart';
 
-class SettingsView extends StatefulWidget {
+class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
 
   @override
-  State<SettingsView> createState() => _SettingsViewState();
-}
-
-class _SettingsViewState extends State<SettingsView>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
   Widget build(BuildContext context) {
-    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Consumer2<AuthProvider, SettingsProvider>(
       builder: (context, authProvider, settingsProvider, child) {
         final user = authProvider.user;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // User Account Section
-              _buildSectionHeader(context, 'Account'),
-              const SizedBox(height: 12),
-              _buildUserCard(context, user, authProvider),
-              const SizedBox(height: 28),
+        return Consumer<ThemeProvider>(
+          builder: (context, themeProvider, child) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // User Account Section
+                  _buildSectionHeader(context, 'Account'),
+                  const SizedBox(height: 12),
+                  _buildUserCard(context, user, authProvider),
+                  const SizedBox(height: 28),
 
-              // Appearance Section
-              _buildSectionHeader(context, 'Appearance'),
-              const SizedBox(height: 12),
-              _buildSettingsCard(context, [
-                _buildDropdownSetting(
-                  context,
-                  title: 'Theme',
-                  subtitle: 'Choose your preferred theme',
-                  value: settingsProvider.themeModeName,
-                  items: const [
-                    DropdownMenuItem(value: 'dark', child: Text('Dark')),
-                    DropdownMenuItem(value: 'light', child: Text('Light')),
-                    DropdownMenuItem(
-                        value: 'system', child: Text('System Default')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      settingsProvider.setThemeMode(value);
-                    }
-                  },
-                ),
-              ]),
-              const SizedBox(height: 28),
-
-              // Audio Settings Section
-              _buildSectionHeader(context, 'Audio Settings'),
-              const SizedBox(height: 12),
-              Consumer<CommsState>(
-                builder: (context, commsState, child) {
-                  return _buildSettingsCard(context, [
-                    _buildSwitchSetting(
-                      context,
-                      title: 'Magic Mic',
-                      subtitle: 'Noise suppression and automatic gain control',
-                      tooltip:
-                          'Improves audio quality using AI-powered noise reduction and gain control. May drain battery faster when enabled.',
-                      value: settingsProvider.magicMicEnabled,
-                      onChanged: (value) {
-                        settingsProvider.setMagicMicEnabled(value);
-                      },
-                    ),
-                    const Divider(),
+                  // Appearance Section
+                  _buildSectionHeader(context, 'Appearance'),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(context, [
                     _buildDropdownSetting(
                       context,
-                      title: 'PTT Mode',
-                      subtitle: 'Push-to-talk behaviour',
-                      tooltip:
-                          'Hold: Press and hold to transmit\nTap: Click to toggle transmit',
-                      value: settingsProvider.pttMode,
+                      title: 'Theme',
+                      subtitle: 'Choose your preferred theme',
+                      value: themeProvider.themeMode,
                       items: const [
-                        DropdownMenuItem(value: 'hold', child: Text('Hold')),
-                        DropdownMenuItem(value: 'tap', child: Text('Tap')),
+                        DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+                        DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                        DropdownMenuItem(
+                            value: ThemeMode.system, child: Text('System Default')),
                       ],
                       onChanged: (value) {
                         if (value != null) {
-                          settingsProvider.setPttMode(value);
+                          themeProvider.setThemeMode(value);
                         }
                       },
+                    ),
+                  ]),
+                  const SizedBox(height: 28),
+
+                  // Audio Settings Section
+                  _buildSectionHeader(context, 'Audio Settings'),
+                  const SizedBox(height: 12),
+                  Consumer<CommsState>(
+                    builder: (context, commsState, child) {
+                      return _buildSettingsCard(context, [
+                        _buildSwitchSetting(
+                          context,
+                          title: 'Magic Mic',
+                          subtitle: 'Noise suppression and automatic gain control',
+                          tooltip:
+                              'Improves audio quality using AI-powered noise reduction and gain control. May drain battery faster when enabled.',
+                          value: settingsProvider.magicMicEnabled,
+                          onChanged: (value) {
+                            settingsProvider.setMagicMicEnabled(value);
+                          },
+                        ),
+                        const Divider(),
+                        _buildDropdownSetting(
+                          context,
+                          title: 'PTT Mode',
+                          subtitle: 'Push-to-talk behaviour',
+                          tooltip:
+                              'Hold: Press and hold to transmit\nTap: Click to toggle transmit',
+                          value: settingsProvider.pttMode,
+                          items: const [
+                            DropdownMenuItem(value: 'hold', child: Text('Hold')),
+                            DropdownMenuItem(value: 'tap', child: Text('Tap')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              settingsProvider.setPttMode(value);
+                            }
+                          },
+                        ),
+                        const Divider(),
+                        _buildInfoTile(
+                          context,
+                          title: 'End-to-End Encryption',
+                          subtitle: commsState.hasE2EEKey
+                              ? '🔒 Encryption active'
+                              : '🔓 No encryption key',
+                          icon: commsState.hasE2EEKey
+                              ? LucideIcons.lock
+                              : LucideIcons.lockOpen,
+                        ),
+                      ]);
+                    },
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Connection Settings Section
+                  _buildSectionHeader(context, 'Connection Settings'),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(context, [
+                    _buildInfoTile(
+                      context,
+                      title: 'API Endpoint',
+                      subtitle: settingsProvider.apiEndpoint,
+                      icon: LucideIcons.server,
+                      onTap: () => _testApiEndpoint(context, settingsProvider),
                     ),
                     const Divider(),
                     _buildInfoTile(
                       context,
-                      title: 'End-to-End Encryption',
-                      subtitle: commsState.hasE2EEKey
-                          ? '🔒 Encryption active'
-                          : '🔓 No encryption key',
-                      icon: commsState.hasE2EEKey
-                          ? LucideIcons.lock
-                          : LucideIcons.lockOpen,
+                      title: 'WebSocket Endpoint',
+                      subtitle: settingsProvider.websocketEndpoint,
+                      icon: LucideIcons.radio,
+                      onTap: () =>
+                          _testWebSocketEndpoint(context, settingsProvider),
                     ),
-                  ]);
-                },
+                    const Divider(),
+                    _buildActionTile(
+                      context,
+                      title: 'Change Server',
+                      subtitle: 'Switch to a different server',
+                      icon: LucideIcons.settings,
+                      onTap: () =>
+                          _showServerConfigDialog(context, settingsProvider),
+                    ),
+                  ]),
+                  const SizedBox(height: 32),
+
+                  // Permissions Section
+                  _buildSectionHeader(context, 'Permissions'),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(context, [
+                    _buildActionTile(
+                      context,
+                      title: 'Microphone Permission',
+                      subtitle: 'Required for Push-to-Talk',
+                      icon: LucideIcons.mic,
+                      onTap: () =>
+                          PermissionService.showPermissionStatusDialog(context),
+                    ),
+                    const Divider(),
+                    _buildActionTile(
+                      context,
+                      title: 'Request All Permissions',
+                      subtitle: 'Grant required permissions',
+                      icon: LucideIcons.shield,
+                      onTap: () async {
+                        await PermissionService
+                            .requestMicrophonePermissionAtStartup(context);
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 32),
+
+                  // About Section
+                  _buildSectionHeader(context, 'About'),
+                  const SizedBox(height: 12),
+                  _buildSettingsCard(context, [
+                    _buildActionTile(
+                      context,
+                      title: 'PTT Gesture Guide',
+                      subtitle: 'Learn the new PTT gestures',
+                      icon: LucideIcons.hand,
+                      onTap: () => PTTGestureGuide.show(context),
+                    ),
+                    const Divider(),
+                    _buildInfoTile(
+                      context,
+                      title: 'Version',
+                      subtitle: '1.0.0',
+                      icon: LucideIcons.info,
+                    ),
+                    const Divider(),
+                    _buildActionTile(
+                      context,
+                      title: 'Privacy Policy',
+                      icon: LucideIcons.shield,
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Privacy Policy - Coming Soon'),
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                          ),
+                        );
+                      },
+                    ),
+                    const Divider(),
+                    _buildActionTile(
+                      context,
+                      title: 'Terms of Service',
+                      icon: LucideIcons.fileText,
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text('Terms of Service - Coming Soon'),
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                          ),
+                        );
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 28),
+
+                  // Danger Zone
+                  _buildSectionHeader(context, 'Account Actions',
+                      isDestructive: true),
+                  const SizedBox(height: 12),
+                  _buildDangerCard(context, authProvider),
+                  const SizedBox(height: 24),
+                ],
               ),
-              const SizedBox(height: 32),
-
-              // Connection Settings Section
-              _buildSectionHeader(context, 'Connection Settings'),
-              const SizedBox(height: 12),
-              _buildSettingsCard(context, [
-                _buildInfoTile(
-                  context,
-                  title: 'API Endpoint',
-                  subtitle: settingsProvider.apiEndpoint,
-                  icon: LucideIcons.server,
-                  onTap: () => _testApiEndpoint(context, settingsProvider),
-                ),
-                const Divider(),
-                _buildInfoTile(
-                  context,
-                  title: 'WebSocket Endpoint',
-                  subtitle: settingsProvider.websocketEndpoint,
-                  icon: LucideIcons.radio,
-                  onTap: () =>
-                      _testWebSocketEndpoint(context, settingsProvider),
-                ),
-                const Divider(),
-                _buildActionTile(
-                  context,
-                  title: 'Change Server',
-                  subtitle: 'Switch to a different server',
-                  icon: LucideIcons.settings,
-                  onTap: () =>
-                      _showServerConfigDialog(context, settingsProvider),
-                ),
-              ]),
-              const SizedBox(height: 32),
-
-              // Permissions Section
-              _buildSectionHeader(context, 'Permissions'),
-              const SizedBox(height: 12),
-              _buildSettingsCard(context, [
-                _buildActionTile(
-                  context,
-                  title: 'Microphone Permission',
-                  subtitle: 'Required for Push-to-Talk',
-                  icon: LucideIcons.mic,
-                  onTap: () =>
-                      PermissionService.showPermissionStatusDialog(context),
-                ),
-                const Divider(),
-                _buildActionTile(
-                  context,
-                  title: 'Request All Permissions',
-                  subtitle: 'Grant required permissions',
-                  icon: LucideIcons.shield,
-                  onTap: () async {
-                    await PermissionService
-                        .requestMicrophonePermissionAtStartup(context);
-                  },
-                ),
-              ]),
-              const SizedBox(height: 32),
-
-              // About Section
-              _buildSectionHeader(context, 'About'),
-              const SizedBox(height: 12),
-              _buildSettingsCard(context, [
-                _buildActionTile(
-                  context,
-                  title: 'PTT Gesture Guide',
-                  subtitle: 'Learn the new PTT gestures',
-                  icon: LucideIcons.hand,
-                  onTap: () => PTTGestureGuide.show(context),
-                ),
-                const Divider(),
-                _buildInfoTile(
-                  context,
-                  title: 'Version',
-                  subtitle: '1.0.0',
-                  icon: LucideIcons.info,
-                ),
-                const Divider(),
-                _buildActionTile(
-                  context,
-                  title: 'Privacy Policy',
-                  icon: LucideIcons.shield,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Privacy Policy - Coming Soon'),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                      ),
-                    );
-                  },
-                ),
-                const Divider(),
-                _buildActionTile(
-                  context,
-                  title: 'Terms of Service',
-                  icon: LucideIcons.fileText,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Terms of Service - Coming Soon'),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                      ),
-                    );
-                  },
-                ),
-              ]),
-              const SizedBox(height: 28),
-
-              // Danger Zone
-              _buildSectionHeader(context, 'Account Actions',
-                  isDestructive: true),
-              const SizedBox(height: 12),
-              _buildDangerCard(context, authProvider),
-              const SizedBox(height: 24),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -298,8 +293,8 @@ class _SettingsViewState extends State<SettingsView>
                         height: 18,
                         decoration: BoxDecoration(
                           color: authProvider.isLoggedIn
-                              ? Colors.green
-                              : Colors.grey,
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface.withAlpha((theme.colorScheme.onSurface.alpha * 0.5).round()),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: theme.colorScheme.surface,
@@ -506,9 +501,10 @@ class _SettingsViewState extends State<SettingsView>
     bool isDestructive = false,
   }) {
     final theme = Theme.of(context);
-    final color = isDestructive
-        ? theme.colorScheme.error
-        : theme.colorScheme.onSurfaceVariant;
+    final color =
+        isDestructive
+            ? theme.colorScheme.error
+            : theme.colorScheme.onSurfaceVariant;
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text(
@@ -526,7 +522,7 @@ class _SettingsViewState extends State<SettingsView>
             )
           : null,
       trailing:
-          const Icon(LucideIcons.chevronRight, color: Colors.grey, size: 20),
+          Icon(LucideIcons.chevronRight, color: theme.colorScheme.onSurfaceVariant, size: 20),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );
@@ -659,7 +655,6 @@ class _SettingsViewState extends State<SettingsView>
 
               // Handle sign out with proper state synchronization
               await StateSynchronizationService.handleSignOut(context);
-              await authProvider.logout();
 
               if (context.mounted) {
                 // Close the settings bottom sheet
