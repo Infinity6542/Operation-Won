@@ -803,7 +803,8 @@ class _HomeViewState extends State<HomeView>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurfaceVariant.withAlpha((theme.colorScheme.onSurfaceVariant.alpha * 0.4).round()),
+                color: theme.colorScheme.onSurfaceVariant.withAlpha(
+                    (theme.colorScheme.onSurfaceVariant.alpha * 0.4).round()),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

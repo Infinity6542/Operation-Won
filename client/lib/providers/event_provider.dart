@@ -56,8 +56,8 @@ class EventProvider extends ChangeNotifier {
 
     try {
       debugPrint('[EventProvider] Creating event: $eventName');
-      await _apiService
-          .createEvent(eventName, eventDescription: eventDescription);
+      await _apiService.createEvent(eventName,
+          eventDescription: eventDescription);
       debugPrint(
           '[EventProvider] Event created successfully, refreshing list...');
       await loadEvents(); // Refresh the list

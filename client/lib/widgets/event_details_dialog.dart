@@ -513,7 +513,8 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
             : theme.colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withAlpha((theme.colorScheme.outline.alpha * 0.2).round()),
+          color: theme.colorScheme.outline
+              .withAlpha((theme.colorScheme.outline.alpha * 0.2).round()),
         ),
       ),
       child: ListTile(

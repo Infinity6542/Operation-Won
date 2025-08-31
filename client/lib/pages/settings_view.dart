@@ -42,10 +42,13 @@ class SettingsView extends StatelessWidget {
                       subtitle: 'Choose your preferred theme',
                       value: themeProvider.themeMode,
                       items: const [
-                        DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-                        DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
                         DropdownMenuItem(
-                            value: ThemeMode.system, child: Text('System Default')),
+                            value: ThemeMode.dark, child: Text('Dark')),
+                        DropdownMenuItem(
+                            value: ThemeMode.light, child: Text('Light')),
+                        DropdownMenuItem(
+                            value: ThemeMode.system,
+                            child: Text('System Default')),
                       ],
                       onChanged: (value) {
                         if (value != null) {
@@ -65,7 +68,8 @@ class SettingsView extends StatelessWidget {
                         _buildSwitchSetting(
                           context,
                           title: 'Magic Mic',
-                          subtitle: 'Noise suppression and automatic gain control',
+                          subtitle:
+                              'Noise suppression and automatic gain control',
                           tooltip:
                               'Improves audio quality using AI-powered noise reduction and gain control. May drain battery faster when enabled.',
                           value: settingsProvider.magicMicEnabled,
@@ -82,7 +86,8 @@ class SettingsView extends StatelessWidget {
                               'Hold: Press and hold to transmit\nTap: Click to toggle transmit',
                           value: settingsProvider.pttMode,
                           items: const [
-                            DropdownMenuItem(value: 'hold', child: Text('Hold')),
+                            DropdownMenuItem(
+                                value: 'hold', child: Text('Hold')),
                             DropdownMenuItem(value: 'tap', child: Text('Tap')),
                           ],
                           onChanged: (value) {
@@ -192,7 +197,8 @@ class SettingsView extends StatelessWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: const Text('Privacy Policy - Coming Soon'),
-                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
                           ),
                         );
                       },
@@ -205,8 +211,10 @@ class SettingsView extends StatelessWidget {
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('Terms of Service - Coming Soon'),
-                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            content:
+                                const Text('Terms of Service - Coming Soon'),
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
                           ),
                         );
                       },
@@ -294,7 +302,9 @@ class SettingsView extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: authProvider.isLoggedIn
                               ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface.withAlpha((theme.colorScheme.onSurface.alpha * 0.5).round()),
+                              : theme.colorScheme.onSurface.withAlpha(
+                                  (theme.colorScheme.onSurface.alpha * 0.5)
+                                      .round()),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: theme.colorScheme.surface,
@@ -501,10 +511,9 @@ class SettingsView extends StatelessWidget {
     bool isDestructive = false,
   }) {
     final theme = Theme.of(context);
-    final color =
-        isDestructive
-            ? theme.colorScheme.error
-            : theme.colorScheme.onSurfaceVariant;
+    final color = isDestructive
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurfaceVariant;
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text(
@@ -521,8 +530,8 @@ class SettingsView extends StatelessWidget {
               ),
             )
           : null,
-      trailing:
-          Icon(LucideIcons.chevronRight, color: theme.colorScheme.onSurfaceVariant, size: 20),
+      trailing: Icon(LucideIcons.chevronRight,
+          color: theme.colorScheme.onSurfaceVariant, size: 20),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
     );

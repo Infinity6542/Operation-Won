@@ -183,7 +183,9 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: theme.colorScheme.error.withAlpha((theme.colorScheme.error.alpha * 0.4).round()),
+                                    color: theme.colorScheme.error.withAlpha(
+                                        (theme.colorScheme.error.alpha * 0.4)
+                                            .round()),
                                     blurRadius: 20,
                                     spreadRadius: 5,
                                   ),
@@ -241,7 +243,9 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                               ),
                             ],
                             border: Border.all(
-                              color: theme.colorScheme.onSurface.withAlpha((theme.colorScheme.onSurface.alpha * 0.3).round()),
+                              color: theme.colorScheme.onSurface.withAlpha(
+                                  (theme.colorScheme.onSurface.alpha * 0.3)
+                                      .round()),
                               width: 2,
                             ),
                           ),
@@ -266,7 +270,8 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surface.withAlpha((theme.colorScheme.surface.alpha * 0.7).round()),
+                  color: theme.colorScheme.surface.withAlpha(
+                      (theme.colorScheme.surface.alpha * 0.7).round()),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -286,7 +291,8 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.error.withAlpha((theme.colorScheme.error.alpha * 0.9).round()),
+                    color: theme.colorScheme.error.withAlpha(
+                        (theme.colorScheme.error.alpha * 0.9).round()),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -343,13 +349,16 @@ class _FloatingPTTButtonState extends State<FloatingPTTButton>
 
   Color _buildPTTShadowColor(CommsState commsState, ThemeData theme) {
     if (commsState.isEmergencyMode) {
-      return theme.colorScheme.error.withAlpha((theme.colorScheme.error.alpha * 0.4).round());
+      return theme.colorScheme.error
+          .withAlpha((theme.colorScheme.error.alpha * 0.4).round());
     }
 
     if (commsState.isPTTActive) {
-      return theme.colorScheme.primary.withAlpha((theme.colorScheme.primary.alpha * 0.4).round());
+      return theme.colorScheme.primary
+          .withAlpha((theme.colorScheme.primary.alpha * 0.4).round());
     }
 
-    return theme.colorScheme.onSurface.withAlpha((theme.colorScheme.onSurface.alpha * 0.3).round());
+    return theme.colorScheme.onSurface
+        .withAlpha((theme.colorScheme.onSurface.alpha * 0.3).round());
   }
 }

@@ -65,7 +65,8 @@ class EnhancedErrorHandler {
                 height: 16,
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: Colors.white),
-              )            else
+              )
+            else
               const Icon(Icons.check_circle_outline, color: Colors.white),
             const SizedBox(width: 8),
             Expanded(

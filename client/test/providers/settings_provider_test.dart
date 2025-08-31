@@ -55,8 +55,6 @@ void main() {
       });
     });
 
-    
-
     group('PTT Mode Tests', () {
       setUp(() async {
         settingsProvider = SettingsProvider();
@@ -405,7 +403,7 @@ void main() {
         settingsProvider.websocketEndpoint;
 
         // After any operations, we should still have valid data
-        
+
         await settingsProvider.setPttMode('invalid_ptt');
 
         expect(settingsProvider.pttMode, isA<String>());

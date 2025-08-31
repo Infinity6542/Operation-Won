@@ -18,7 +18,8 @@ class AuthProvider extends ChangeNotifier {
   SettingsProvider? get settingsProvider => _settingsProvider;
 
   AuthProvider({SettingsProvider? settingsProvider, ApiService? apiService})
-      : _settingsProvider = settingsProvider, _apiService = apiService {
+      : _settingsProvider = settingsProvider,
+        _apiService = apiService {
     _apiService?.onAuthenticationFailed = _handleAuthenticationFailure;
     _initialize();
   }

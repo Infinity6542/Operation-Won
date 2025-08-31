@@ -186,7 +186,8 @@ class _MyAppState extends State<MyApp> {
                 shape: RoundedRectangleBorder(
                   borderRadius: const BorderRadius.all(Radius.circular(16)),
                   side: BorderSide(
-                    color: const Color(0xFF333333).withAlpha((const Color(0xFF333333).alpha * 0.5).round()),
+                    color: const Color(0xFF333333).withAlpha(
+                        (const Color(0xFF333333).alpha * 0.5).round()),
                     width: 1,
                   ),
                 ),
