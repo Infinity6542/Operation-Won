@@ -510,7 +510,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
       decoration: BoxDecoration(
         color: theme.brightness == Brightness.dark
             ? theme.colorScheme.surfaceContainerHigh
-            : theme.colorScheme.surfaceVariant,
+            : theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: theme.colorScheme.outline
@@ -567,7 +567,7 @@ class _EventDetailsDialogState extends State<EventDetailsDialog>
       decoration: BoxDecoration(
         color: theme.brightness == Brightness.dark
             ? theme.cardTheme.color
-            : theme.colorScheme.surfaceVariant,
+            : theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
             color: theme.cardTheme.shape is RoundedRectangleBorder
