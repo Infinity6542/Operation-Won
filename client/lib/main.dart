@@ -56,8 +56,6 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // We need to add a post-frame callback because we can't access context
-    // directly in initState to get the AudioService.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _listenToAudioErrors();
     });
