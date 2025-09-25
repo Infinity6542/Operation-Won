@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
-import 'package:opus_dart/opus_dart.dart';
+import 'package:flutter_opus/flutter_opus.dart';
 
 class AudioService extends ChangeNotifier {
   static const MethodChannel _channel = MethodChannel('operation_won/audio');
@@ -14,10 +13,10 @@ class AudioService extends ChangeNotifier {
   Uint8List? _e2eeKey;
   StreamSubscription? _audioStreamSubscription;
 
-  // Opus codec: use opus_dart with opus_flutter
+  // Opus codec: use flutter_opus
   bool _opusInitialized = false;
-  SimpleOpusEncoder? _opusEncoder;
-  SimpleOpusDecoder? _opusDecoder;
+  OpusEncoder? _opusEncoder;
+  OpusDecoder? _opusDecoder;
 
   // Audio recording stream controller
   final StreamController<Uint8List> _audioDataController =
@@ -44,18 +43,27 @@ class AudioService extends ChangeNotifier {
 
   Future<void> _initializeOpus() async {
     try {
-      initOpus(await opus_flutter.load());
-      _opusEncoder = SimpleOpusEncoder(
+      // Get Opus version for logging
+      final version = OpusDecoder.getVersion();
+      debugPrint('[Audio] Opus version: $version');
+
+      _opusEncoder = OpusEncoder.create(
         sampleRate: 48000,
         channels: 1,
-        application: Application.voip,
+        // Note: flutter_opus may not support application parameter
+        // application: OpusApplication.voip,
       );
-      _opusDecoder = SimpleOpusDecoder(
+      _opusDecoder = OpusDecoder.create(
         sampleRate: 48000,
         channels: 1,
       );
-      _opusInitialized = true;
-      debugPrint('[Audio] Opus initialized successfully');
+
+      if (_opusEncoder != null && _opusDecoder != null) {
+        _opusInitialized = true;
+        debugPrint('[Audio] Opus initialized successfully');
+      } else {
+        throw Exception('Failed to create Opus encoder/decoder');
+      }
     } catch (e) {
       _errorController.add('Failed to initialize Opus: $e');
       debugPrint('[Audio] Failed to initialize Opus: $e');
@@ -266,7 +274,7 @@ class AudioService extends ChangeNotifier {
 
   // Encode audio data using Opus
   Future<Uint8List?> encodeAudioData(Uint8List audioData) async {
-    if (!_opusInitialized) {
+    if (!_opusInitialized || _opusEncoder == null) {
       debugPrint('[Audio] Opus not initialized, returning raw audio data');
       return audioData;
     }
@@ -292,10 +300,17 @@ class AudioService extends ChangeNotifier {
       }
 
       debugPrint('[Audio] Encoding ${int16Data.length} samples');
-      final encodedData = _opusEncoder!.encode(input: int16Data);
-      debugPrint('[Audio] Encoded to ${encodedData.length} bytes');
 
-      return encodedData;
+      // Use flutter_opus API: encode(pcmData, frameSize)
+      final encodedData = _opusEncoder!.encode(int16Data, expectedSamples);
+
+      if (encodedData != null) {
+        debugPrint('[Audio] Encoded to ${encodedData.length} bytes');
+        return encodedData;
+      } else {
+        debugPrint('[Audio] Encoding failed - returned null');
+        return audioData;
+      }
     } catch (e) {
       _errorController.add('Failed to encode audio data: $e');
       debugPrint('[Audio] Failed to encode audio data: $e');
@@ -305,22 +320,29 @@ class AudioService extends ChangeNotifier {
 
   // Decode audio data using Opus
   Future<Uint8List?> decodeAudioData(Uint8List encodedData) async {
-    if (!_opusInitialized) {
+    if (!_opusInitialized || _opusDecoder == null) {
       debugPrint('[Audio] Opus not initialized, returning raw audio data');
       return encodedData;
     }
 
     try {
-      final decodedInt16 = _opusDecoder!.decode(input: encodedData);
+      const int frameSize = 960; // 20ms at 48kHz
 
-      // Convert Int16List back to Uint8List, explicitly handling endianness
-      final Uint8List decodedData = Uint8List(decodedInt16.length * 2);
-      final ByteData byteData = decodedData.buffer.asByteData();
-      for (int i = 0; i < decodedInt16.length; i++) {
-        byteData.setInt16(i * 2, decodedInt16[i], Endian.little);
+      // Use flutter_opus API: decode(opusData, frameSize)
+      final decodedInt16 = _opusDecoder!.decode(encodedData, frameSize);
+
+      if (decodedInt16 != null) {
+        // Convert Int16List back to Uint8List, explicitly handling endianness
+        final Uint8List decodedData = Uint8List(decodedInt16.length * 2);
+        final ByteData byteData = decodedData.buffer.asByteData();
+        for (int i = 0; i < decodedInt16.length; i++) {
+          byteData.setInt16(i * 2, decodedInt16[i], Endian.little);
+        }
+        return decodedData;
+      } else {
+        debugPrint('[Audio] Decoding failed - returned null');
+        return encodedData;
       }
-
-      return decodedData;
     } catch (e) {
       _errorController.add('Failed to decode audio data: $e');
       debugPrint('[Audio] Failed to decode audio data: $e');
@@ -329,15 +351,14 @@ class AudioService extends ChangeNotifier {
   }
 
   @override
-  @override
   void dispose() {
     stopRecording();
     stopPlaying();
     _audioDataController.close();
     _errorController.close();
     _audioStreamSubscription?.cancel();
-    _opusEncoder?.destroy();
-    _opusDecoder?.destroy();
+    _opusEncoder?.dispose();
+    _opusDecoder?.dispose();
     super.dispose();
   }
 }

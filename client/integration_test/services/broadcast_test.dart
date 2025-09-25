@@ -6,8 +6,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:opus_dart/opus_dart.dart';
-import 'package:opus_flutter/opus_flutter.dart' as opus_flutter;
+import 'package:flutter_opus/flutter_opus.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 // --- Test Configuration ---
@@ -63,9 +62,6 @@ void main() {
     expect(receiverToken, isNotEmpty,
         reason: "Receiver token should not be empty.");
 
-    // --- 2. Initialize Opus ---
-    initOpus(await opus_flutter.load());
-
     // --- 3. Connect Clients ---
     final channelId = 'broadcast-test-$timestamp';
 
@@ -113,16 +109,23 @@ void main() {
     // --- 5. Generate and Send Message ---
     final int sampleRate = 48000;
     final int channels = 1;
-    final encoder = SimpleOpusEncoder(
-        sampleRate: sampleRate,
-        channels: channels,
-        application: Application.voip);
+    final encoder =
+        OpusEncoder.create(sampleRate: sampleRate, channels: channels);
+
+    if (encoder == null) {
+      fail('Failed to create Opus encoder');
+    }
+
     final pcm = Int16List(960); // 20ms of audio
     for (int i = 0; i < pcm.length; i++) {
       pcm[i] = (sin(2 * pi * 440 * i / sampleRate) * 32767).toInt();
     }
-    final encodedMessage = encoder.encode(input: pcm);
-    encoder.destroy();
+    final encodedMessage = encoder.encode(pcm, 960);
+    encoder.dispose();
+
+    if (encodedMessage == null) {
+      fail('Failed to encode audio data');
+    }
 
     // Give connections a moment to establish
     await Future.delayed(const Duration(milliseconds: 500));
@@ -149,9 +152,25 @@ void main() {
 
     // --- 6a. Verify Audio Quality by Decoding ---
     final decoder =
-        SimpleOpusDecoder(sampleRate: sampleRate, channels: channels);
+        OpusDecoder.create(sampleRate: sampleRate, channels: channels);
+
+    if (decoder == null) {
+      fail('Failed to create Opus decoder');
+    }
+
     try {
-      final decodedPcm = decoder.decode(input: receivedMessage);
+      final decodedBytes = decoder.decode(receivedMessage, 960);
+      if (decodedBytes == null) {
+        fail('Failed to decode audio data');
+      }
+
+      // Convert bytes back to Int16List
+      final ByteData byteData = decodedBytes.buffer.asByteData();
+      final Int16List decodedPcm = Int16List(decodedBytes.length ~/ 2);
+      for (int i = 0; i < decodedPcm.length; i++) {
+        decodedPcm[i] = byteData.getInt16(i * 2, Endian.little);
+      }
+
       expect(decodedPcm.length, equals(960),
           reason: "Decoded PCM should have 960 samples (20ms at 48kHz)");
 
@@ -163,7 +182,7 @@ void main() {
       expect(correlation, greaterThan(0),
           reason: "Decoded audio should correlate with original");
     } finally {
-      decoder.destroy();
+      decoder.dispose();
     }
 
     await Future.delayed(const Duration(milliseconds: 500));
