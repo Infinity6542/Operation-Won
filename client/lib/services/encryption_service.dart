@@ -4,6 +4,3 @@
 // Key rotation
 // Session management
 // Chunk en/decryption --> audio service
-// 
-// Also maybe move away from opus
-// Consider lossless
