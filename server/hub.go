@@ -265,7 +265,8 @@ func (c *Client) readPump() {
 			if c.encryptionStatus == 1 {
 				var exchange struct {
 					ChannelID string `json:"channel_ID"`
-					publicKey string `json:"public_key"`
+					publicKey string
+					// json:"public_key"`
 				}
 				err := json.Unmarshal(messageData, &exchange)
 				if err != nil {
@@ -278,13 +279,26 @@ func (c *Client) readPump() {
 
 				log.Printf("[WBS] [KEY] Client %s initiated a key exchange in channel %s", c.ID, exchange.ChannelID)
 
+				details := map[string]interface{}{
+					"type":       "key_exchange",
+					"user_id":    c.UserID,
+					"channel_id": exchange.ChannelID,
+					"public_key": c.publicKey,
+				}
+
 				// Broadcasting key
-				// message := map[string]interface{}{
-				// 	"type":       "key_exchange",
-				// 	"user_id":    c.UserID,
-				// 	"channel_id": exchange.ChannelID,
-				// 	"public_key": c.publicKey,
-				// }
+				for k, v := range map[string]interface{}{
+					"channel_id": exchange.ChannelID,
+					"public_key": c.publicKey,
+					"user_id":    c.UserID,
+				} {
+					details[k] = v
+				}
+
+				if messageData, e := json.Marshal(details); e == nil {
+					msg := &Message{ChannelID: exchange.ChannelID, Data: messageData, Sender: c}
+					c.hub.broadcast <- msg
+				}
 			} else if c.isRecording {
 				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageID)
 
