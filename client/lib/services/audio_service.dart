@@ -37,7 +37,6 @@ class AudioService extends ChangeNotifier {
   AudioService() {
     _initializeOpus();
     _setupMethodCallHandler();
-    // Skip E2EE key generation for now since native implementation is not available
     // _generateE2EEKey();
   }
 
