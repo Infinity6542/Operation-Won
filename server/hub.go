@@ -252,7 +252,7 @@ func (c *Client) readPump() {
 		case websocket.TextMessage:
 			var s Signal
 			if e := json.Unmarshal(messageData, &s); e != nil {
-				log.Printf("[WBS] [MSG] Inavlid message from client %s: %v", c.ID, e)
+				log.Printf("[WBS] [MSG] Invalid message from client %s: %v", c.ID, e)
 				continue
 			}
 			c.handleSignal(s)
