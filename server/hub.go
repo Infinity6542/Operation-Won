@@ -17,14 +17,14 @@ import (
 
 // Structs
 type Client struct {
-	ID                string
-	UserID            int
-	ChannelID         string
-	hub               *Hub
-	conn              *websocket.Conn
-	send              chan []byte
-	isRecording       bool
-	currentMessageeID string
+	ID               string
+	UserID           int
+	ChannelID        string
+	hub              *Hub
+	conn             *websocket.Conn
+	send             chan []byte
+	isRecording      bool
+	currentMessageID string
 }
 
 type Message struct {
@@ -257,9 +257,9 @@ func (c *Client) readPump() {
 			}
 			c.handleSignal(s)
 		case websocket.BinaryMessage:
-			log.Printf("[WBS] [BIN] Received binary message: %d bytes, isRecording: %v, messageID: %s", len(messageData), c.isRecording, c.currentMessageeID)
+			log.Printf("[WBS] [BIN] Received binary message: %d bytes, isRecording: %v, messageID: %s", len(messageData), c.isRecording, c.currentMessageID)
 			if c.isRecording {
-				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageeID)
+				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageID)
 
 				// Check if directory exists and create if necessary
 				if err := os.MkdirAll("./audio", os.ModePerm); err != nil {
@@ -309,9 +309,9 @@ func (c *Client) handleSignal(s Signal) {
 
 		if acquired {
 			c.isRecording = true
-			c.currentMessageeID = fmt.Sprintf("%d-%d", c.UserID, time.Now().Unix())
+			c.currentMessageID = fmt.Sprintf("%d-%d", c.UserID, time.Now().Unix())
 
-			log.Printf("[HUB] [PTT] User %d acquired speaker lock for channel %s, messageID: %s", c.UserID, c.ChannelID, c.currentMessageeID)
+			log.Printf("[HUB] [PTT] User %d acquired speaker lock for channel %s, messageID: %s", c.UserID, c.ChannelID, c.currentMessageID)
 
 			// Notify other clients in the channel that someone is speaking
 			speakerNotification := map[string]interface{}{
@@ -332,7 +332,7 @@ func (c *Client) handleSignal(s Signal) {
 			// Send confirmation back to client
 			response := map[string]interface{}{
 				"type":       "ptt_start_confirmed",
-				"message_id": c.currentMessageeID,
+				"message_id": c.currentMessageID,
 			}
 			if responseData, e := json.Marshal(response); e == nil {
 				select {
@@ -372,8 +372,8 @@ func (c *Client) handleSignal(s Signal) {
 				c.isRecording = false
 
 				// Check if audio file still exists when stopping
-				if c.currentMessageeID != "" {
-					audioFile := fmt.Sprintf("./audio/%s.opus", c.currentMessageeID)
+				if c.currentMessageID != "" {
+					audioFile := fmt.Sprintf("./audio/%s.opus", c.currentMessageID)
 					if stat, err := os.Stat(audioFile); err != nil {
 						log.Printf("[PTT] [STOP] Audio file %s missing on PTT stop: %v", audioFile, err)
 					} else {
@@ -400,7 +400,7 @@ func (c *Client) handleSignal(s Signal) {
 					"type":       "speaker_inactive",
 					"user_id":    c.UserID,
 					"channel_id": c.ChannelID,
-					"message_id": c.currentMessageeID,
+					"message_id": c.currentMessageID,
 				}
 
 				if notificationData, e := json.Marshal(speakerNotification); e == nil {
@@ -415,7 +415,7 @@ func (c *Client) handleSignal(s Signal) {
 				// Send confirmation back to client
 				response := map[string]interface{}{
 					"type":       "ptt_stop_confirmed",
-					"message_id": c.currentMessageeID,
+					"message_id": c.currentMessageID,
 				}
 				if responseData, e := json.Marshal(response); e == nil {
 					select {
@@ -425,7 +425,7 @@ func (c *Client) handleSignal(s Signal) {
 					}
 				}
 
-				c.currentMessageeID = ""
+				c.currentMessageID = ""
 			} else {
 				log.Printf("[HUB] [PTT] User %d attempted to release speaker lock for channel %s but is not the current speaker", c.UserID, c.ChannelID)
 			}
