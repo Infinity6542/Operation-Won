@@ -17,14 +17,18 @@ import (
 
 // Structs
 type Client struct {
-	ID               string
-	UserID           int
-	ChannelID        string
-	hub              *Hub
-	conn             *websocket.Conn
-	send             chan []byte
-	isRecording      bool
-	currentMessageID string
+	ID                string
+	UserID            int
+	ChannelID         string
+	hub               *Hub
+	conn              *websocket.Conn
+	send              chan []byte
+	isRecording       bool
+	currentMessageID  string
+	encryptionEnabled bool
+	publicKey         string `json:"publicKey,omitempty"`
+	keyExchangeId     string `json:key_exchange_id,omitempty`
+	encryptionStatus  int
 }
 
 type Message struct {
@@ -258,7 +262,30 @@ func (c *Client) readPump() {
 			c.handleSignal(s)
 		case websocket.BinaryMessage:
 			log.Printf("[WBS] [BIN] Received binary message: %d bytes, isRecording: %v, messageID: %s", len(messageData), c.isRecording, c.currentMessageID)
-			if c.isRecording {
+			if c.encryptionStatus == 1 {
+				var exchange struct {
+					ChannelID string `json:"channel_ID"`
+					publicKey string `json:"public_key"`
+				}
+				err := json.Unmarshal(messageData, &exchange)
+				if err != nil {
+					log.Printf("[WBS] [KEY] Failed to unmarshal key exchange data: %v", err)
+					return
+				}
+
+				c.publicKey = exchange.publicKey
+				c.encryptionEnabled = true
+
+				log.Printf("[WBS] [KEY] Client %s initiated a key exchange in channel %s", c.ID, exchange.ChannelID)
+
+				// Broadcasting key
+				// message := map[string]interface{}{
+				// 	"type":       "key_exchange",
+				// 	"user_id":    c.UserID,
+				// 	"channel_id": exchange.ChannelID,
+				// 	"public_key": c.publicKey,
+				// }
+			} else if c.isRecording {
 				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageID)
 
 				// Check if directory exists and create if necessary
@@ -430,7 +457,6 @@ func (c *Client) handleSignal(s Signal) {
 				log.Printf("[HUB] [PTT] User %d attempted to release speaker lock for channel %s but is not the current speaker", c.UserID, c.ChannelID)
 			}
 		}
-
 	case "channel_change":
 		// Handle channel change requests from client
 		var payload struct {
@@ -460,7 +486,8 @@ func (c *Client) handleSignal(s Signal) {
 		default:
 			log.Printf("[HUB] [CHN] Failed to submit channel change request for user %d", c.UserID)
 		}
-
+	case "key_exchange":
+		c.encryptionStatus = 1
 	default:
 		log.Printf("[WBS] [SIG] Received unknown signal from client '%s', consider updating the server.", s.Type)
 	}
