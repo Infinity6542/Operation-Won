@@ -24,7 +24,10 @@ type Client struct {
 	conn              *websocket.Conn
 	send              chan []byte
 	isRecording       bool
-	currentMessageeID string
+	currentMessageID  string
+	encryptionEnabled bool
+	publicKey         string
+	encryptionStatus  int
 }
 
 type Message struct {
@@ -252,14 +255,70 @@ func (c *Client) readPump() {
 		case websocket.TextMessage:
 			var s Signal
 			if e := json.Unmarshal(messageData, &s); e != nil {
-				log.Printf("[WBS] [MSG] Inavlid message from client %s: %v", c.ID, e)
+				log.Printf("[WBS] [MSG] Invalid message from client %s: %v", c.ID, e)
 				continue
 			}
 			c.handleSignal(s)
 		case websocket.BinaryMessage:
-			log.Printf("[WBS] [BIN] Received binary message: %d bytes, isRecording: %v, messageID: %s", len(messageData), c.isRecording, c.currentMessageeID)
-			if c.isRecording {
-				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageeID)
+			log.Printf("[WBS] [BIN] Received binary message: %d bytes, isRecording: %v, messageID: %s", len(messageData), c.isRecording, c.currentMessageID)
+			if c.encryptionStatus == 1 {
+				var exchange struct {
+					ChannelID string `json:"channel_id"`
+					PublicKey string `json:"public_key"`
+					UserID    int    `json:"user_id"`
+				}
+				err := json.Unmarshal(messageData, &exchange)
+				if err != nil {
+					log.Printf("[WBS] [KEY] Failed to unmarshal key exchange data: %v", err)
+					return
+				}
+
+				c.publicKey = exchange.PublicKey
+				c.encryptionEnabled = true
+
+				log.Printf("[WBS] [KEY] Client %s (UserID: %d) initiated key exchange in channel %s", c.ID, c.UserID, exchange.ChannelID)
+
+				ctx := context.Background()
+				keyStorageKey := fmt.Sprintf("channel:%s:keys:%d", exchange.ChannelID, c.UserID)
+				err = c.hub.redis.Set(ctx, keyStorageKey, exchange.PublicKey, 24*time.Hour).Err()
+				if err != nil {
+					log.Printf("[WBS] [KEY] Failed to store public key in Redis: %v", err)
+				}
+
+				keyExchangeResponse := map[string]interface{}{
+					"type":       "key_exchange_broadcast",
+					"user_id":    c.UserID,
+					"channel_id": exchange.ChannelID,
+					"public_key": c.publicKey,
+					"timestamp":  time.Now().Unix(),
+				}
+
+				if responseData, e := json.Marshal(keyExchangeResponse); e == nil {
+					msg := &Message{ChannelID: exchange.ChannelID, Data: responseData, Sender: c}
+					c.hub.broadcast <- msg
+				}
+
+				c.encryptionStatus = 2
+			} else if c.encryptionEnabled && c.isRecording {
+				log.Printf("[WBS] [ENC] Received encrypted audio: %d bytes from client %s", len(messageData), c.ID)
+
+				msg := &Message{ChannelID: c.ChannelID, Data: messageData, Sender: c}
+				c.hub.broadcast <- msg
+
+				if c.currentMessageID != "" {
+					file := fmt.Sprintf("./audio/%s_encrypted.opus", c.currentMessageID)
+					if err := os.MkdirAll("./audio", os.ModePerm); err != nil {
+						log.Printf("[REC] [DIR] Failed to create audio directory: %v", err)
+					} else {
+						if f, e := os.OpenFile(file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644); e == nil {
+							f.Write(messageData)
+							f.Close()
+							log.Printf("[REC] [ENC] Appended audio chunk to %s", file)
+						}
+					}
+				}
+			} else if c.isRecording {
+				file := fmt.Sprintf("./audio/%s.opus", c.currentMessageID)
 
 				// Check if directory exists and create if necessary
 				if err := os.MkdirAll("./audio", os.ModePerm); err != nil {
@@ -309,9 +368,9 @@ func (c *Client) handleSignal(s Signal) {
 
 		if acquired {
 			c.isRecording = true
-			c.currentMessageeID = fmt.Sprintf("%d-%d", c.UserID, time.Now().Unix())
+			c.currentMessageID = fmt.Sprintf("%d-%d", c.UserID, time.Now().Unix())
 
-			log.Printf("[HUB] [PTT] User %d acquired speaker lock for channel %s, messageID: %s", c.UserID, c.ChannelID, c.currentMessageeID)
+			log.Printf("[HUB] [PTT] User %d acquired speaker lock for channel %s, messageID: %s", c.UserID, c.ChannelID, c.currentMessageID)
 
 			// Notify other clients in the channel that someone is speaking
 			speakerNotification := map[string]interface{}{
@@ -332,7 +391,7 @@ func (c *Client) handleSignal(s Signal) {
 			// Send confirmation back to client
 			response := map[string]interface{}{
 				"type":       "ptt_start_confirmed",
-				"message_id": c.currentMessageeID,
+				"message_id": c.currentMessageID,
 			}
 			if responseData, e := json.Marshal(response); e == nil {
 				select {
@@ -372,8 +431,8 @@ func (c *Client) handleSignal(s Signal) {
 				c.isRecording = false
 
 				// Check if audio file still exists when stopping
-				if c.currentMessageeID != "" {
-					audioFile := fmt.Sprintf("./audio/%s.opus", c.currentMessageeID)
+				if c.currentMessageID != "" {
+					audioFile := fmt.Sprintf("./audio/%s.opus", c.currentMessageID)
 					if stat, err := os.Stat(audioFile); err != nil {
 						log.Printf("[PTT] [STOP] Audio file %s missing on PTT stop: %v", audioFile, err)
 					} else {
@@ -400,7 +459,7 @@ func (c *Client) handleSignal(s Signal) {
 					"type":       "speaker_inactive",
 					"user_id":    c.UserID,
 					"channel_id": c.ChannelID,
-					"message_id": c.currentMessageeID,
+					"message_id": c.currentMessageID,
 				}
 
 				if notificationData, e := json.Marshal(speakerNotification); e == nil {
@@ -415,7 +474,7 @@ func (c *Client) handleSignal(s Signal) {
 				// Send confirmation back to client
 				response := map[string]interface{}{
 					"type":       "ptt_stop_confirmed",
-					"message_id": c.currentMessageeID,
+					"message_id": c.currentMessageID,
 				}
 				if responseData, e := json.Marshal(response); e == nil {
 					select {
@@ -425,12 +484,11 @@ func (c *Client) handleSignal(s Signal) {
 					}
 				}
 
-				c.currentMessageeID = ""
+				c.currentMessageID = ""
 			} else {
 				log.Printf("[HUB] [PTT] User %d attempted to release speaker lock for channel %s but is not the current speaker", c.UserID, c.ChannelID)
 			}
 		}
-
 	case "channel_change":
 		// Handle channel change requests from client
 		var payload struct {
@@ -460,7 +518,8 @@ func (c *Client) handleSignal(s Signal) {
 		default:
 			log.Printf("[HUB] [CHN] Failed to submit channel change request for user %d", c.UserID)
 		}
-
+	case "key_exchange":
+		c.encryptionStatus = 1
 	default:
 		log.Printf("[WBS] [SIG] Received unknown signal from client '%s', consider updating the server.", s.Type)
 	}
@@ -770,4 +829,69 @@ func (h *Hub) RedisWithRetry(operation func() error, maxRetries int) error {
 		}
 	}
 	return fmt.Errorf("redis operation failed after %d retries: %v", maxRetries+1, lastErr)
+}
+
+// Key management functions for encryption
+
+// StoreUserPublicKey stores a user's public key for a channel
+func (h *Hub) StoreUserPublicKey(channelID string, userID int, publicKey string) error {
+	ctx := context.Background()
+	key := fmt.Sprintf("channel:%s:keys:%d", channelID, userID)
+	return h.redis.Set(ctx, key, publicKey, 24*time.Hour).Err()
+}
+
+// GetUserPublicKey retrieves a user's public key for a channel
+func (h *Hub) GetUserPublicKey(channelID string, userID int) (string, error) {
+	ctx := context.Background()
+	key := fmt.Sprintf("channel:%s:keys:%d", channelID, userID)
+	return h.redis.Get(ctx, key).Result()
+}
+
+// GetChannelPublicKeys retrieves all public keys for users in a channel
+func (h *Hub) GetChannelPublicKeys(channelID string) (map[string]string, error) {
+	ctx := context.Background()
+	pattern := fmt.Sprintf("channel:%s:keys:*", channelID)
+
+	keys, err := h.redis.Keys(ctx, pattern).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]string)
+	if len(keys) > 0 {
+		values, err := h.redis.MGet(ctx, keys...).Result()
+		if err != nil {
+			return nil, err
+		}
+
+		for i, key := range keys {
+			if i < len(values) && values[i] != nil {
+				// Extract user ID from key pattern "channel:xxx:keys:123"
+				parts := strings.Split(key, ":")
+				if len(parts) >= 4 {
+					userID := parts[3]
+					result[userID] = values[i].(string)
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// CleanupChannelKeys removes all encryption keys for a channel
+func (h *Hub) CleanupChannelKeys(channelID string) error {
+	ctx := context.Background()
+	pattern := fmt.Sprintf("channel:%s:keys:*", channelID)
+
+	keys, err := h.redis.Keys(ctx, pattern).Result()
+	if err != nil {
+		return err
+	}
+
+	if len(keys) > 0 {
+		return h.redis.Del(ctx, keys...).Err()
+	}
+
+	return nil
 }

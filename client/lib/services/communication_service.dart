@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../providers/settings_provider.dart';
 import 'websocket_service.dart';
 import 'audio_service.dart';
 import 'permission_service.dart';
+import 'encryption_service.dart';
 
 class CommunicationService extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
   final WebSocketService _webSocketService = WebSocketService();
+  final EncryptionService _encryptionService = EncryptionService();
   late final AudioService _audioService;
 
   StreamSubscription? _audioDataSubscription;
@@ -30,6 +33,12 @@ class CommunicationService extends ChangeNotifier {
   bool get isEmergencyMode => _isEmergencyMode;
   bool get isPersistentRecording => _isPersistentRecording;
   String? get currentChannelId => _currentChannelId;
+  bool get isEncryptionReady =>
+      _currentChannelId != null &&
+      _encryptionService.isChannelEncryptionReady(_currentChannelId!);
+  EncryptionStatus get encryptionStatus => _currentChannelId != null
+      ? _encryptionService.getChannelEncryptionStatus(_currentChannelId!)
+      : EncryptionStatus.disabled;
 
   CommunicationService(this._settingsProvider) {
     // Initialize audio service based on platform
@@ -41,6 +50,12 @@ class CommunicationService extends ChangeNotifier {
 
     _setupListeners();
     _initializeConnection();
+    _initializeEncryption();
+  }
+
+  Future<void> _initializeEncryption() async {
+    await _encryptionService.initialize();
+    debugPrint('[Comm] Encryption service initialized');
   }
 
   void _setupListeners() {
@@ -55,8 +70,17 @@ class CommunicationService extends ChangeNotifier {
     // Set PTT active callback to prevent reconnection during PTT
     _webSocketService.setPTTActiveCallback(() => _isPTTActive);
 
+    // Set encryption-related callbacks
+    _webSocketService.setKeyExchangeCallback(processKeyExchange);
+    _webSocketService.setEncryptedAudioCallback(_onEncryptedAudioReceived);
+
     // Listen to audio service changes
     _audioService.addListener(() {
+      notifyListeners();
+    });
+
+    // Listen to encryption service changes
+    _encryptionService.addListener(() {
       notifyListeners();
     });
 
@@ -178,6 +202,17 @@ class CommunicationService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Join a specific channel with encryption setup
+  Future<void> joinChannelWithEncryption(String channelId) async {
+    // First join the channel normally
+    await joinChannel(channelId);
+
+    // Then setup encryption for the channel
+    await setupChannelEncryption(channelId);
+
+    debugPrint('[Comm] Joined channel with encryption: $channelId');
+  }
+
   // Leave current channel
   Future<void> leaveChannel() async {
     // Guard against multiple leave calls
@@ -213,10 +248,58 @@ class CommunicationService extends ChangeNotifier {
     final channelId = _currentChannelId;
     _currentChannelId = null;
 
+    // Clear encryption data for the channel
+    if (channelId != null) {
+      await _encryptionService.clearChannelEncryption(channelId);
+    }
+
     // Disconnect WebSocket when leaving channel to prevent reconnection attempts
     await _webSocketService.disconnect();
 
     debugPrint('[Comm] Left channel $channelId and disconnected WebSocket');
+    notifyListeners();
+  }
+
+  // Set up encryption for a channel
+  Future<bool> setupChannelEncryption(String channelId) async {
+    debugPrint('[Comm] Setting up encryption for channel: $channelId');
+
+    try {
+      // For now, pass empty user list - in production, get actual channel members
+      final success =
+          await _encryptionService.setupChannelEncryption(channelId, []);
+      if (success) {
+        debugPrint('[Comm] Channel encryption setup initiated for $channelId');
+
+        // Get our public key to broadcast
+        final keyPair = await _encryptionService.generateKeyPair();
+        final publicKeyBase64 =
+            _encryptionService.encodePublicKey(keyPair.publicKey);
+
+        // Send key exchange via WebSocket
+        _webSocketService.sendSignal('key_exchange', {
+          'channelId': channelId,
+          'publicKey': publicKeyBase64,
+        });
+
+        debugPrint('[Comm] Sent key exchange for channel $channelId');
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[Comm] Failed to setup channel encryption: $e');
+      return false;
+    }
+  }
+
+  // Process incoming key exchange
+  Future<void> processKeyExchange(
+      String channelId, String userId, String publicKeyBase64) async {
+    debugPrint(
+        '[Comm] Processing key exchange for channel $channelId from user $userId');
+    await _encryptionService.processKeyExchange(
+        channelId, userId, publicKeyBase64);
     notifyListeners();
   }
 
@@ -317,12 +400,33 @@ class CommunicationService extends ChangeNotifier {
 
     if (_isPTTActive && _webSocketService.isConnected) {
       debugPrint('[Comm] Encoding and sending audio data to WebSocket');
-      // Encode audio data before sending (async operation)
-      _audioService.encodeAudioData(audioData).then((encodedData) {
+
+      // First, encode the audio data
+      _audioService.encodeAudioData(audioData).then((encodedData) async {
         if (encodedData != null) {
-          debugPrint(
-              '[Comm] Sending encoded audio: ${encodedData.length} bytes');
-          _webSocketService.sendAudioData(encodedData);
+          // Then encrypt if encryption is ready
+          if (_currentChannelId != null &&
+              _encryptionService.isChannelEncryptionReady(_currentChannelId!)) {
+            debugPrint(
+                '[Comm] Encrypting encoded audio: ${encodedData.length} bytes');
+            final encryptedChunk = await _encryptionService.encryptAudioChunk(
+                encodedData, _currentChannelId!);
+            if (encryptedChunk != null) {
+              // Send encrypted audio chunk as JSON
+              final encryptedJson = encryptedChunk.toJson();
+              _webSocketService.sendSignal('encrypted_audio', encryptedJson);
+              debugPrint(
+                  '[Comm] Sent encrypted audio: ${encryptedChunk.encryptedData.length} bytes encrypted data');
+            } else {
+              debugPrint(
+                  '[Comm] Encryption failed, sending unencrypted encoded data');
+              _webSocketService.sendAudioData(encodedData);
+            }
+          } else {
+            debugPrint(
+                '[Comm] Encryption not ready, sending unencrypted encoded audio: ${encodedData.length} bytes');
+            _webSocketService.sendAudioData(encodedData);
+          }
         } else {
           debugPrint('[Comm] Encoding failed, sending unencoded data');
           _webSocketService.sendAudioData(audioData);
@@ -343,6 +447,9 @@ class CommunicationService extends ChangeNotifier {
     debugPrint(
         '[Comm] Received incoming audio data: ${audioData.length} bytes');
 
+    // First check if this might be encrypted data by trying to parse as EncryptedAudioChunk
+    // For now, assume unencrypted data - in a full implementation, we'd check message type
+
     // Decode audio data before playing (async operation)
     _audioService.decodeAudioData(audioData).then((decodedData) {
       if (decodedData != null) {
@@ -359,6 +466,43 @@ class CommunicationService extends ChangeNotifier {
       // Play unencoded as fallback
       _audioService.playAudioChunk(audioData);
     });
+  }
+
+  // Handle incoming encrypted audio data (called by WebSocket service for encrypted_audio signals)
+  Future<void> _onEncryptedAudioReceived(
+      Map<String, dynamic> encryptedAudioJson) async {
+    if (_currentChannelId == null) {
+      debugPrint('[Comm] Cannot decrypt audio - no current channel');
+      return;
+    }
+
+    try {
+      // Parse encrypted audio chunk from JSON
+      final encryptedChunk = EncryptedAudioChunk.fromJson(encryptedAudioJson);
+      debugPrint(
+          '[Comm] Received encrypted audio: ${encryptedChunk.encryptedData.length} bytes encrypted data');
+
+      // Decrypt the audio chunk
+      final decryptedData = await _encryptionService.decryptAudioChunk(
+          encryptedChunk, _currentChannelId!);
+      if (decryptedData != null) {
+        debugPrint('[Comm] Decrypted audio: ${decryptedData.length} bytes');
+
+        // Decode the decrypted audio data (it's still Opus-encoded)
+        final decodedData = await _audioService.decodeAudioData(decryptedData);
+        if (decodedData != null) {
+          debugPrint(
+              '[Comm] Playing decrypted and decoded audio: ${decodedData.length} bytes');
+          _audioService.playAudioChunk(decodedData);
+        } else {
+          debugPrint('[Comm] Failed to decode decrypted audio');
+        }
+      } else {
+        debugPrint('[Comm] Failed to decrypt audio chunk');
+      }
+    } catch (e) {
+      debugPrint('[Comm] Error processing encrypted audio: $e');
+    }
   }
 
   // Test connection

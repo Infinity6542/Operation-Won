@@ -21,6 +21,12 @@ class WebSocketService extends ChangeNotifier {
   // Callback to check if PTT is active (to prevent reconnection during PTT)
   bool Function()? _isPTTActiveCallback;
 
+  // Callbacks for encryption-related signals
+  Future<void> Function(String channelId, String userId, String publicKey)?
+      _onKeyExchangeCallback;
+  Future<void> Function(Map<String, dynamic> encryptedAudioJson)?
+      _onEncryptedAudioCallback;
+
   // Audio stream controller for received audio data
   final StreamController<Uint8List> _audioStreamController =
       StreamController<Uint8List>.broadcast();
@@ -35,6 +41,20 @@ class WebSocketService extends ChangeNotifier {
   // Set callback to check PTT active status (prevents reconnection during PTT)
   void setPTTActiveCallback(bool Function()? callback) {
     _isPTTActiveCallback = callback;
+  }
+
+  // Set callback for key exchange signals
+  void setKeyExchangeCallback(
+      Future<void> Function(String channelId, String userId, String publicKey)?
+          callback) {
+    _onKeyExchangeCallback = callback;
+  }
+
+  // Set callback for encrypted audio signals
+  void setEncryptedAudioCallback(
+      Future<void> Function(Map<String, dynamic> encryptedAudioJson)?
+          callback) {
+    _onEncryptedAudioCallback = callback;
   }
 
   // Convert HTTP URL to WebSocket URL if needed
@@ -240,8 +260,44 @@ class WebSocketService extends ChangeNotifier {
       case 'channel_changed':
         // Handle channel change
         break;
+      case 'key_exchange':
+        _handleKeyExchange(signal);
+        break;
+      case 'encrypted_audio':
+        _handleEncryptedAudio(signal);
+        break;
       default:
         debugPrint('[WebSocket] Unknown signal type: $type');
+    }
+  }
+
+  // Handle key exchange signals
+  void _handleKeyExchange(Map<String, dynamic> signal) {
+    try {
+      final payload = signal['payload'] as Map<String, dynamic>?;
+      if (payload != null && _onKeyExchangeCallback != null) {
+        final channelId = payload['channelId'] as String?;
+        final userId = payload['userId'] as String?;
+        final publicKey = payload['publicKey'] as String?;
+
+        if (channelId != null && userId != null && publicKey != null) {
+          _onKeyExchangeCallback!(channelId, userId, publicKey);
+        }
+      }
+    } catch (e) {
+      debugPrint('[WebSocket] Error handling key exchange: $e');
+    }
+  }
+
+  // Handle encrypted audio signals
+  void _handleEncryptedAudio(Map<String, dynamic> signal) {
+    try {
+      final payload = signal['payload'] as Map<String, dynamic>?;
+      if (payload != null && _onEncryptedAudioCallback != null) {
+        _onEncryptedAudioCallback!(payload);
+      }
+    } catch (e) {
+      debugPrint('[WebSocket] Error handling encrypted audio: $e');
     }
   }
 

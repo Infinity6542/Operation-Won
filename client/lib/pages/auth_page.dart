@@ -380,7 +380,7 @@ class _LoginFormState extends State<LoginForm> {
                 'Custom';
 
         return DropdownButtonFormField<String>(
-          initialValue: currentEndpointName,
+          value: currentEndpointName,
           decoration: InputDecoration(
             labelText: 'Server',
             prefixIcon: const Icon(Icons.dns_outlined),

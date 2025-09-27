@@ -10,6 +10,7 @@ class AudioService extends ChangeNotifier {
   bool _isRecording = false;
   bool _isPlaying = false;
   bool _magicMicEnabled = false;
+  bool _disposing = false;
   Uint8List? _e2eeKey;
   StreamSubscription? _audioStreamSubscription;
 
@@ -33,6 +34,13 @@ class AudioService extends ChangeNotifier {
   bool get hasE2EEKey => _e2eeKey != null;
   Stream<Uint8List> get audioDataStream => _audioDataController.stream;
   Stream<String> get errorStream => _errorController.stream;
+
+  // Safe error logging that doesn't fail when disposing
+  void _logError(String error) {
+    if (!_disposing && !_errorController.isClosed) {
+      _errorController.add(error);
+    }
+  }
 
   AudioService() {
     _initializeOpus();
@@ -64,7 +72,7 @@ class AudioService extends ChangeNotifier {
         throw Exception('Failed to create Opus encoder/decoder');
       }
     } catch (e) {
-      _errorController.add('Failed to initialize Opus: $e');
+      _logError('Failed to initialize Opus: $e');
       debugPrint('[Audio] Failed to initialize Opus: $e');
       _opusInitialized = false;
     }
@@ -82,7 +90,7 @@ class AudioService extends ChangeNotifier {
           break;
         case 'onRecordingError':
           final error = call.arguments as String;
-          _errorController.add('Recording error: $error');
+          _logError('Recording error: $error');
           debugPrint('[Audio] Recording error: $error');
           _isRecording = false;
           notifyListeners();
@@ -99,7 +107,7 @@ class AudioService extends ChangeNotifier {
       final result = await _channel.invokeMethod('requestMicrophonePermission');
       return result as bool;
     } catch (e) {
-      _errorController.add('Failed to request microphone permission: $e');
+            _logError('Failed to request microphone permission: $e');
       debugPrint('[Audio] Failed to request microphone permission: $e');
       return false;
     }
@@ -124,7 +132,7 @@ class AudioService extends ChangeNotifier {
       debugPrint('[Audio] Recording started: $_isRecording');
       return _isRecording;
     } catch (e) {
-      _errorController.add('Failed to start recording: $e');
+            _logError('Failed to start recording: $e');
       debugPrint('[Audio] Failed to start recording: $e');
       return false;
     }
@@ -141,7 +149,9 @@ class AudioService extends ChangeNotifier {
 
       debugPrint('[Audio] Recording stopped');
     } catch (e) {
-      _errorController.add('Failed to stop recording: $e');
+            if (!_disposing && !_errorController.isClosed) {
+        _logError('Failed to stop recording: $e');
+      }
       debugPrint('[Audio] Failed to stop recording: $e');
     }
   }
@@ -186,7 +196,9 @@ class AudioService extends ChangeNotifier {
 
       debugPrint('[Audio] Playing mode stopped');
     } catch (e) {
-      _errorController.add('Failed to stop playing mode: $e');
+            if (!_disposing && !_errorController.isClosed) {
+        _logError('Failed to stop playing mode: $e');
+      }
       debugPrint('[Audio] Failed to stop playing mode: $e');
     }
   }
@@ -351,13 +363,36 @@ class AudioService extends ChangeNotifier {
 
   @override
   void dispose() {
-    stopRecording();
-    stopPlaying();
-    _audioDataController.close();
-    _errorController.close();
+    _disposing = true;
+    
+    // Cleanup synchronously to avoid async issues
     _audioStreamSubscription?.cancel();
     _opusEncoder?.dispose();
     _opusDecoder?.dispose();
+    
+    // Close streams after setting disposing flag
+    if (!_audioDataController.isClosed) {
+      _audioDataController.close();
+    }
+    if (!_errorController.isClosed) {
+      _errorController.close();
+    }
+    
+    // Try to stop recording/playing without error logging
+    try {
+      if (_isRecording) {
+        _channel.invokeMethod('stopRecording');
+        _isRecording = false;
+      }
+    } catch (_) {}
+    
+    try {
+      if (_isPlaying) {
+        _channel.invokeMethod('stopPlaying');
+        _isPlaying = false;
+      }
+    } catch (_) {}
+    
     super.dispose();
   }
 }
