@@ -41,9 +41,9 @@ class AppColors {
   static final Color accentBlueAlpha80 = accentBlue.withValues(alpha: 0.8);
 
   // Border Radius Values
-  static const double radiusSmall = 8.0;
-  static const double radiusMedium = 12.0;
-  static const double radiusLarge = 16.0;
+  static const double radiusSmall = 10.0;
+  static const double radiusMedium = 16.0;
+  static const double radiusLarge = 22.0;
 }
 
 // Pre-computed colors to improve performance (keeping for backward compatibility)
@@ -186,7 +186,7 @@ final ThemeData lightTheme = ThemeData(
     backgroundColor: Colors.white,
     surfaceTintColor: Colors.transparent,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(AppColors.radiusSmall)),
+      borderRadius: BorderRadius.all(Radius.circular(AppColors.radiusMedium)),
       side: BorderSide(color: Colors.black12),
     ),
   ),
