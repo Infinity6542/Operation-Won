@@ -89,6 +89,25 @@ android {
             signingConfig keystoreProperties['storeFile'] != null ? signingConfigs.release : signingConfigs.debug
         }
     }
+
+    // Custom APK naming - using archivesBaseName
+    android.applicationVariants.all { variant ->
+        def appName = System.getenv("APK_NAME") ?: "opwon"
+        def versionName = variant.versionName
+        def buildType = variant.buildType.name
+        
+        variant.outputs.all { output ->
+            def abiFilter = output.getFilter(com.android.build.OutputFile.ABI)
+            def abi = abiFilter ? "-${abiFilter}" : ""
+            
+            if (buildType == "release") {
+                output.outputFileName = "${appName}-v${versionName}${abi}-release.apk"
+            } else {
+                def timestamp = new Date().format('yyyyMMdd-HHmm')
+                output.outputFileName = "${appName}-v${versionName}${abi}-${buildType}-${timestamp}.apk"
+            }
+        }
+    }
 }
 
 flutter {
