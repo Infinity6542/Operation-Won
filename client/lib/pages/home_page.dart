@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:operation_won/home_view.dart';
 import 'package:operation_won/services/permission_service.dart';
 
-@NowaGenerated()
 class HomePage extends StatefulWidget {
-  @NowaGenerated({'loader': 'auto-constructor'})
   const HomePage({super.key});
 
   @override
@@ -14,7 +11,6 @@ class HomePage extends StatefulWidget {
   }
 }
 
-@NowaGenerated()
 class _HomePageState extends State<HomePage>
     with AutomaticKeepAliveClientMixin {
   int? pageIndex = 0;
@@ -58,15 +54,12 @@ class _HomePageState extends State<HomePage>
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               crossAxisAlignment: CrossAxisAlignment.center,
-              spacing: 0,
               children: [
-                FlexSizedBox(
-                  flex: 1,
+                Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 15),
-                    child: SizedBox(
-                      child: HomeView(),
-                    ),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 15),
+                    child: const HomeView(),
                   ),
                 )
               ],

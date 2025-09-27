@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:operation_won/channel.dart';
 import 'package:operation_won/comms_state.dart';
 import 'package:operation_won/globals/app_state.dart';
+import 'package:operation_won/globals/themes.dart';
 import 'package:operation_won/pages/auth_page.dart';
 import 'package:operation_won/pages/home_page.dart';
 import 'package:operation_won/pages/splash.dart';
@@ -20,14 +20,11 @@ import 'package:operation_won/widgets/auth_state_listener.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-@NowaGenerated()
 late final SharedPreferences sharedPrefs;
 
-@NowaGenerated()
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
   try {
+    WidgetsFlutterBinding.ensureInitialized();
     sharedPrefs = await SharedPreferences.getInstance();
     runApp(const MyApp());
   } catch (e) {
@@ -42,9 +39,7 @@ void main() async {
   }
 }
 
-@NowaGenerated({'visibleInNowa': false})
 class MyApp extends StatefulWidget {
-  @NowaGenerated({'loader': 'auto-constructor'})
   const MyApp({super.key});
 
   @override
@@ -65,13 +60,18 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _listenToAudioErrors() {
-    final audioService = Provider.of<AudioService>(context, listen: false);
-    _audioErrorSubscription = audioService.errorStream.listen((errorMessage) {
-      EnhancedErrorHandler.showErrorSnackBar(
-        context: context,
-        message: 'Audio Error: $errorMessage',
-      );
-    });
+    // Only listen to audio errors if we have a valid context with providers
+    try {
+      final audioService = Provider.of<AudioService>(context, listen: false);
+      _audioErrorSubscription = audioService.errorStream.listen((errorMessage) {
+        EnhancedErrorHandler.showErrorSnackBar(
+          context: context,
+          message: 'Audio Error: $errorMessage',
+        );
+      });
+    } catch (e) {
+      debugPrint('AudioService provider not available yet: $e');
+    }
   }
 
   @override
@@ -160,63 +160,8 @@ class _MyAppState extends State<MyApp> {
         builder: (context, themeProvider, child) {
           return MaterialApp(
             title: 'Operation Won',
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.deepPurple,
-                brightness: Brightness.light,
-              ),
-              useMaterial3: true,
-            ),
-            darkTheme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF2196F3), // Material Blue
-                brightness: Brightness.dark,
-                primary: const Color(0xFF2196F3), // Blue primary
-                secondary: const Color(0xFF4CAF50), // Green secondary
-                surface: Colors.black, // AMOLED black
-                onSurface: Colors.white,
-                surfaceContainer: const Color(0xFF1A1A1A),
-                surfaceContainerHighest: const Color(0xFF2A2A2A),
-                error: Colors.redAccent,
-              ),
-              scaffoldBackgroundColor: Colors.black, // AMOLED black
-              cardTheme: CardThemeData(
-                elevation: 0,
-                color: const Color(0xFF1A1A1A), // Slightly off-black
-                shape: RoundedRectangleBorder(
-                  borderRadius: const BorderRadius.all(Radius.circular(16)),
-                  side: BorderSide(
-                    color: const Color(0xFF333333).withAlpha(
-                        (const Color(0xFF333333).alpha * 0.5).round()),
-                    width: 1,
-                  ),
-                ),
-              ),
-              filledButtonTheme: FilledButtonThemeData(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF2196F3),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              textButtonTheme: TextButtonThemeData(
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF2196F3),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                surfaceTintColor: Colors.transparent,
-              ),
-              useMaterial3: true,
-            ),
+            theme: lightTheme,
+            darkTheme: darkTheme,
             themeMode: themeProvider.themeMode,
             home: const AuthStateListener(
               child: AuthenticationFlow(),

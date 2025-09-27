@@ -1,11 +1,9 @@
-import 'package:nowa_runtime/nowa_runtime.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:typed_data';
 import 'services/communication_service.dart';
 import 'providers/settings_provider.dart';
 
-@NowaGenerated()
 class CommsState extends ChangeNotifier {
   CommunicationService? _communicationService;
   String? _currentChannelId;

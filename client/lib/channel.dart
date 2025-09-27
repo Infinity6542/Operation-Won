@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nowa_runtime/nowa_runtime.dart';
 
-@NowaGenerated()
 class Channel extends StatelessWidget {
-  @NowaGenerated({'loader': 'auto-constructor'})
   const Channel({super.key});
 
   @override

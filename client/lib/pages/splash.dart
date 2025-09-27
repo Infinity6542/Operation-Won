@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nowa_runtime/nowa_runtime.dart';
 
-@NowaGenerated()
 class Splash extends StatelessWidget {
-  @NowaGenerated({'loader': 'auto-constructor'})
   const Splash({super.key});
 
   @override

@@ -16,6 +16,8 @@ class CommunicationService extends ChangeNotifier {
 
   StreamSubscription? _audioDataSubscription;
   StreamSubscription? _incomingAudioSubscription;
+  Timer? _notificationDebounceTimer;
+  bool _isDisposed = false;
 
   bool _isPTTActive = false;
   bool _isPTTToggleMode = false; // true for tap mode, false for hold mode
@@ -53,6 +55,17 @@ class CommunicationService extends ChangeNotifier {
     _initializeEncryption();
   }
 
+  // Debounced notification to prevent excessive UI rebuilds
+  void _debouncedNotify() {
+    _notificationDebounceTimer?.cancel();
+    _notificationDebounceTimer = Timer(const Duration(milliseconds: 16), () {
+      // Guard against notifications after disposal
+      if (!_isDisposed) {
+        notifyListeners();
+      }
+    });
+  }
+
   Future<void> _initializeEncryption() async {
     await _encryptionService.initialize();
     debugPrint('[Comm] Encryption service initialized');
@@ -64,7 +77,7 @@ class CommunicationService extends ChangeNotifier {
 
     // Listen to WebSocket service changes
     _webSocketService.addListener(() {
-      notifyListeners();
+      _debouncedNotify();
     });
 
     // Set PTT active callback to prevent reconnection during PTT
@@ -76,12 +89,12 @@ class CommunicationService extends ChangeNotifier {
 
     // Listen to audio service changes
     _audioService.addListener(() {
-      notifyListeners();
+      _debouncedNotify();
     });
 
     // Listen to encryption service changes
     _encryptionService.addListener(() {
-      notifyListeners();
+      _debouncedNotify();
     });
 
     // Listen to outgoing audio data (from microphone)
@@ -199,7 +212,7 @@ class CommunicationService extends ChangeNotifier {
     }
 
     debugPrint('[Comm] Joined channel: $channelId');
-    notifyListeners();
+    notifyListeners(); // Keep immediate for channel changes
   }
 
   // Join a specific channel with encryption setup
@@ -257,7 +270,7 @@ class CommunicationService extends ChangeNotifier {
     await _webSocketService.disconnect();
 
     debugPrint('[Comm] Left channel $channelId and disconnected WebSocket');
-    notifyListeners();
+    notifyListeners(); // Keep immediate for channel changes
   }
 
   // Set up encryption for a channel
@@ -598,6 +611,7 @@ class CommunicationService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     stopPTT();
     disconnectWebSocket();
 
@@ -609,6 +623,7 @@ class CommunicationService extends ChangeNotifier {
     _audioDataSubscription?.cancel();
     _incomingAudioSubscription?.cancel();
     _settingsProvider.removeListener(_onSettingsChanged);
+    _notificationDebounceTimer?.cancel();
     _audioService.dispose();
     _webSocketService.dispose();
     super.dispose();

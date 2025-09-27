@@ -249,24 +249,23 @@ class EncryptionService extends ChangeNotifier {
 
   Future<void> _storePrivateKey(String channelId, Uint8List privateKey) async {
     final keyString = base64Encode(privateKey);
-    
+
     // Store in memory for demo (in production, use secure storage)
     _storedPrivateKeys[channelId] = privateKey;
-    
+
     debugPrint(
         '[Encryption] Storing private key for channel $channelId (${keyString.length} chars)');
   }
 
   Future<Uint8List?> _getPrivateKey(String channelId) async {
     debugPrint('[Encryption] Retrieving private key for channel $channelId');
-    
-    // Return from in-memory storage
+
     final privateKey = _storedPrivateKeys[channelId];
     if (privateKey != null) {
       debugPrint('[Encryption] Found private key for channel $channelId');
       return privateKey;
     }
-    
+
     debugPrint('[Encryption] No private key found for channel $channelId');
     return null;
   }

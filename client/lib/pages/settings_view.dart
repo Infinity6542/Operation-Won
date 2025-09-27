@@ -133,14 +133,33 @@ class SettingsView extends StatelessWidget {
                           _testWebSocketEndpoint(context, settingsProvider),
                     ),
                     const Divider(),
-                    _buildActionTile(
-                      context,
-                      title: 'Change Server',
-                      subtitle: 'Switch to a different server',
-                      icon: LucideIcons.settings,
-                      onTap: () =>
-                          _showServerConfigDialog(context, settingsProvider),
-                    ),
+                    _buildActionTile(context,
+                        title: 'Change Server',
+                        subtitle: 'Switch to a different server',
+                        icon: LucideIcons.settings,
+                        onTap: () => showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                                  title: Text("This will sign you out."),
+                                  content: Text(
+                                      "Changing servers requires to sign out. Do you want to continue?"),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: Text("Cancel")),
+                                    FilledButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          settingsProvider.resetToDefaults();
+                                          authProvider.logout();
+                                          StateSynchronizationService
+                                              .handleSignOut(context);
+                                        },
+                                        child: Text("Sign out"))
+                                  ],
+                                ))),
                   ]),
                   const SizedBox(height: 32),
 
@@ -537,113 +556,113 @@ class SettingsView extends StatelessWidget {
     );
   }
 
-  void _showServerConfigDialog(
-      BuildContext context, SettingsProvider settingsProvider) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Server Configuration'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Select a server or configure a custom one:',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              // Predefined servers
-              ...SettingsProvider.predefinedEndpoints.map((endpoint) {
-                return ListTile(
-                  title: Text(endpoint['name']!),
-                  subtitle: Text(endpoint['api']!),
-                  leading: Radio<String>(
-                    value: endpoint['api']!,
-                    groupValue: settingsProvider.apiEndpoint,
-                    onChanged: (value) {
-                      if (value != null) {
-                        settingsProvider.setPredefinedEndpoint(endpoint);
-                        Navigator.of(context).pop();
-                      }
-                    },
-                  ),
-                  onTap: () {
-                    settingsProvider.setPredefinedEndpoint(endpoint);
-                    Navigator.of(context).pop();
-                  },
-                );
-              }),
-              // Custom server option
-              ListTile(
-                title: const Text('Custom Server'),
-                subtitle: const Text('Configure your own server'),
-                leading: Radio<String>(
-                  value: 'custom',
-                  groupValue: settingsProvider.isUsingCustomEndpoint
-                      ? 'custom'
-                      : settingsProvider.apiEndpoint,
-                  onChanged: (value) {
-                    Navigator.of(context).pop();
-                    _showCustomServerDialog(context, settingsProvider);
-                  },
-                ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _showCustomServerDialog(context, settingsProvider);
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
+  // void _showServerConfigDialog(
+  //     BuildContext context, SettingsProvider settingsProvider) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Server Configuration'),
+  //       content: SizedBox(
+  //         width: double.maxFinite,
+  //         child: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             Text(
+  //               'Select a server or configure a custom one:',
+  //               style: Theme.of(context).textTheme.bodyMedium,
+  //             ),
+  //             const SizedBox(height: 16),
+  //             // Predefined servers
+  //             ...SettingsProvider.predefinedEndpoints.map((endpoint) {
+  //               return ListTile(
+  //                 title: Text(endpoint['name']!),
+  //                 subtitle: Text(endpoint['api']!),
+  //                 leading: Radio<String>(
+  //                   value: endpoint['api']!,
+  //                   groupValue: settingsProvider.apiEndpoint,
+  //                   onChanged: (value) {
+  //                     if (value != null) {
+  //                       settingsProvider.setPredefinedEndpoint(endpoint);
+  //                       Navigator.of(context).pop();
+  //                     }
+  //                   },
+  //                 ),
+  //                 onTap: () {
+  //                   settingsProvider.setPredefinedEndpoint(endpoint);
+  //                   Navigator.of(context).pop();
+  //                 },
+  //               );
+  //             }),
+  //             // Custom server option
+  //             ListTile(
+  //               title: const Text('Custom Server'),
+  //               subtitle: const Text('Configure your own server'),
+  //               leading: Radio<String>(
+  //                 value: 'custom',
+  //                 groupValue: settingsProvider.isUsingCustomEndpoint
+  //                     ? 'custom'
+  //                     : settingsProvider.apiEndpoint,
+  //                 onChanged: (value) {
+  //                   Navigator.of(context).pop();
+  //                   _showCustomServerDialog(context, settingsProvider);
+  //                 },
+  //               ),
+  //               onTap: () {
+  //                 Navigator.of(context).pop();
+  //                 _showCustomServerDialog(context, settingsProvider);
+  //               },
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(),
+  //           child: const Text('Close'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-  void _showCustomServerDialog(
-      BuildContext context, SettingsProvider settingsProvider) {
-    final controller =
-        TextEditingController(text: settingsProvider.apiEndpoint);
+  // void _showCustomServerDialog(
+  //     BuildContext context, SettingsProvider settingsProvider) {
+  //   final controller =
+  //       TextEditingController(text: settingsProvider.apiEndpoint);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Custom Server'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'API Endpoint',
-            hintText: 'https://api.example.com',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final apiUrl = controller.text.trim();
-              if (apiUrl.isNotEmpty) {
-                final wsUrl = SettingsProvider.generateWebSocketUrl(apiUrl);
-                await settingsProvider.setApiEndpoint(apiUrl);
-                await settingsProvider.setWebsocketEndpoint(wsUrl);
-              }
-              if (context.mounted) Navigator.of(context).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Custom Server'),
+  //       content: TextField(
+  //         controller: controller,
+  //         decoration: const InputDecoration(
+  //           labelText: 'API Endpoint',
+  //           hintText: 'https://api.example.com',
+  //           border: OutlineInputBorder(),
+  //         ),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         FilledButton(
+  //           onPressed: () async {
+  //             final apiUrl = controller.text.trim();
+  //             if (apiUrl.isNotEmpty) {
+  //               final wsUrl = SettingsProvider.generateWebSocketUrl(apiUrl);
+  //               await settingsProvider.setApiEndpoint(apiUrl);
+  //               await settingsProvider.setWebsocketEndpoint(wsUrl);
+  //             }
+  //             if (context.mounted) Navigator.of(context).pop();
+  //           },
+  //           child: const Text('Save'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   void _showSignOutDialog(BuildContext context, AuthProvider authProvider) {
     showDialog(
@@ -660,9 +679,8 @@ class SettingsView extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () async {
-              Navigator.of(context).pop(); // Close the confirm dialog
+              Navigator.of(context).pop();
 
-              // Handle sign out with proper state synchronization
               await StateSynchronizationService.handleSignOut(context);
 
               if (context.mounted) {
