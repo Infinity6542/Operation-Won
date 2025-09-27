@@ -15,6 +15,7 @@ import 'package:operation_won/providers/settings_provider.dart';
 import 'package:operation_won/providers/theme_provider.dart';
 import 'package:operation_won/services/api_service.dart';
 import 'package:operation_won/services/audio_service.dart';
+import 'package:operation_won/services/version_service.dart';
 import 'package:operation_won/utils/error_handler.dart';
 import 'package:operation_won/widgets/auth_state_listener.dart';
 import 'package:provider/provider.dart';
@@ -25,7 +26,11 @@ late final SharedPreferences sharedPrefs;
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize core services
     sharedPrefs = await SharedPreferences.getInstance();
+    await VersionService.initialize();
+
     runApp(const MyApp());
   } catch (e) {
     debugPrint('Error initializing app: $e');

@@ -9,6 +9,7 @@ import '../services/state_synchronization_service.dart';
 import '../services/api_service.dart';
 import '../widgets/ptt_gesture_guide.dart';
 import '../services/permission_service.dart';
+import '../services/version_service.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -204,7 +205,7 @@ class SettingsView extends StatelessWidget {
                     _buildInfoTile(
                       context,
                       title: 'Version',
-                      subtitle: '1.0.0',
+                      subtitle: VersionService.formattedVersion,
                       icon: LucideIcons.info,
                     ),
                     const Divider(),

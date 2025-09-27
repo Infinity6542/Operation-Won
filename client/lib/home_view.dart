@@ -16,6 +16,7 @@ import 'widgets/join_channel_dialog.dart';
 import 'widgets/ptt_gesture_zone.dart';
 import 'widgets/refresh_indicator.dart';
 import 'services/state_synchronization_service.dart';
+import 'services/version_service.dart';
 import 'pages/settings_view.dart';
 
 class HomeView extends StatefulWidget {
@@ -118,141 +119,145 @@ class _HomeViewState extends State<HomeView>
           builder: (context, username, child) {
             final auth = Provider.of<AuthProvider>(context, listen: false);
             final events = Provider.of<EventProvider>(context, listen: false);
-            final channels = Provider.of<ChannelProvider>(context, listen: false);
+            final channels =
+                Provider.of<ChannelProvider>(context, listen: false);
             final commsState = Provider.of<CommsState>(context, listen: false);
-        final isInChannel = commsState.currentChannelId != null;
+            final isInChannel = commsState.currentChannelId != null;
 
             // Cache expensive calculations
             final screenHeight = MediaQuery.of(context).size.height;
             final safePadding = MediaQuery.of(context).padding;
-            
+
             // Pre-compute alpha colors
             const _scrimColor = Color(0x80000000); // Black with 50% opacity
-            
+
             const pttHeightFraction = 0.8; // 4/5 of the screen
             const contentHeightFraction = 0.2; // 1/5 of the screen
             const animationDuration = Duration(milliseconds: 400);
 
-        // Determine animated positions and sizes
-        final double contentHeight = isInChannel
-            ? screenHeight * contentHeightFraction
-            : screenHeight * (1 - contentHeightFraction);
+            // Determine animated positions and sizes
+            final double contentHeight = isInChannel
+                ? screenHeight * contentHeightFraction
+                : screenHeight * (1 - contentHeightFraction);
 
-        final double pttHeight = isInChannel
-            ? screenHeight * pttHeightFraction
-            : screenHeight * contentHeightFraction;
+            final double pttHeight = isInChannel
+                ? screenHeight * pttHeightFraction
+                : screenHeight * contentHeightFraction;
 
-        final double contentTop = 0;
-        final double pttTop = contentHeight;
+            final double contentTop = 0;
+            final double pttTop = contentHeight;
 
-        return Scaffold(
-          backgroundColor: theme.colorScheme.surface,
-          body: Stack(
-            children: [
-              // Animated Content Area (Events/Channels) - Wrapped in RepaintBoundary
-              AnimatedPositioned(
-                duration: animationDuration,
-                curve: Curves.easeInOut,
-                top: contentTop,
-                left: 0,
-                right: 0,
-                height: contentHeight,
-                child: RepaintBoundary(
-                  child: IgnorePointer(
-                    ignoring: isInChannel, // Disable interaction when collapsed
-                    child: AnimatedOpacity(
-                      duration: animationDuration,
-                      opacity: isInChannel ? 0.5 : 1.0,
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          top: safePadding.top,
-                          left: safePadding.left,
-                          right: safePadding.right,
-                        ),
-                        child: Column(
-                          children: [
-                            // Fixed header sections
-                            _buildAppBar(theme, username, isInChannel),
-                            _buildCommsStatusBar(theme, isInChannel),
-                            _buildTabBar(theme, isInChannel),
-
-                            // Scrollable content area  
-                            Expanded(
-                              child: CustomRefreshIndicator(
-                                onRefresh: _loadData,
-                                child: TabBarView(
-                                  controller: _tabController,
-                                  children: [
-                                    _buildEventsTab(context, events),
-                                    _buildChannelsTab(context, channels),
-                                  ],
-                                ),
-                              ),
+            return Scaffold(
+              backgroundColor: theme.colorScheme.surface,
+              body: Stack(
+                children: [
+                  // Animated Content Area (Events/Channels) - Wrapped in RepaintBoundary
+                  AnimatedPositioned(
+                    duration: animationDuration,
+                    curve: Curves.easeInOut,
+                    top: contentTop,
+                    left: 0,
+                    right: 0,
+                    height: contentHeight,
+                    child: RepaintBoundary(
+                      child: IgnorePointer(
+                        ignoring:
+                            isInChannel, // Disable interaction when collapsed
+                        child: AnimatedOpacity(
+                          duration: animationDuration,
+                          opacity: isInChannel ? 0.5 : 1.0,
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              top: safePadding.top,
+                              left: safePadding.left,
+                              right: safePadding.right,
                             ),
-                          ],
+                            child: Column(
+                              children: [
+                                // Fixed header sections
+                                _buildAppBar(theme, username, isInChannel),
+                                _buildCommsStatusBar(theme, isInChannel),
+                                _buildTabBar(theme, isInChannel),
+
+                                // Scrollable content area
+                                Expanded(
+                                  child: CustomRefreshIndicator(
+                                    onRefresh: _loadData,
+                                    child: TabBarView(
+                                      controller: _tabController,
+                                      children: [
+                                        _buildEventsTab(context, events),
+                                        _buildChannelsTab(context, channels),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
 
-              // Animated PTT Gesture Zone - Wrapped in RepaintBoundary
-              AnimatedPositioned(
-                duration: animationDuration,
-                curve: Curves.easeInOut,
-                top: pttTop,
-                left: 0,
-                right: 0,
-                height: pttHeight,
-                child: RepaintBoundary(
-                  child: PTTGestureZone(
-                    onPermissionDenied: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Microphone permission required'),
-                          backgroundColor: Theme.of(context).colorScheme.error,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-
-              // Scrim overlay for Speed Dial
-              Positioned.fill(
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
-                  opacity: _isSpeedDialOpen ? 1.0 : 0.0,
-                  child: IgnorePointer(
-                    ignoring: !_isSpeedDialOpen,
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        setState(() {
-                          _isSpeedDialOpen = false;
-                        });
-                      },
-                      child: Container(
-                        color: _scrimColor,
+                  // Animated PTT Gesture Zone - Wrapped in RepaintBoundary
+                  AnimatedPositioned(
+                    duration: animationDuration,
+                    curve: Curves.easeInOut,
+                    top: pttTop,
+                    left: 0,
+                    right: 0,
+                    height: pttHeight,
+                    child: RepaintBoundary(
+                      child: PTTGestureZone(
+                        onPermissionDenied: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  const Text('Microphone permission required'),
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
-                ),
-              ),
 
-              // Floating Action Button fixed at bottom-right corner
-              Positioned(
-                bottom: 16, // 16px from bottom edge
-                right: 16, // 16px from right edge
-                child: RepaintBoundary(
-                  child: _buildFloatingActionButton(theme, auth),
-                ),
+                  // Scrim overlay for Speed Dial
+                  Positioned.fill(
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      opacity: _isSpeedDialOpen ? 1.0 : 0.0,
+                      child: IgnorePointer(
+                        ignoring: !_isSpeedDialOpen,
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            setState(() {
+                              _isSpeedDialOpen = false;
+                            });
+                          },
+                          child: Container(
+                            color: _scrimColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Floating Action Button fixed at bottom-right corner
+                  Positioned(
+                    bottom: 16, // 16px from bottom edge
+                    right: 16, // 16px from right edge
+                    child: RepaintBoundary(
+                      child: _buildFloatingActionButton(theme, auth),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
+            );
           },
         );
       },
@@ -268,51 +273,51 @@ class _HomeViewState extends State<HomeView>
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: theme.colorScheme.primary,
-            child: Icon(
-              LucideIcons.user,
-              size: 20,
-              color: theme.colorScheme.onPrimary,
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: theme.colorScheme.primary,
+              child: Icon(
+                LucideIcons.user,
+                size: 20,
+                color: theme.colorScheme.onPrimary,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome back',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome back',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                Text(
-                  username ?? 'User',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  Text(
+                    username ?? 'User',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: () {
-              // Light haptic feedback for settings menu access
-              HapticFeedback.lightImpact();
-              _showSettingsMenu();
-            },
-            icon: const Icon(LucideIcons.settings),
-            style: IconButton.styleFrom(
-              backgroundColor: theme.colorScheme.surfaceContainer,
-              foregroundColor: theme.colorScheme.onSurfaceVariant,
+            IconButton(
+              onPressed: () {
+                // Light haptic feedback for settings menu access
+                HapticFeedback.lightImpact();
+                _showSettingsMenu();
+              },
+              icon: const Icon(LucideIcons.settings),
+              style: IconButton.styleFrom(
+                backgroundColor: theme.colorScheme.surfaceContainer,
+                foregroundColor: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -825,7 +830,8 @@ class _HomeViewState extends State<HomeView>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color:
+                    theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1025,16 +1031,14 @@ class _HomeViewState extends State<HomeView>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Help & Support'),
-        content: const Column(
+        title: const Text('Support & Info'),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Operation Won - Communication App'),
-            SizedBox(height: 8),
-            Text('Version: 0.0.1a'),
-            SizedBox(height: 16),
-            Text('No support just yet :).'),
+            Text('Version: ${VersionService.formattedVersion}'),
+            const SizedBox(height: 16),
+            const Text('No support just yet :).'),
           ],
         ),
         actions: [
