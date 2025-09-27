@@ -110,16 +110,28 @@ class _HomeViewState extends State<HomeView>
     super.build(context);
     final theme = Theme.of(context);
 
-    return Consumer4<AuthProvider, EventProvider, ChannelProvider, CommsState>(
-      builder: (context, auth, events, channels, commsState, child) {
-        final user = auth.user;
+    return Selector<CommsState, bool>(
+      selector: (context, commsState) => commsState.currentChannelId != null,
+      builder: (context, isInChannel, child) {
+        return Selector<AuthProvider, String?>(
+          selector: (context, auth) => auth.user?.username,
+          builder: (context, username, child) {
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            final events = Provider.of<EventProvider>(context, listen: false);
+            final channels = Provider.of<ChannelProvider>(context, listen: false);
+            final commsState = Provider.of<CommsState>(context, listen: false);
         final isInChannel = commsState.currentChannelId != null;
 
-        const pttHeightFraction = 0.8; // 4/5 of the screen
-        const contentHeightFraction = 0.2; // 1/5 of the screen
-        const animationDuration = Duration(milliseconds: 400);
-
-        final screenHeight = MediaQuery.of(context).size.height;
+            // Cache expensive calculations
+            final screenHeight = MediaQuery.of(context).size.height;
+            final safePadding = MediaQuery.of(context).padding;
+            
+            // Pre-compute alpha colors
+            const _scrimColor = Color(0x80000000); // Black with 50% opacity
+            
+            const pttHeightFraction = 0.8; // 4/5 of the screen
+            const contentHeightFraction = 0.2; // 1/5 of the screen
+            const animationDuration = Duration(milliseconds: 400);
 
         // Determine animated positions and sizes
         final double contentHeight = isInChannel
@@ -137,7 +149,7 @@ class _HomeViewState extends State<HomeView>
           backgroundColor: theme.colorScheme.surface,
           body: Stack(
             children: [
-              // Animated Content Area (Events/Channels)
+              // Animated Content Area (Events/Channels) - Wrapped in RepaintBoundary
               AnimatedPositioned(
                 duration: animationDuration,
                 curve: Curves.easeInOut,
@@ -145,45 +157,47 @@ class _HomeViewState extends State<HomeView>
                 left: 0,
                 right: 0,
                 height: contentHeight,
-                child: IgnorePointer(
-                  ignoring: isInChannel, // Disable interaction when collapsed
-                  child: AnimatedOpacity(
-                    duration: animationDuration,
-                    opacity: isInChannel ? 0.5 : 1.0,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        top: MediaQuery.of(context).padding.top,
-                        left: MediaQuery.of(context).padding.left,
-                        right: MediaQuery.of(context).padding.right,
-                      ),
-                      child: Column(
-                        children: [
-                          // Fixed header sections
-                          _buildAppBar(theme, user?.username, isInChannel),
-                          _buildCommsStatusBar(theme, isInChannel),
-                          _buildTabBar(theme, isInChannel),
+                child: RepaintBoundary(
+                  child: IgnorePointer(
+                    ignoring: isInChannel, // Disable interaction when collapsed
+                    child: AnimatedOpacity(
+                      duration: animationDuration,
+                      opacity: isInChannel ? 0.5 : 1.0,
+                      child: Padding(
+                        padding: EdgeInsets.only(
+                          top: safePadding.top,
+                          left: safePadding.left,
+                          right: safePadding.right,
+                        ),
+                        child: Column(
+                          children: [
+                            // Fixed header sections
+                            _buildAppBar(theme, username, isInChannel),
+                            _buildCommsStatusBar(theme, isInChannel),
+                            _buildTabBar(theme, isInChannel),
 
-                          // Scrollable content area
-                          Expanded(
-                            child: CustomRefreshIndicator(
-                              onRefresh: _loadData,
-                              child: TabBarView(
-                                controller: _tabController,
-                                children: [
-                                  _buildEventsTab(context, events),
-                                  _buildChannelsTab(context, channels),
-                                ],
+                            // Scrollable content area  
+                            Expanded(
+                              child: CustomRefreshIndicator(
+                                onRefresh: _loadData,
+                                child: TabBarView(
+                                  controller: _tabController,
+                                  children: [
+                                    _buildEventsTab(context, events),
+                                    _buildChannelsTab(context, channels),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
 
-              // Animated PTT Gesture Zone
+              // Animated PTT Gesture Zone - Wrapped in RepaintBoundary
               AnimatedPositioned(
                 duration: animationDuration,
                 curve: Curves.easeInOut,
@@ -191,15 +205,17 @@ class _HomeViewState extends State<HomeView>
                 left: 0,
                 right: 0,
                 height: pttHeight,
-                child: PTTGestureZone(
-                  onPermissionDenied: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Microphone permission required'),
-                        backgroundColor: Theme.of(context).colorScheme.error,
-                      ),
-                    );
-                  },
+                child: RepaintBoundary(
+                  child: PTTGestureZone(
+                    onPermissionDenied: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Microphone permission required'),
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
 
@@ -219,7 +235,7 @@ class _HomeViewState extends State<HomeView>
                         });
                       },
                       child: Container(
-                        color: Colors.black.withAlpha(128),
+                        color: _scrimColor,
                       ),
                     ),
                   ),
@@ -230,10 +246,14 @@ class _HomeViewState extends State<HomeView>
               Positioned(
                 bottom: 16, // 16px from bottom edge
                 right: 16, // 16px from right edge
-                child: _buildFloatingActionButton(theme, auth),
+                child: RepaintBoundary(
+                  child: _buildFloatingActionButton(theme, auth),
+                ),
               ),
             ],
           ),
+        );
+          },
         );
       },
     );
@@ -243,10 +263,11 @@ class _HomeViewState extends State<HomeView>
     if (isCollapsed) {
       return const SizedBox.shrink(); // Hide app bar when collapsed
     }
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
+    return RepaintBoundary(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
           CircleAvatar(
             radius: 20,
             backgroundColor: theme.colorScheme.primary,
@@ -291,6 +312,7 @@ class _HomeViewState extends State<HomeView>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -803,8 +825,7 @@ class _HomeViewState extends State<HomeView>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurfaceVariant.withAlpha(
-                    (theme.colorScheme.onSurfaceVariant.alpha * 0.4).round()),
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

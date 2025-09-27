@@ -520,6 +520,37 @@ func (c *Client) handleSignal(s Signal) {
 		}
 	case "key_exchange":
 		c.encryptionStatus = 1
+	case "encrypted_audio":
+		// Handle encrypted audio data
+		log.Printf("[HUB] [ENC] Received encrypted audio from user %d in channel %s", c.UserID, c.ChannelID)
+
+		// Create a properly formatted encrypted_audio signal for broadcasting
+		encryptedSignal := map[string]interface{}{
+			"type":    "encrypted_audio",
+			"payload": json.RawMessage(s.Payload),
+		}
+
+		// Marshal the signal into JSON
+		signalData, err := json.Marshal(encryptedSignal)
+		if err != nil {
+			log.Printf("[HUB] [ENC] Failed to marshal encrypted audio signal: %v", err)
+			return
+		}
+
+		// Broadcast the encrypted audio to all other clients in the channel
+		message := &Message{
+			ChannelID: c.ChannelID,
+			Data:      signalData,
+			Sender:    c,
+		}
+
+		// Send to hub for broadcasting
+		select {
+		case c.hub.broadcast <- message:
+			log.Printf("[HUB] [ENC] Encrypted audio broadcasted from user %d", c.UserID)
+		default:
+			log.Printf("[HUB] [ENC] Failed to broadcast encrypted audio from user %d", c.UserID)
+		}
 	default:
 		log.Printf("[WBS] [SIG] Received unknown signal from client '%s', consider updating the server.", s.Type)
 	}
